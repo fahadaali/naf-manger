@@ -144,57 +144,12 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
     
     try {
       // التحقق من توفر الخادم أولاً
-      const healthCheck = await fetch('http://localhost:3001/api/health', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!healthCheck.ok) {
-        throw new Error('خادم البريد الإلكتروني غير متاح');
-      }
-
-      // إرسال طلب إلى خادم البريد الإلكتروني
-      const response = await fetch('http://localhost:3001/api/send-meeting-invitation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingDetails,
-          invitees,
-          emailContent
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'فشل في إرسال الدعوات');
-      }
-
-      console.log('✅ تم إرسال الدعوات بنجاح:', result);
-      
-      // عرض تفاصيل النتائج للمستخدم
-      if (result.summary) {
-        const { success, failed, total } = result.summary;
-        if (failed > 0) {
-          console.warn(`⚠️ تم إرسال ${success} من أصل ${total} دعوات`);
-        }
-      }
-
+      /* إرسال الدعوة بالبريد معطَّل: خادم Express سقط، وWorkers لا تتكلّم
+         SMTP. والرابط يبقى قابلاً للنسخ واليدِ تُرسله. */
+      throw new Error('غير مربوط');
     } catch (error) {
-      console.error('❌ خطأ في إرسال الدعوات:', error);
-      
-      // رسائل خطأ أكثر تفصيلاً
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new Error('لا يمكن الاتصال بخادم البريد الإلكتروني. تأكد من تشغيل الخادم على المنفذ 3001');
-      } else if (error.message.includes('خادم البريد الإلكتروني غير متاح')) {
-        throw new Error('خادم البريد الإلكتروني لا يستجيب. يرجى إعادة تشغيل الخادم');
-      } else {
-        throw new Error(`خطأ في إرسال الدعوات: ${error.message}`);
-      }
+      console.error('تعذّر إرسال الدعوات:', error);
+      throw error;
     }
     
     // تأخير قصير للمعالجة

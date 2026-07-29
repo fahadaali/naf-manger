@@ -1,55 +1,30 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-
-// متغيرات البيئة لـ Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-/* ═══ العميل يُنشأ عند أول استعمال، لا عند تحميل الوحدة ═══
+/* ═══ Supabase مفصولة ═══
  *
- * كان هنا `throw` عارياً في جسم الوحدة حين يغيب المتغيّران. و`Vite` يحقن
- * هذين المتغيّرين **وقت البناء**، فبناءٌ لا يجدهما يُدرج الرمية في الحزمة —
- * فتقع لحظةَ تحميلها، قبل أن يُركّب React شيئاً.
+ * القاعدة صارت D1، والنداء يمرّ بالـWorker. فلا حزمة `supabase-js` في
+ * الاعتماديات ولا مفتاح في الحزمة ولا نداءَ من متصفّح إلى قاعدةٍ رأساً.
  *
- * والنتيجة صفحةٌ بيضاء تامّة في كل مسار: لا رسالة، ولا تحويلة إلى المركز،
- * ولا حتى صفحة `‎/denied`. لأن `App` يستورد `data/database` وهو يستورد هذا
- * الملفّ، فالسلسلة تنكسر عند أوّل `import`.
+ * والملفّ باقٍ لسببين: `supabaseDatabase.ts` لا يزال في المستودع شاهداً
+ * على ما كان ويستورد منه، ونوعُ `Database` أدناه يصف المخطّط القديم وصفاً
+ * مفيداً لمن يقارن. فبقي السطح ولم يبقَ خلفه شيء.
  *
- * والدخول لم يعد يمرّ بـSupabase أصلاً — المركز هو الباب — فغيابُ إعدادها
- * يجب أن يُعطّل شاشات البيانات وحدها، لا أن يُسقط التطبيق كلَّه قبل أن يبدأ.
- *
- * فصار الخطأ يقع عند أول نداء فعليّ: من يسأل القاعدة يُخفق ويُخفق وحده.
+ * ومن ناداه بعد اليوم يُخفق صراحةً — لا صمتاً، ولا ببيانات قديمة.
  */
-let client: SupabaseClient | null = null;
 
-function requireClient(): SupabaseClient {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing Supabase environment variables. Please check your .env file.');
-  }
-  if (!client) {
-    client = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      }
-    });
-  }
-  return client;
-}
+const REMOVED = 'supabase_removed';
 
-/** أهو مضبوط؟ تسأله الشاشات قبل أن تنادي، فتعرض تعذّراً بدل أن ترمي. */
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+/** مفصولة دائماً. تسألها الشاشات قبل أن تنادي. */
+export const isSupabaseConfigured = false;
 
-/* الوسيط يحفظ السطح كما هو — `supabase.from(...)` و`supabase.auth` —
-   فلا يُمسّ أيٌّ من المواضع العشرة التي تستورده. والدوالُّ تُربط بالعميل
-   لأن `supabase-js` يعتمد على `this` داخلها. */
-export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
-  get(_target, property) {
-    const instance = requireClient();
-    const value = Reflect.get(instance, property, instance);
-    return typeof value === 'function' ? value.bind(instance) : value;
+/* الوسيط يحفظ الشكل — `supabase.from(...)` — فلا يسقط تحليلُ الأنواع في
+   `supabaseDatabase.ts`. وأولُ لمسةٍ فعلية ترمي. */
+export const supabase: any = new Proxy(
+  {},
+  {
+    get() {
+      throw new Error(REMOVED);
+    },
   },
-});
+);
 
 // أنواع قاعدة البيانات المُولدة
 export type Database = {

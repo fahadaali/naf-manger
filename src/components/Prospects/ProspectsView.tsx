@@ -150,12 +150,7 @@ export default function ProspectsView() {
   useEffect(() => {
     const loadTotalClients = async () => {
       try {
-        const { data: clients, error } = await supabase
-          .from('clients')
-          .select('id');
-
-        if (error) throw error;
-        setTotalClients((clients || []).length);
+        setTotalClients((await db.getClients()).length);
       } catch (error) {
         console.error('Error loading total clients:', error);
         setTotalClients(0);

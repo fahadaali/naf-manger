@@ -78,81 +78,20 @@ export default function EmailSettings() {
     }
   };
 
+  /* ═══ إرسال البريد معطَّل ═══
+   *
+   * كان يُنادى خادمُ Express على `localhost:3001` — خادمٌ خارج Cloudflare
+   * يحتاج استضافةً وصيانة، ولا يعمل إلا على جهاز من شغّله.
+   *
+   * وWorkers لا تتكلّم SMTP، و`Email Routing` تستقبل وتحوّل ولا تُرسل.
+   * فالإرسال يحتاج مزوّداً يتكلّم HTTP، وذلك قرارٌ لم يُتَّخذ بعد.
+   *
+   * فالشاشة تحفظ الإعدادات ولا ترسل، وتقول ذلك صراحةً بالمصطلح المسجَّل
+   * «غير مربوط» بدل أن تسقط بخطأ شبكةٍ يوهم أن العطل عارض.
+   */
   const testEmailConnection = async () => {
-    setIsTesting(true);
-    setTestResult(null);
-    setSaveMessage('');
-
-    try {
-      // التحقق من الحقول المطلوبة
-      if (!settings?.host || !settings?.user || !settings?.password || !testEmail.trim()) {
-        throw new Error('يرجى ملء جميع الحقول المطلوبة وإدخال بريد إلكتروني للاختبار');
-      }
-
-      // التحقق من صحة البريد الإلكتروني للاختبار
-      if (!/\S+@\S+\.\S+/.test(testEmail)) {
-        throw new Error('يرجى إدخال بريد إلكتروني صحيح للاختبار');
-      }
-
-      // التحقق من توفر خادم البريد الإلكتروني
-      const healthResponse = await fetch('http://localhost:3001/api/health');
-      if (!healthResponse.ok) {
-        throw new Error('خادم البريد الإلكتروني غير متاح. تأكد من تشغيل الخادم على المنفذ 3001');
-      }
-
-      // إرسال طلب إلى خادم البريد الإلكتروني
-      const response = await fetch('http://localhost:3001/api/send-test-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          emailSettings: settings,
-          testEmail: testEmail
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'فشل في إرسال البريد التجريبي');
-      }
-
-      setTestResult('success');
-      setSaveMessage(`✅ تم إرسال البريد التجريبي بنجاح!
-
-📧 تفاصيل الإرسال:
-• البريد المرسل إليه: ${testEmail}
-• معرف الرسالة: ${result.messageId}
-• الخادم: ${settings.host}:${settings.port}
-• الأمان: ${settings.secure ? 'SSL/TLS' : 'STARTTLS'}
-• المرسل: ${settings.fromName} <${settings.fromAddress}>
-• وقت الإرسال: ${new Date().toLocaleString('ar-SA')}
-
-ℹ️ تحقق من صندوق الوارد أو مجلد الرسائل غير المرغوب فيها في البريد المرسل إليه.`);
-      
-    } catch (error) {
-      console.error('Email test error:', error);
-      setTestResult('error');
-      
-      let errorMessage = 'فشل في إرسال البريد التجريبي';
-      
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        errorMessage = 'لا يمكن الاتصال بخادم البريد الإلكتروني. تأكد من تشغيل الخادم على المنفذ 3001';
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
-      setSaveMessage(`❌ ${errorMessage}
-
-💡 نصائح لحل المشكلة:
-• تأكد من تشغيل خادم البريد الإلكتروني: cd server && npm start
-• تحقق من صحة إعدادات SMTP
-• تأكد من تفعيل "App Passwords" للحسابات التي تدعمها
-• تحقق من إعدادات الأمان في حساب البريد الإلكتروني`);
-    } finally {
-      setIsTesting(false);
-    }
+    setTestResult('error');
+    setSaveMessage('غير مربوط');
   };
 
   const resetToDefaults = () => {
@@ -443,14 +382,9 @@ export default function EmailSettings() {
               <p><strong>1. انتقل إلى مجلد الخادم:</strong></p>
               <code className="bg-amber-100 px-2 py-1 rounded text-xs">cd server</code>
               
-              <p><strong>2. ثبت المكتبات المطلوبة:</strong></p>
-              <code className="bg-amber-100 px-2 py-1 rounded text-xs">npm install</code>
-              
-              <p><strong>3. شغل الخادم:</strong></p>
-              <code className="bg-amber-100 px-2 py-1 rounded text-xs">npm start</code>
-              
-              <p><strong>4. تأكد من أن الخادم يعمل على:</strong></p>
-              <code className="bg-amber-100 px-2 py-1 rounded text-xs">http://localhost:3001</code>
+              <p>الإرسال غير مربوط. وWorkers لا تتكلّم SMTP، فالإرسال يحتاج
+              مزوّداً يتكلّم HTTP — وذلك قرارٌ لم يُتَّخذ بعد. والإعدادات هنا
+              تُحفظ وتنتظره.</p>
             </div>
           </div>
         </div>
