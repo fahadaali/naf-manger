@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { UserIcon, PhoneIcon, EnvelopeIcon, PencilIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { Marketer, MarketerStats } from '../../types';
 import { format } from 'date-fns';
-import { supabase } from '../../lib/supabase';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { db } from '../../data/database';
 
 interface MarketerCardProps {
   marketer: Marketer;
@@ -30,64 +30,9 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        // جلب إحصائيات المسوّق من Supabase
-        const [
-          { data: cases, error: casesError },
-          { data: commissions, error: commissionsError }
-        ] = await Promise.all([
-          supabase.from('cases').select('*').eq('marketer_id', marketer.id),
-          supabase.from('commission_payments').select('*').eq('marketer_id', marketer.id)
-        ]);
-
-        if (casesError) throw casesError;
-        if (commissionsError) throw commissionsError;
-
-        const casesData = cases || [];
-        const commissionsData = commissions || [];
-
-        // حساب الإحصائيات
-        const totalCases = casesData.length;
-        const completedCases = casesData.filter(c => c.status === 'completed').length;
-        const wonCases = casesData.filter(c => c.outcome === 'won').length;
-        const lostCases = casesData.filter(c => c.outcome === 'lost').length;
-        
-        const totalRevenue = casesData.reduce((sum, c) => {
-          const paymentStatus = c.payment_status;
-          return sum + (paymentStatus?.collectedAmount || 0);
-        }, 0);
-        
-        const totalCommissionPaid = commissionsData.reduce((sum, c) => sum + (c.amount || 0), 0);
-        
-        // حساب العمولة المستحقة
-        const totalCommissionEarned = casesData.reduce((sum, c) => {
-          const commissionStructure = c.commission_structure;
-          const paymentStatus = c.payment_status;
-          if (commissionStructure && paymentStatus) {
-            if (commissionStructure.type === 'percentage') {
-              return sum + ((paymentStatus.collectedAmount || 0) * (commissionStructure.value || 0) / 100);
-            } else {
-              return sum + (commissionStructure.value || 0);
-            }
-          }
-          return sum;
-        }, 0);
-        
-        const remainingCommission = totalCommissionEarned - totalCommissionPaid;
-        const conversionRate = completedCases > 0 ? Math.round((wonCases / completedCases) * 100) : 0;
-        const averageCaseValue = totalCases > 0 ? Math.round(totalRevenue / totalCases) : 0;
-
-        setStats({
-          totalCases,
-          completedCases,
-          wonCases,
-          lostCases,
-          totalRevenue,
-          totalCommissionEarned,
-          totalCommissionPaid,
-          remainingCommission,
-          conversionRate,
-          averageCaseValue
-        });
+        /* الحسابُ في الخادم لا هنا: كانت البطاقة تجلب قضايا المسوّق
+           ودفعاتِه كلَّها لتعدّها، فشبكةٌ من عشر بطاقات عشرون نداءً. */
+        setStats(await db.getMarketerStats(marketer.id));
       } catch (error) {
         console.error('Error loading marketer stats:', error);
         // استخدام قيم افتراضية في حالة الخطأ

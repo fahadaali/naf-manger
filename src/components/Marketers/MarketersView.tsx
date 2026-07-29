@@ -4,7 +4,7 @@ import { Marketer, MarketerStats } from '../../types';
 import MarketerCard from './MarketerCard';
 import MarketerModal from './MarketerModal';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../data/database';
 
 export default function MarketersView() {
   const [marketers, setMarketers] = useState<Marketer[]>([]);
@@ -25,30 +25,7 @@ export default function MarketersView() {
     const loadMarketersAsync = async () => {
       try {
         // جلب المسوّقين مباشرة من Supabase
-        const { data: marketersData, error } = await supabase
-          .from('marketers')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // تحويل البيانات إلى التنسيق المطلوب
-        const transformedMarketers = (marketersData || []).map(m => ({
-          id: m.id,
-          fullName: m.full_name,
-          idNumber: m.id_number,
-          phone: m.phone,
-          email: m.email,
-          relationshipType: m.relationship_type as Marketer['relationshipType'],
-          startDate: new Date(m.start_date),
-          status: m.status as Marketer['status'],
-          notes: m.notes,
-          profilePicture: m.profile_picture,
-          createdDate: new Date(m.created_at),
-          updatedDate: new Date(m.updated_at)
-        }));
-
-        setMarketers(transformedMarketers);
+        setMarketers(await db.getMarketers());
       } catch (error) {
         console.error('Error loading marketers:', error);
         setMarketers([]);
@@ -93,42 +70,13 @@ export default function MarketersView() {
   const handleSaveMarketer = (marketerData: Partial<Marketer>) => {
     const saveMarketerAsync = async () => {
       try {
-        // تحويل البيانات إلى تنسيق Supabase
-        const supabaseData = {
-          full_name: marketerData.fullName,
-          id_number: marketerData.idNumber,
-          phone: marketerData.phone,
-          email: marketerData.email,
-          relationship_type: marketerData.relationshipType,
-          start_date: marketerData.startDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-          status: marketerData.status,
-          notes: marketerData.notes,
-          profile_picture: marketerData.profilePicture
-        };
-
         if (editingMarketer) {
-          const { error } = await supabase
-            .from('marketers')
-            .update(supabaseData)
-            .eq('id', editingMarketer.id);
-
-          if (!error) {
-            loadMarketers();
-          } else {
-            throw error;
-          }
+          await db.updateMarketer(editingMarketer.id, marketerData);
         } else {
-          const { error } = await supabase
-            .from('marketers')
-            .insert([supabaseData]);
-
-          if (!error) {
-            loadMarketers();
-          } else {
-            throw error;
-          }
+          await db.createMarketer(marketerData as Omit<Marketer, 'id'>);
         }
-        
+        loadMarketers();
+
         setShowMarketerModal(false);
         setEditingMarketer(null);
         setSelectedMarketer(null);

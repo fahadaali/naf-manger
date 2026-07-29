@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ClockIcon, UserIcon, DocumentTextIcon, UserGroupIcon } from '@heroicons/react/24/outline';
-import { supabase } from '../../lib/supabase';
 import { ActivityLog } from '../../types';
+import { db } from '../../data/database';
 
 export default function ActivityFeed() {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
@@ -20,29 +20,7 @@ export default function ActivityFeed() {
     try {
       setLoading(true);
       
-      // جلب الأنشطة مباشرة من Supabase
-      const { data: activitiesData, error } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-
-      // تحويل البيانات إلى التنسيق المطلوب
-      const transformedActivities = (activitiesData || []).map(a => ({
-        id: a.id,
-        type: a.type,
-        description: a.description,
-        userId: a.user_id,
-        userName: a.user_name,
-        entityId: a.entity_id,
-        entityType: a.entity_type,
-        timestamp: new Date(a.created_at),
-        details: a.details
-      }));
-
-      setActivities(transformedActivities);
+      setActivities((await db.getActivities()).slice(0, 10));
     } catch (error) {
       console.error('Error loading activities:', error);
       setActivities([]);

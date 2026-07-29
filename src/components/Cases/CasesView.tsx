@@ -4,7 +4,7 @@ import { Case } from '../../types';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../data/database';
 
 export default function CasesView() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -27,34 +27,7 @@ export default function CasesView() {
     const loadCasesAsync = async () => {
       try {
         // جلب القضايا مباشرة من Supabase
-        const { data: casesData, error } = await supabase
-          .from('cases')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // تحويل البيانات إلى التنسيق المطلوب
-        const transformedCases = (casesData || []).map(c => ({
-          id: c.id,
-          caseNumber: c.case_number,
-          caseType: c.case_type,
-          clientId: c.client_id,
-          clientName: c.client_name,
-          summary: c.summary,
-          status: c.status,
-          outcome: c.outcome,
-          basecampUrl: c.basecamp_url,
-          createdDate: new Date(c.created_at),
-          updatedDate: new Date(c.updated_at),
-          marketerId: c.marketer_id,
-          marketerName: c.marketer_name,
-          feeStructure: c.fee_structure,
-          paymentStatus: c.payment_status,
-          commissionStructure: c.commission_structure
-        }));
-
-        setCases(transformedCases);
+        setCases(await db.getCases());
       } catch (error) {
         console.error('Error loading cases:', error);
         setCases([]);
@@ -114,48 +87,13 @@ export default function CasesView() {
   const handleSaveCase = (caseData: Partial<Case>) => {
     const saveCaseAsync = async () => {
       try {
-        // تحويل البيانات إلى تنسيق Supabase
-        const supabaseData = {
-          case_number: caseData.caseNumber,
-          case_type: caseData.caseType,
-          client_id: caseData.clientId,
-          client_name: caseData.clientName,
-          summary: caseData.summary,
-          status: caseData.status,
-          outcome: caseData.outcome,
-          basecamp_url: caseData.basecampUrl,
-          marketer_id: (caseData as any).marketerId,
-          marketer_name: (caseData as any).marketerName,
-          fee_structure: (caseData as any).feeStructure,
-          payment_status: (caseData as any).paymentStatus,
-          commission_structure: (caseData as any).commissionStructure
-        };
-
         if (editingCase) {
-          // تحديث قضية موجودة
-          const { error } = await supabase
-            .from('cases')
-            .update(supabaseData)
-            .eq('id', editingCase.id);
-
-          if (!error) {
-            loadCases(); // إعادة تحميل القائمة
-          } else {
-            throw error;
-          }
+          await db.updateCase(editingCase.id, caseData);
         } else {
-          // إنشاء قضية جديدة
-          const { error } = await supabase
-            .from('cases')
-            .insert([supabaseData]);
-
-          if (!error) {
-            loadCases(); // إعادة تحميل القائمة
-          } else {
-            throw error;
-          }
+          await db.createCase(caseData as Omit<Case, 'id'>);
         }
-        
+        loadCases();
+
         setShowCaseModal(false);
         setEditingCase(null);
         setViewingCase(null);

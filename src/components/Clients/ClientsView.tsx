@@ -5,7 +5,7 @@ import ClientCard from './ClientCard';
 import ClientModal from './ClientModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../data/database';
 
 export default function ClientsView() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -29,31 +29,7 @@ export default function ClientsView() {
     const loadClientsAsync = async () => {
       try {
         // جلب العملاء مباشرة من Supabase
-        const { data: clientsData, error } = await supabase
-          .from('clients')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // تحويل البيانات إلى التنسيق المطلوب
-        const transformedClients = (clientsData || []).map(c => ({
-          id: c.id,
-          fullName: c.full_name,
-          idNumber: c.id_number,
-          phone: c.phone,
-          email: c.email,
-          joinDate: new Date(c.join_date),
-          clientType: c.client_type as Client['clientType'],
-          status: c.status as Client['status'],
-          notes: c.notes,
-          attachments: c.attachments || [],
-          commercialRegister: c.commercial_register,
-          legalRepresentative: c.legal_representative,
-          profilePicture: c.profile_picture
-        }));
-
-        setClients(transformedClients);
+        setClients(await db.getClients());
       } catch (error) {
         console.error('Error loading clients:', error);
         setClients([]);
@@ -98,47 +74,13 @@ export default function ClientsView() {
   const handleSaveClient = (clientData: Partial<Client>) => {
     const saveClientAsync = async () => {
       try {
-        // تحويل البيانات إلى تنسيق Supabase
-        const supabaseData = {
-          full_name: clientData.fullName,
-          id_number: clientData.idNumber,
-          phone: clientData.phone,
-          email: clientData.email,
-          client_type: clientData.clientType,
-          status: clientData.status,
-          notes: clientData.notes,
-          commercial_register: clientData.commercialRegister,
-          legal_representative: clientData.legalRepresentative,
-          profile_picture: clientData.profilePicture,
-          join_date: clientData.joinDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-          attachments: clientData.attachments || []
-        };
-
         if (editingClient) {
-          // تحديث عميل موجود
-          const { error } = await supabase
-            .from('clients')
-            .update(supabaseData)
-            .eq('id', editingClient.id);
-
-          if (!error) {
-            loadClients(); // إعادة تحميل القائمة
-          } else {
-            throw error;
-          }
+          await db.updateClient(editingClient.id, clientData);
         } else {
-          // إنشاء عميل جديد
-          const { error } = await supabase
-            .from('clients')
-            .insert([supabaseData]);
-
-          if (!error) {
-            loadClients(); // إعادة تحميل القائمة
-          } else {
-            throw error;
-          }
+          await db.createClient(clientData as Omit<Client, 'id'>);
         }
-        
+        loadClients();
+
         setShowClientModal(false);
         setEditingClient(null);
         setSelectedClient(null);

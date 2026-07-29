@@ -10,9 +10,9 @@ import {
 import { TrendingUp } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
-import { supabase } from '../../lib/supabase';
 import { Client, Prospect, Case, ActivityLog } from '../../types';
 import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { db } from '../../data/database';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
@@ -33,97 +33,20 @@ export default function Analytics() {
     try {
       setLoading(true);
       
-      // جلب البيانات مباشرة من Supabase
-      const [
-        { data: clientsData, error: clientsError },
-        { data: prospectsData, error: prospectsError },
-        { data: casesData, error: casesError },
-        { data: activitiesData, error: activitiesError }
-      ] = await Promise.all([
-        supabase.from('clients').select('*'),
-        supabase.from('prospects').select('*'),
-        supabase.from('cases').select('*'),
-        supabase.from('activity_logs').select('*').order('created_at', { ascending: false })
+      /* التحويل صار في `database.ts` — موضعٌ واحد. وكان مكرّراً هنا حرفاً
+         بحرف، فأيُّ عمودٍ يتغيّر اسمُه يلزم تعديلُه في موضعين، وأولُ ما
+         يُنسى أحدُهما. */
+      const [clientsData, prospectsData, casesData, activitiesData] = await Promise.all([
+        db.getClients(),
+        db.getProspects(),
+        db.getCases(),
+        db.getActivities(),
       ]);
-      
-      // التحقق من الأخطاء
-      if (clientsError) console.error('Error fetching clients:', clientsError);
-      if (prospectsError) console.error('Error fetching prospects:', prospectsError);
-      if (casesError) console.error('Error fetching cases:', casesError);
-      if (activitiesError) console.error('Error fetching activities:', activitiesError);
-      
-      // تحويل البيانات إلى التنسيق المطلوب
-      const transformedClients = (clientsData || []).map(c => ({
-        id: c.id,
-        fullName: c.full_name,
-        idNumber: c.id_number,
-        phone: c.phone,
-        email: c.email,
-        joinDate: new Date(c.join_date),
-        clientType: c.client_type,
-        status: c.status,
-        notes: c.notes,
-        attachments: c.attachments || [],
-        commercialRegister: c.commercial_register,
-        legalRepresentative: c.legal_representative,
-        profilePicture: c.profile_picture
-      }));
 
-      const transformedProspects = (prospectsData || []).map(p => ({
-        id: p.id,
-        fullName: p.full_name,
-        idNumber: p.id_number,
-        phone: p.phone,
-        email: p.email,
-        joinDate: new Date(p.join_date),
-        clientType: p.client_type,
-        prospectStatus: p.prospect_status,
-        notes: p.notes,
-        attachments: p.attachments || [],
-        commercialRegister: p.commercial_register,
-        legalRepresentative: p.legal_representative,
-        profilePicture: p.profile_picture,
-        source: p.source,
-        expectedValue: p.expected_value,
-        followUpDate: p.follow_up_date ? new Date(p.follow_up_date) : undefined,
-        assignedTo: p.assigned_to
-      }));
-
-      const transformedCases = (casesData || []).map(c => ({
-        id: c.id,
-        caseNumber: c.case_number,
-        caseType: c.case_type,
-        clientId: c.client_id,
-        clientName: c.client_name,
-        summary: c.summary,
-        status: c.status,
-        outcome: c.outcome,
-        basecampUrl: c.basecamp_url,
-        createdDate: new Date(c.created_at),
-        updatedDate: new Date(c.updated_at),
-        marketerId: c.marketer_id,
-        marketerName: c.marketer_name,
-        feeStructure: c.fee_structure,
-        paymentStatus: c.payment_status,
-        commissionStructure: c.commission_structure
-      }));
-
-      const transformedActivities = (activitiesData || []).map(a => ({
-        id: a.id,
-        type: a.type,
-        description: a.description,
-        userId: a.user_id,
-        userName: a.user_name,
-        entityId: a.entity_id,
-        entityType: a.entity_type,
-        timestamp: new Date(a.created_at),
-        details: a.details
-      }));
-      
-      setClients(transformedClients);
-      setProspects(transformedProspects);
-      setCases(transformedCases);
-      setActivities(transformedActivities);
+      setClients(clientsData);
+      setProspects(prospectsData);
+      setCases(casesData);
+      setActivities(activitiesData);
     } catch (error) {
       console.error('Error loading analytics data:', error);
       // Set empty arrays as fallback

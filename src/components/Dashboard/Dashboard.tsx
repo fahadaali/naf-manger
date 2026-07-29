@@ -3,8 +3,8 @@ import { Users, FileText, TrendingUp, Award, UserPlus, Link, Monitor, Copy, Chec
 import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { db } from '../../data/database';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -32,75 +32,9 @@ export default function Dashboard() {
   
   const loadStats = async () => {
     try {
-      // جلب البيانات مباشرة من Supabase
-      const [
-        { data: clients, error: clientsError },
-        { data: prospects, error: prospectsError },
-        { data: cases, error: casesError }
-      ] = await Promise.all([
-        supabase.from('clients').select('*'),
-        supabase.from('prospects').select('*'),
-        supabase.from('cases').select('*')
-      ]);
-
-      if (clientsError) throw clientsError;
-      if (prospectsError) throw prospectsError;
-      if (casesError) throw casesError;
-
-      const clientsData = clients || [];
-      const prospectsData = prospects || [];
-      const casesData = cases || [];
-
-      // حساب الإحصائيات
-      const totalClients = clientsData.length;
-      const totalProspects = prospectsData.length;
-      const totalCases = casesData.length;
-      
-      const pendingCases = casesData.filter(c => c.status === 'pending').length;
-      const inProgressCases = casesData.filter(c => c.status === 'in-progress').length;
-      const completedCases = casesData.filter(c => c.status === 'completed').length;
-      const postponedCases = casesData.filter(c => c.status === 'postponed').length;
-      
-      const wonCases = casesData.filter(c => c.outcome === 'won').length;
-      const winRate = completedCases > 0 ? Math.round((wonCases / completedCases) * 100) : 0;
-      
-      const conversionRate = (totalClients + totalProspects) > 0 ? 
-        Math.round((totalClients / (totalClients + totalProspects)) * 100) : 0;
-
-      // توزيع العملاء حسب النوع
-      const clientsByType = {
-        individual: clientsData.filter(c => c.client_type === 'individual').length,
-        company: clientsData.filter(c => c.client_type === 'company').length,
-        association: clientsData.filter(c => c.client_type === 'association').length,
-        government: clientsData.filter(c => c.client_type === 'government').length
-      };
-
-      // توزيع العملاء المحتملين حسب الحالة
-      const prospectsByStatus: Record<string, number> = {};
-      prospectsData.forEach(p => {
-        prospectsByStatus[p.prospect_status] = (prospectsByStatus[p.prospect_status] || 0) + 1;
-      });
-
-      // توزيع القضايا حسب الحالة
-      const casesByStatus = {
-        pending: pendingCases,
-        'in-progress': inProgressCases,
-        completed: completedCases,
-        postponed: postponedCases
-      };
-
-      setStats({
-        totalClients,
-        totalProspects,
-        totalCases,
-        pendingCases,
-        completedCases,
-        winRate,
-        clientsByType,
-        prospectsByStatus,
-        casesByStatus,
-        conversionRate
-      });
+      // الإحصاءات تُحسب في القاعدة لا هنا: جلبُ الجداول كاملةً إلى المتصفّح
+      // ليُعدّ صفوفُها كان ينقل آلاف الصفوف في كل فتحةِ لوحة.
+      setStats(await db.getStats());
     } catch (error) {
       console.error('Error loading stats:', error);
       // في حالة الخطأ، استخدم قيم افتراضية

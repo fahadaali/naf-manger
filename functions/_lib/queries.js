@@ -266,13 +266,23 @@ export async function readStats(env) {
   });
 }
 
-/** إحصاءاتُ مسوّقٍ بعينه. والمبالغ تعود ريالات كسائر الواجهة. */
+/**
+ * إحصاءاتُ مسوّقٍ بعينه.
+ *
+ * الحسابُ هنا لا في البطاقة: كانت تجلب قضايا المسوّق ودفعاتِه إلى المتصفّح
+ * لتعدّها، فكلُّ بطاقةٍ في الشبكة نداءان إلى القاعدة — عشرُ بطاقاتٍ عشرون.
+ *
+ * والمقدارُ المحصَّل والعمولةُ المستحقّة يُقرآن من `payment_status` و
+ * `commission_structure`، وهما بنيتان تكتبهما شاشةُ القضية بالريالات كما
+ * يُدخلها المستخدم. فلا تُقسَم على مئة هنا — القسمةُ لعمودَي المبالغ وحدهما.
+ */
 export async function readMarketerStats(env, user, marketerId) {
   if (!may(user, RESOURCES.marketers, 'read')) return fail('forbidden', 403);
 
   const [cases, paid] = await env.DB.batch([
     env.DB.prepare(
-      `SELECT status, outcome, COUNT(*) n FROM cases WHERE marketer_id = ? GROUP BY status, outcome`,
+      `SELECT status, outcome, payment_status, commission_structure
+       FROM cases WHERE marketer_id = ?`,
     ).bind(marketerId),
     env.DB.prepare(
       `SELECT COALESCE(SUM(amount), 0) total FROM commission_payments WHERE marketer_id = ?`,
@@ -283,11 +293,26 @@ export async function readMarketerStats(env, user, marketerId) {
   let completedCases = 0;
   let wonCases = 0;
   let lostCases = 0;
+  let totalRevenue = 0;
+  let totalCommissionEarned = 0;
+
   for (const row of cases.results ?? []) {
-    totalCases += row.n;
-    if (row.status === 'completed') completedCases += row.n;
-    if (row.outcome === 'won') wonCases += row.n;
-    if (row.outcome === 'lost') lostCases += row.n;
+    totalCases += 1;
+    if (row.status === 'completed') completedCases += 1;
+    if (row.outcome === 'won') wonCases += 1;
+    if (row.outcome === 'lost') lostCases += 1;
+
+    const payment = safeJson(row.payment_status);
+    const commission = safeJson(row.commission_structure);
+    const collected = Number(payment?.collectedAmount ?? 0);
+    totalRevenue += collected;
+
+    if (commission) {
+      totalCommissionEarned +=
+        commission.type === 'percentage'
+          ? (collected * Number(commission.value ?? 0)) / 100
+          : Number(commission.value ?? 0);
+    }
   }
 
   const totalCommissionPaid = Number(paid.results?.[0]?.total ?? 0) / 100;
@@ -299,12 +324,12 @@ export async function readMarketerStats(env, user, marketerId) {
       completedCases,
       wonCases,
       lostCases,
-      totalRevenue: 0,
-      totalCommissionEarned: 0,
+      totalRevenue,
+      totalCommissionEarned,
       totalCommissionPaid,
-      remainingCommission: 0,
-      conversionRate: totalCases > 0 ? Math.round((wonCases / totalCases) * 100) : 0,
-      averageCaseValue: 0,
+      remainingCommission: totalCommissionEarned - totalCommissionPaid,
+      conversionRate: completedCases > 0 ? Math.round((wonCases / completedCases) * 100) : 0,
+      averageCaseValue: totalCases > 0 ? Math.round(totalRevenue / totalCases) : 0,
     },
   });
 }

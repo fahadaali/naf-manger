@@ -5,7 +5,7 @@ import ProspectCard from './ProspectCard';
 import ProspectModal from './ProspectModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { db } from '../../data/database';
 
 export default function ProspectsView() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -29,35 +29,7 @@ export default function ProspectsView() {
     const loadProspectsAsync = async () => {
       try {
         // جلب العملاء المحتملين مباشرة من Supabase
-        const { data: prospectsData, error } = await supabase
-          .from('prospects')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // تحويل البيانات إلى التنسيق المطلوب
-        const transformedProspects = (prospectsData || []).map(p => ({
-          id: p.id,
-          fullName: p.full_name,
-          idNumber: p.id_number,
-          phone: p.phone,
-          email: p.email,
-          joinDate: new Date(p.join_date),
-          clientType: p.client_type as Prospect['clientType'],
-          prospectStatus: p.prospect_status,
-          notes: p.notes,
-          attachments: p.attachments || [],
-          commercialRegister: p.commercial_register,
-          legalRepresentative: p.legal_representative,
-          profilePicture: p.profile_picture,
-          source: p.source,
-          expectedValue: p.expected_value,
-          followUpDate: p.follow_up_date ? new Date(p.follow_up_date) : undefined,
-          assignedTo: p.assigned_to
-        }));
-
-        setProspects(transformedProspects);
+        setProspects(await db.getProspects());
       } catch (error) {
         console.error('Error loading prospects:', error);
         setProspects([]);
@@ -102,51 +74,13 @@ export default function ProspectsView() {
   const handleSaveProspect = (prospectData: Partial<Prospect>) => {
     const saveProspectAsync = async () => {
       try {
-        // تحويل البيانات إلى تنسيق Supabase
-        const supabaseData = {
-          full_name: prospectData.fullName,
-          id_number: prospectData.idNumber,
-          phone: prospectData.phone,
-          email: prospectData.email,
-          client_type: prospectData.clientType,
-          prospect_status: prospectData.prospectStatus,
-          notes: prospectData.notes,
-          commercial_register: prospectData.commercialRegister,
-          legal_representative: prospectData.legalRepresentative,
-          profile_picture: prospectData.profilePicture,
-          join_date: prospectData.joinDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-          attachments: prospectData.attachments || [],
-          source: prospectData.source,
-          expected_value: prospectData.expectedValue,
-          follow_up_date: prospectData.followUpDate?.toISOString().split('T')[0],
-          assigned_to: prospectData.assignedTo
-        };
-
         if (editingProspect) {
-          // تحديث عميل محتمل موجود
-          const { error } = await supabase
-            .from('prospects')
-            .update(supabaseData)
-            .eq('id', editingProspect.id);
-
-          if (!error) {
-            loadProspects(); // إعادة تحميل القائمة
-          } else {
-            throw error;
-          }
+          await db.updateProspect(editingProspect.id, prospectData);
         } else {
-          // إنشاء عميل محتمل جديد
-          const { error } = await supabase
-            .from('prospects')
-            .insert([supabaseData]);
-
-          if (!error) {
-            loadProspects(); // إعادة تحميل القائمة
-          } else {
-            throw error;
-          }
+          await db.createProspect(prospectData as Omit<Prospect, 'id'>);
         }
-        
+        loadProspects();
+
         setShowProspectModal(false);
         setEditingProspect(null);
         setSelectedProspect(null);
@@ -164,48 +98,18 @@ export default function ProspectsView() {
     if (window.confirm(`هل أنت متأكد من تحويل "${prospect.fullName}" إلى عميل فعلي؟`)) {
       const convertProspectAsync = async () => {
         try {
-          // تحويل العميل المحتمل إلى عميل فعلي
-          const clientData = {
-            full_name: prospect.fullName,
-            id_number: prospect.idNumber,
-            phone: prospect.phone,
-            email: prospect.email,
-            client_type: prospect.clientType,
-            status: 'current',
-            notes: prospect.notes,
-            commercial_register: prospect.commercialRegister,
-            legal_representative: prospect.legalRepresentative,
-            profile_picture: prospect.profilePicture,
-            join_date: new Date().toISOString().split('T')[0],
-            attachments: prospect.attachments || []
-          };
+          /* التحويل فعلٌ واحد على الخادم: النسخُ ثم الحذف من المتصفّح
+             يترك محتملاً نُسخ ولم يُحذف إن انقطعت الشبكة بينهما. */
+          await db.convertProspectToClient(prospect.id);
 
-          // إضافة العميل الجديد
-          const { error: insertError } = await supabase
-            .from('clients')
-            .insert([clientData]);
-
-          if (insertError) throw insertError;
-
-          // حذف العميل المحتمل
-          const { error: deleteError } = await supabase
-            .from('prospects')
-            .delete()
-            .eq('id', prospect.id);
-
-          if (deleteError) throw deleteError;
-
-          // إضافة نشاط
-          await supabase
-            .from('activity_logs')
-            .insert([{
-              type: 'prospect_converted',
-              description: `تم تحويل العميل المحتمل "${prospect.fullName}" إلى عميل فعلي`,
-              user_id: 'system',
-              user_name: 'النظام',
-              entity_id: prospect.id,
-              entity_type: 'prospect'
-            }]);
+          await db.addActivity({
+            type: 'prospect_converted',
+            description: `تم تحويل العميل المحتمل "${prospect.fullName}" إلى عميل فعلي`,
+            userId: 'system',
+            userName: 'النظام',
+            entityId: prospect.id,
+            entityType: 'prospect',
+          } as any);
 
             loadProspects(); // إعادة تحميل القائمة
             alert(`تم تحويل "${prospect.fullName}" إلى عميل فعلي بنجاح!`);

@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS cases (
   basecamp_url          TEXT,
   marketer_id           TEXT REFERENCES marketers(id),
   marketer_name         TEXT,
-  fee_structure         TEXT,                      -- JSON — مبالغُه هللات
+  fee_structure         TEXT,                      -- JSON — مبالغُه ريالات كما تكتبها الشاشة
   payment_status        TEXT,                      -- JSON
   commission_structure  TEXT,                      -- JSON
   created_at            INTEGER NOT NULL,
