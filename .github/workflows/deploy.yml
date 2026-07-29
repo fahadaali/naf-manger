@@ -42,15 +42,32 @@ jobs:
       # ── الموارد تُنشأ إن لم تكن، ومعرّفاتها تُحقن في wrangler.toml.
       #    المعرّفات لا تُلتزم في المستودع: السير يكتشفها في كل تشغيل،
       #    فلا نسخة من الملف تختلف عن أخرى.
+      #
+      #    و`CF_D1_DATABASE_ID` يسبق الاكتشاف حين يُضبط: قاعدةٌ بعينها
+      #    تُقصد بمعرّفها لا باسمها، فلا يُنشئ السير قاعدةً ثانية لأن اسماً
+      #    لم يطابق. واسمُها يُقرأ من الحساب ويُحقن كذلك — لأن خطوة الهجرة
+      #    تنادي بالاسم، فمعرّفٌ لقاعدةٍ باسمٍ آخر يهجّر غيرَ ما ينشر.
       - name: تجهيز قاعدة D1
+        env:
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
         run: |
-          DB_ID=$(npx wrangler d1 list --json | jq -r '.[] | select(.name=="naf-manger") | .uuid' | head -1)
-          if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
-            npx wrangler d1 create naf-manger
+          if [ -n "$CF_D1_DATABASE_ID" ]; then
+            DB_ID="$CF_D1_DATABASE_ID"
+            DB_NAME=$(npx wrangler d1 list --json | jq -r --arg id "$DB_ID" '.[] | select(.uuid==$id) | .name' | head -1)
+            [ -n "$DB_NAME" ] && [ "$DB_NAME" != "null" ] \
+              || { echo "::error::CF_D1_DATABASE_ID لا يقابل قاعدةً في هذا الحساب: $DB_ID"; exit 1; }
+          else
+            DB_NAME="naf-manger"
             DB_ID=$(npx wrangler d1 list --json | jq -r '.[] | select(.name=="naf-manger") | .uuid' | head -1)
+            if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
+              npx wrangler d1 create naf-manger
+              DB_ID=$(npx wrangler d1 list --json | jq -r '.[] | select(.name=="naf-manger") | .uuid' | head -1)
+            fi
           fi
-          echo "قاعدة D1: $DB_ID"
-          sed -i "s/REPLACE_WITH_D1_ID/$DB_ID/" wrangler.toml
+          echo "قاعدة D1: $DB_NAME ($DB_ID)"
+          echo "DB_NAME=$DB_NAME" >> "$GITHUB_ENV"
+          sed -i "s|REPLACE_WITH_D1_ID|$DB_ID|" wrangler.toml
+          sed -i "s|^database_name = .*|database_name = \"$DB_NAME\"|" wrangler.toml
 
       - name: تجهيز مساحة KV
         run: |
@@ -65,13 +82,54 @@ jobs:
       - name: تجهيز حاوية R2
         run: npx wrangler r2 bucket create naf-manger-files || true
 
+      # ── بريد الآدمن الأول ──
+      # يُحقن من أسرار المستودع ولا يُكتب في ملفّ متتبَّع: بريدُ شخصٍ بعينه
+      # لا يبقى في git إلى الأبد. وهو ليس سرّاً يحرس شيئاً — لا يُدخل أحداً
+      # ولا يمنعه — لكنّ إبقاءه خارج المستودع أنظف.
+      #
+      # وغيابُه لا يُسقط النشر: المنصة تعمل، ولا آدمن فيها. فيُنبَّه ولا يُفشل.
+      - name: حقن بريد الآدمن الأول
+        env:
+          BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
+        run: |
+          if [ -z "$BOOTSTRAP_ADMIN_EMAIL" ]; then
+            echo "::warning::لا BOOTSTRAP_ADMIN_EMAIL — لن يُنشأ آدمن، وكل داخل يأخذ staff."
+          fi
+          node -e '
+            const fs = require("fs");
+            const email = process.env.BOOTSTRAP_ADMIN_EMAIL || "";
+            const file = "wrangler.toml";
+            const next = fs.readFileSync(file, "utf8").replace(
+              /^BOOTSTRAP_ADMIN_EMAIL = .*$/m,
+              "BOOTSTRAP_ADMIN_EMAIL = " + JSON.stringify(email),
+            );
+            fs.writeFileSync(file, next);
+          '
+          grep -q "^BOOTSTRAP_ADMIN_EMAIL = " wrangler.toml \
+            || { echo "::error::لم يُحقن البريد — تغيّر شكل السطر في wrangler.toml."; exit 1; }
+
       # الهجرات للأمام فقط، وتطبيقها آمن للتكرار: wrangler يتتبّع المطبَّق.
+      # والاسم من الخطوة أعلاه لا مكتوباً هنا، فالهجرة تصيب ما يُنشر.
       - name: تطبيق الهجرات
-        run: npx wrangler d1 migrations apply naf-manger --remote
+        run: npx wrangler d1 migrations apply "$DB_NAME" --remote
 
       - name: إنشاء مشروع Pages
         run: |
           npx wrangler pages project create "$PROJECT" --production-branch main || true
+
+      # ── سرّ المنصة ──
+      # يُحمل إلى Pages من أسرار المستودع إن وُجد هناك. وهذا اختياري: من
+      # وضعه بـ`wrangler pages secret put` مرّةً لا يحتاجه، والخطوة تمرّ.
+      #
+      # ولا يُطبع ولا يُمرَّر في سطر أوامر: يدخل من المجرى القياسي، فلا
+      # يظهر في `ps` ولا في سجلّ التشغيل.
+      - name: حمل سرّ المنصة إلى Pages
+        if: ${{ secrets.AUTH_CLIENT_SECRET != '' }}
+        env:
+          AUTH_CLIENT_SECRET: ${{ secrets.AUTH_CLIENT_SECRET }}
+        run: |
+          printf '%s' "$AUTH_CLIENT_SECRET" \
+            | npx wrangler pages secret put AUTH_CLIENT_SECRET --project-name "$PROJECT"
 
       # ── بوابة السرّ ──
       # الدخول كلّه يقف على `AUTH_CLIENT_SECRET`، وغيابُه لا يظهر إلا عند
