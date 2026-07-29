@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import LoginPage from './components/Auth/LoginPage';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import Dashboard from './components/Dashboard/Dashboard';
@@ -14,34 +13,15 @@ import ReportsView from './components/Reports/ReportsView';
 import { db } from './data/database';
 import SmartLawyer from './components/SmartLawyer/SmartLawyer';
 import MarketersView from './components/Marketers/MarketersView';
-import LandingPage from './components/LandingPage/LandingPage';
+import Denied from './components/Auth/Denied';
 
-interface LoginModalProps {
-  onClose: () => void;
-}
-
-function LoginModal({ onClose }: LoginModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <LoginPage />
-        <button
-          onClick={onClose}
-          className="absolute top-4 left-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
+/* `LoginModal` كان هنا، ويعرض `LoginPage` فوق `LandingPage`. وقد سقط الاثنان
+   من المسار حين صار الباب مركزياً: الوسيط يحرس الجذر، فلا يبلغ هذه الحزمةَ
+   متصفّحٌ بلا جلسة أصلاً. والملفّان باقيان في المستودع كما هما. */
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const { isAuthenticated, loading } = useAuth();
   const [settings, setSettings] = useState<any>(null);
 
@@ -77,14 +57,17 @@ function AppContent() {
     );
   }
 
+  /* غير المصادَق لا يبلغ هنا في السويّ: الوسيط يحوّله إلى المركز قبل أن
+     تصل هذه الحزمة إلى متصفّحه. وبلوغُه يعني تعذّر `‎/api/me` — فيُعرض
+     نصٌّ مسجَّل ولا تُعرض شاشة دخول محلية: الباب هو المركز.
+
+     وصفحتا `LandingPage` و`LoginPage` باقيتان في المستودع ولا يقود إليهما
+     مسار. حذفُهما قرارٌ مستقل عن ربط الدخول، فلا يُخلط به. */
   if (!isAuthenticated) {
     return (
-      <>
-        <LandingPage onShowLogin={() => setShowLoginModal(true)} />
-        {showLoginModal && (
-          <LoginModal onClose={() => setShowLoginModal(false)} />
-        )}
-      </>
+      <div dir="rtl" className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <p className="text-slate-700">حدث خطأ في النظام. أعد المحاولة بعد قليل</p>
+      </div>
     );
   }
 
@@ -187,6 +170,16 @@ function AppContent() {
 }
 
 function App() {
+  /* `‎/denied` مسارٌ عام: يبلغه من لا جلسةَ له ومن مُنع، فلا يمرّ بـ
+     `AuthProvider` — وإلّا استدعى `‎/api/me` فرُدّ بـ٤٠١ ومعه عنوان الباب،
+     فيُحوَّل الممنوعُ إلى المركز الذي ردّه توّاً، ويعود منه ممنوعاً. لفّةٌ
+     لا تنتهي، وصاحبُها لا يقرأ سببه أبداً.
+
+     والمطابقة بالمساواة التامة لا بالبادئة: `‎/denied-something` مسارٌ آخر. */
+  if (window.location.pathname === '/denied') {
+    return <Denied />;
+  }
+
   return (
     <AuthProvider>
       <AppContent />
