@@ -1,7 +1,33 @@
 name = "naf-manger"
 compatibility_date = "2026-07-29"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "dist"
+main = "worker/index.js"
+
+# النطاق: naf-manger.<الحساب>.workers.dev — وهو ما يُسجَّل في المركز
+# مسارَ استقبالٍ كاملاً: https://naf-manger.naflaw-sa.workers.dev/auth/callback
+workers_dev = true
+
+# ─────────────────────────────────────────────────────────────
+# الأصول الساكنة — بناءُ Vite.
+# ─────────────────────────────────────────────────────────────
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+# كل مسارٍ لا ملفَّ له يعود `index.html`: اللوحة توجّه نفسها في المتصفّح.
+# وهو بديل `public/_redirects` الذي كانت تقرؤه Pages ولا يقرؤه Worker.
+not_found_handling = "single-page-application"
+
+# ═══ ولولا هذا السطر لسقطت الحراسة كلُّها ═══
+#
+# الأصول تُقدَّم قبل الـWorker افتراضاً. فطلبُ `‎/` كان يجد `index.html`
+# ويُقدَّم مباشرةً بلا أن يمرّ بالحارس — فلا تحويلة إلى المركز، ويصل
+# غيرُ المسجَّل إلى اللوحة ثم تسقط نداءاتُها بـ٤٠١ واحداً واحداً.
+#
+# وهو فرقٌ جوهري عن Pages: هناك `_middleware.js` يسبق كل طلب بطبعه،
+# وهنا يجب أن يُطلب. فيُشغَّل الـWorker أولاً، وهو من ينادي `ASSETS`
+# بعد أن يقرّر.
+run_worker_first = true
 
 # ─────────────────────────────────────────────────────────────
 # متغيّرات غير سرّية. لا سرّ هنا إطلاقاً — السرّ عبر:

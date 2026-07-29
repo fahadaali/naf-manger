@@ -116,13 +116,22 @@ jobs:
       - name: تطبيق الهجرات
         run: npx wrangler d1 migrations apply "$DB_NAME" --remote
 
-      - name: إنشاء مشروع Pages
-        run: |
-          npx wrangler pages project create "$PROJECT" --production-branch main || true
+      - name: البناء
+        run: npm run build
+
+      # ── النشر يسبق السرّ، ولا بدّ ──
+      # `wrangler secret put` يشترط وجود الـWorker: على عاملٍ لم يُنشر بعد
+      # يسأل «أأنشئه؟» — سؤالٌ لا مجيب له في عدّاءٍ بلا طرفية. فالترتيب
+      # هنا معكوسٌ عمّا كان في Pages، وهو ما تفرضه المنصة لا اختيارٌ.
+      #
+      # ووضعُ السرّ بعد النشر ينفذ فوراً: تغييرُ سرٍّ يُصدر نسخةً جديدة من
+      # العامل نفسه، فلا ينتظر نشرةً تالية.
+      - name: النشر
+        run: npx wrangler deploy
 
       # ── سرّ المنصة ──
-      # يُحمل إلى Pages من أسرار المستودع إن وُجد هناك. وهذا اختياري: من
-      # وضعه بـ`wrangler pages secret put` مرّةً لا يحتاجه، والخطوة تمرّ.
+      # يُحمل من أسرار المستودع إن وُجد. واختياريٌّ: من وضعه بـ
+      # `wrangler secret put` مرّةً لا يحتاجه، والخطوة تمرّ.
       #
       # ولا يُطبع ولا يُمرَّر في سطر أوامر: يدخل من المجرى القياسي، فلا
       # يظهر في `ps` ولا في سجلّ التشغيل.
@@ -130,34 +139,20 @@ jobs:
       # والفحص في الصدفة لا في `if:` — سياق `secrets` لا يُقرأ في شرط خطوة،
       # ووجودُه هناك خطأُ تحقّقٍ يردّ الملفّ كلَّه قبل أن تُنشأ وظيفة واحدة:
       # يظهر تشغيلاً فاشلاً بلا وظائف ولا سجلّ، ولا يقول أين العطل.
-      - name: حمل سرّ المنصة إلى Pages
+      - name: حمل سرّ المنصة
         env:
           AUTH_CLIENT_SECRET: ${{ secrets.AUTH_CLIENT_SECRET }}
         run: |
           if [ -z "$AUTH_CLIENT_SECRET" ]; then
-            echo "لا سرّ في أسرار المستودع — يُتوقَّع أنه مضبوط في Pages مباشرةً."
+            echo "لا سرّ في أسرار المستودع — يُتوقَّع أنه مضبوط على العامل مباشرةً."
             exit 0
           fi
-          printf '%s' "$AUTH_CLIENT_SECRET" \
-            | npx wrangler pages secret put AUTH_CLIENT_SECRET --project-name "$PROJECT"
+          printf '%s' "$AUTH_CLIENT_SECRET" | npx wrangler secret put AUTH_CLIENT_SECRET
 
       # ── بوابة السرّ ──
-      # الدخول كلّه يقف على `AUTH_CLIENT_SECRET`، وغيابُه لا يظهر إلا عند
-      # أول مبادلة: يفشل الدخول برسالة لا تفرّق بين سرٍّ غائب وسرٍّ خاطئ.
-      # فيُفحص وجودُه قبل النشر لا بعده.
+      # الدخول كلّه يقف عليه، وغيابُه لا يظهر إلا عند أول مبادلة: يفشل
+      # الدخول برسالة لا تفرّق بين سرٍّ غائب وسرٍّ خاطئ. فيُفحص هنا صراحةً.
       - name: التحقق من وجود سرّ المنصة
         run: |
-          npx wrangler pages secret list --project-name "$PROJECT" \
-            | grep -q AUTH_CLIENT_SECRET \
-            || { echo "::error::لا سرّ: wrangler pages secret put AUTH_CLIENT_SECRET --project-name $PROJECT"; exit 1; }
-
-      - name: البناء
-        run: npm run build
-
-      # `--commit-dirty=true` لازم: الخطوات أعلاه تكتب في `wrangler.toml`
-      # بمعرّفات الموارد وبريد الآدمن، فالشجرة متّسخة حتماً عند هذه النقطة.
-      # وبدونه يسأل wrangler سؤالاً لا مجيب له في عدّاءٍ بلا طرفية.
-      - name: النشر
-        run: |
-          npx wrangler pages deploy dist \
-            --project-name "$PROJECT" --branch main --commit-dirty=true
+          npx wrangler secret list | grep -q AUTH_CLIENT_SECRET \
+            || { echo "::error::لا سرّ: wrangler secret put AUTH_CLIENT_SECRET"; exit 1; }
