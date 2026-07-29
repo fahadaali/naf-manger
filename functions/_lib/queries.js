@@ -1,0 +1,334 @@
+// المسارات التي لا يكفيها CRUD: الإعدادات والأعضاء والإحصاءات والتحويل.
+
+import { RESOURCES, toClient } from './resources.js';
+import { may } from './crud.js';
+import { permissionsFor } from './roles.js';
+
+const json = (body, status = 200) => Response.json(body, { status });
+const fail = (error, status) => json({ ok: false, error }, status);
+
+const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+/* ═══ الإعدادات ═══
+ *
+ * كانت في Supabase صفّاً لكل مفتاح، وكان القارئ يبني الكائن من الصفوف
+ * بجملة `switch` طويلة. وهي هنا كائنٌ واحد تحت مفتاح واحد: الواجهة تقرؤه
+ * كاملاً وتكتبه كاملاً، فتفريقُه صفوفاً يضيف ترجمةً في الطرفين بلا مقابل.
+ */
+const SETTINGS_KEY = 'settings';
+
+/** الافتراضي — يُعطي الشاشات مفرداتِها قبل أن يحفظ أحدٌ شيئاً. */
+const DEFAULT_SETTINGS = {
+  clientTypes: ['individual', 'company', 'association', 'government'],
+  clientStatuses: ['current', 'former'],
+  prospectStatuses: ['مهتم', 'تم التواصل', 'بانتظار توقيع', 'غير مناسب', 'تم الرفض'],
+  prospectSources: [
+    'موقع إلكتروني',
+    'وسائل التواصل الاجتماعي',
+    'إحالة من عميل',
+    'إعلان',
+    'معرض',
+    'أخرى',
+  ],
+  caseTypes: ['قضية تجارية', 'قضية عمالية', 'قضية مدنية', 'قضية جزائية'],
+  caseStatuses: ['pending', 'in-progress', 'completed', 'postponed'],
+  marketerStatuses: ['active', 'inactive'],
+  relationshipTypes: ['freelancer', 'employee', 'partner'],
+  commissionTypes: ['percentage', 'fixed_amount'],
+  collectionStatuses: ['pending', 'partial', 'collected'],
+  feeTypes: ['fixed_amount', 'percentage'],
+  companyName: 'NAF Law',
+  companyDescription: 'نظام إدارة المكتب القانوني',
+};
+
+export async function readSettings(env) {
+  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
+    .bind(SETTINGS_KEY)
+    .first();
+
+  let stored = {};
+  try {
+    stored = row?.value ? JSON.parse(row.value) : {};
+  } catch {
+    // إعدادٌ تالف يُقرأ غياباً: الشاشات تعمل بالافتراضي بدل أن تسقط.
+    stored = {};
+  }
+
+  return json({ ok: true, data: { ...DEFAULT_SETTINGS, ...stored } });
+}
+
+export async function writeSettings(request, env, user) {
+  if (!user.permissions?.settings?.update) return fail('forbidden', 403);
+
+  let patch;
+  try {
+    patch = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+  if (!patch || typeof patch !== 'object') return fail('invalid_body', 400);
+
+  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
+    .bind(SETTINGS_KEY)
+    .first();
+
+  let stored = {};
+  try {
+    stored = row?.value ? JSON.parse(row.value) : {};
+  } catch {
+    stored = {};
+  }
+
+  const merged = { ...stored, ...patch };
+
+  await env.DB.prepare(
+    `INSERT INTO system_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+                                    updated_by = excluded.updated_by,
+                                    updated_at = excluded.updated_at`,
+  )
+    .bind(SETTINGS_KEY, JSON.stringify(merged), user.id, nowSeconds())
+    .run();
+
+  return json({ ok: true, data: { ...DEFAULT_SETTINGS, ...merged } });
+}
+
+/* ═══ الأعضاء ═══
+ *
+ * شاشة المستخدمين تقرأ هذا وتكتبه. ولا إنشاء هنا ولا كلمة مرور: العضوية
+ * تُنشأ بأول دخولٍ من المركز، والمنصة ترقّي وتوقف لا أكثر.
+ */
+export async function listMembers(env, user) {
+  if (!user.permissions?.users?.read) return fail('forbidden', 403);
+
+  const { results } = await env.DB.prepare(
+    `SELECT user_id, display_name, email, role, perms, is_active, created_at, last_seen_at
+     FROM members ORDER BY created_at DESC`,
+  ).all();
+
+  const data = (results ?? []).map((row) => ({
+    id: row.user_id,
+    name: row.display_name ?? '',
+    email: row.email ?? '',
+    role: row.role,
+    isActive: Number(row.is_active) === 1,
+    permissions: permissionsFor(row.role, safeJson(row.perms)),
+    createdDate: row.created_at ? new Date(row.created_at * 1000).toISOString() : null,
+    lastLogin: row.last_seen_at ? new Date(row.last_seen_at * 1000).toISOString() : null,
+  }));
+
+  return json({ ok: true, data });
+}
+
+export async function updateMember(request, env, user, id) {
+  if (!user.permissions?.users?.update) return fail('forbidden', 403);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+
+  const sets = [];
+  const values = [];
+
+  if (typeof body.role === 'string' && body.role) {
+    sets.push('role = ?');
+    values.push(body.role);
+  }
+  if (body.permissions && typeof body.permissions === 'object') {
+    sets.push('perms = ?');
+    values.push(JSON.stringify(body.permissions));
+  }
+  if (typeof body.isActive === 'boolean') {
+    /* إيقافُ عضوٍ هنا يمنعه من الدخول: الوسيط يقرأ `is_active` في كل طلب
+       محميّ، فالإيقاف يسري في الطلب التالي لا عند انتهاء كوكيه. */
+    sets.push('is_active = ?');
+    values.push(body.isActive ? 1 : 0);
+  }
+
+  if (!sets.length) return fail('empty_update', 400);
+
+  /* ولا يُوقف العضوُ نفسَه ولا يُنزّل دورَه: آخرُ آدمنٍ يفعلها يُغلق
+     شاشةَ المستخدمين على الجميع، ولا سبيل للعودة إلا من القاعدة. */
+  if (id === user.id && (body.isActive === false || body.role)) {
+    return fail('cannot_change_self', 409);
+  }
+
+  values.push(id);
+  const result = await env.DB.prepare(`UPDATE members SET ${sets.join(', ')} WHERE user_id = ?`)
+    .bind(...values)
+    .run();
+
+  if (!result.meta?.changes) return fail('not_found', 404);
+  return json({ ok: true });
+}
+
+/* ═══ تحويل محتملٍ إلى عميل ═══
+   الصفّان يتحرّكان معاً: يُنشأ العميل ويُحذف المحتمل. و`batch` يجعلهما
+   دفعةً واحدة، فلا يبقى محتملٌ نُسخ ولم يُحذف. */
+export async function convertProspect(env, user, id) {
+  if (!may(user, RESOURCES.prospects, 'update') || !may(user, RESOURCES.clients, 'create')) {
+    return fail('forbidden', 403);
+  }
+
+  const row = await env.DB.prepare(`SELECT * FROM prospects WHERE id = ?`).bind(id).first();
+  if (!row) return fail('not_found', 404);
+
+  const clientId = crypto.randomUUID();
+  const now = nowSeconds();
+
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO clients (id, full_name, id_number, phone, email, join_date, client_type,
+                            status, notes, profile_picture, commercial_register,
+                            legal_representative, attachments, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'current', ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      clientId,
+      row.full_name,
+      row.id_number,
+      row.phone,
+      row.email,
+      row.join_date,
+      row.client_type,
+      row.notes,
+      row.profile_picture,
+      row.commercial_register,
+      row.legal_representative,
+      row.attachments,
+      now,
+      now,
+    ),
+    env.DB.prepare(`DELETE FROM prospects WHERE id = ?`).bind(id),
+  ]);
+
+  const created = await env.DB.prepare(`SELECT * FROM clients WHERE id = ?`)
+    .bind(clientId)
+    .first();
+
+  return json({ ok: true, data: toClient(RESOURCES.clients, created) }, 201);
+}
+
+/* ═══ الإحصاءات ═══
+   تُحسب في القاعدة لا في الذاكرة: الجمعُ على آلاف الصفوف في `Worker` يحمل
+   الجدول كلَّه إليه في كل فتحةِ لوحة. */
+export async function readStats(env) {
+  const [clients, prospects, cases] = await env.DB.batch([
+    env.DB.prepare(`SELECT client_type, COUNT(*) n FROM clients GROUP BY client_type`),
+    env.DB.prepare(`SELECT prospect_status, COUNT(*) n FROM prospects GROUP BY prospect_status`),
+    env.DB.prepare(`SELECT status, outcome, COUNT(*) n FROM cases GROUP BY status, outcome`),
+  ]);
+
+  const clientsByType = {};
+  let totalClients = 0;
+  for (const row of clients.results ?? []) {
+    clientsByType[row.client_type] = row.n;
+    totalClients += row.n;
+  }
+
+  const prospectsByStatus = {};
+  let totalProspects = 0;
+  for (const row of prospects.results ?? []) {
+    prospectsByStatus[row.prospect_status] = row.n;
+    totalProspects += row.n;
+  }
+
+  const casesByStatus = {};
+  let totalCases = 0;
+  let completedCases = 0;
+  let wonCases = 0;
+  for (const row of cases.results ?? []) {
+    casesByStatus[row.status] = (casesByStatus[row.status] ?? 0) + row.n;
+    totalCases += row.n;
+    if (row.status === 'completed') completedCases += row.n;
+    if (row.outcome === 'won') wonCases += row.n;
+  }
+
+  return json({
+    ok: true,
+    data: {
+      totalClients,
+      totalProspects,
+      totalCases,
+      pendingCases: casesByStatus.pending ?? 0,
+      completedCases,
+      winRate: completedCases > 0 ? Math.round((wonCases / completedCases) * 100) : 0,
+      clientsByType,
+      prospectsByStatus,
+      casesByStatus,
+      conversionRate:
+        totalClients + totalProspects > 0
+          ? Math.round((totalClients / (totalClients + totalProspects)) * 100)
+          : 0,
+    },
+  });
+}
+
+/** إحصاءاتُ مسوّقٍ بعينه. والمبالغ تعود ريالات كسائر الواجهة. */
+export async function readMarketerStats(env, user, marketerId) {
+  if (!may(user, RESOURCES.marketers, 'read')) return fail('forbidden', 403);
+
+  const [cases, paid] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT status, outcome, COUNT(*) n FROM cases WHERE marketer_id = ? GROUP BY status, outcome`,
+    ).bind(marketerId),
+    env.DB.prepare(
+      `SELECT COALESCE(SUM(amount), 0) total FROM commission_payments WHERE marketer_id = ?`,
+    ).bind(marketerId),
+  ]);
+
+  let totalCases = 0;
+  let completedCases = 0;
+  let wonCases = 0;
+  let lostCases = 0;
+  for (const row of cases.results ?? []) {
+    totalCases += row.n;
+    if (row.status === 'completed') completedCases += row.n;
+    if (row.outcome === 'won') wonCases += row.n;
+    if (row.outcome === 'lost') lostCases += row.n;
+  }
+
+  const totalCommissionPaid = Number(paid.results?.[0]?.total ?? 0) / 100;
+
+  return json({
+    ok: true,
+    data: {
+      totalCases,
+      completedCases,
+      wonCases,
+      lostCases,
+      totalRevenue: 0,
+      totalCommissionEarned: 0,
+      totalCommissionPaid,
+      remainingCommission: 0,
+      conversionRate: totalCases > 0 ? Math.round((wonCases / totalCases) * 100) : 0,
+      averageCaseValue: 0,
+    },
+  });
+}
+
+/** تصدير كل ما تملكه المنصة — للآدمن وحده. */
+export async function exportAll(env, user) {
+  if (!user.permissions?.settings?.read) return fail('forbidden', 403);
+
+  const tables = ['clients', 'prospects', 'cases', 'marketers', 'commission_payments', 'activity_logs'];
+  const data = {};
+
+  for (const table of tables) {
+    const { results } = await env.DB.prepare(`SELECT * FROM ${table}`).all();
+    data[table] = results ?? [];
+  }
+
+  return json({ ok: true, data });
+}
+
+function safeJson(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}

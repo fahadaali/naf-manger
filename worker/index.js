@@ -7,6 +7,17 @@ import { authenticate, handleBackchannelLogout, handleCallback, handleLogout } f
 
 import { platformConfig } from '../functions/_lib/config.js';
 import { readMember, serveFile, uploadFile } from '../functions/_lib/handlers.js';
+import { handleResource } from '../functions/_lib/crud.js';
+import {
+  convertProspect,
+  exportAll,
+  listMembers,
+  readMarketerStats,
+  readSettings,
+  readStats,
+  updateMember,
+  writeSettings,
+} from '../functions/_lib/queries.js';
 
 const FILES_PREFIX = '/api/files/';
 
@@ -63,9 +74,46 @@ export default {
       return serveFile(env, url.pathname.slice(FILES_PREFIX.length));
     }
 
-    /* مسارٌ تحت `‎/api/` لا معالج له يُردّ JSON لا صفحة: من ناداه `fetch`
-       ينتظر JSON، وصفحةُ الواجهة تُسقط تحليله بخطأ لا صلة له بالسبب. */
-    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
+    /* ═══ الموارد ═══
+       الأفعالُ الخاصة أوّلاً — لأن `‎/api/prospects/:id/convert` يطابق
+       شكلَ المورد كذلك، ولو تُرك له لعُومل `convert` معرّفَ صفّ. */
+    const segments = url.pathname.split('/').filter(Boolean); // ['api', name, id, verb]
+
+    if (segments[0] === 'api') {
+      const [, name, id, verb] = segments;
+
+      if (name === 'stats' && !id && request.method === 'GET') {
+        return readStats(env);
+      }
+      if (name === 'settings' && !id) {
+        if (request.method === 'GET') return readSettings(env);
+        if (request.method === 'PATCH' || request.method === 'PUT') {
+          return writeSettings(request, env, user);
+        }
+      }
+      if (name === 'members') {
+        if (!id && request.method === 'GET') return listMembers(env, user);
+        if (id && (request.method === 'PATCH' || request.method === 'PUT')) {
+          return updateMember(request, env, user, id);
+        }
+      }
+      if (name === 'export' && !id && request.method === 'GET') {
+        return exportAll(env, user);
+      }
+      if (name === 'prospects' && id && verb === 'convert' && request.method === 'POST') {
+        return convertProspect(env, user, id);
+      }
+      if (name === 'marketers' && id && verb === 'stats' && request.method === 'GET') {
+        return readMarketerStats(env, user, id);
+      }
+
+      // المسارات العامة للموارد: قائمةٌ أو صفّ. وما زاد على ذلك ليس مساراً.
+      if (name && !verb) {
+        return handleResource(request, env, user, name, id);
+      }
+
+      /* مسارٌ تحت `‎/api/` لا معالج له يُردّ JSON لا صفحة: من ناداه `fetch`
+         ينتظر JSON، وصفحةُ الواجهة تُسقط تحليله بخطأ لا صلة له بالسبب. */
       return Response.json({ ok: false, error: 'not_found' }, { status: 404 });
     }
 

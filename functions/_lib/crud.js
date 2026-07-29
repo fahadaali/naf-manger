@@ -1,0 +1,175 @@
+// عملياتُ الموارد — قراءةً وكتابةً — ومعها الحارس.
+//
+// ═══ هذا هو موضع سياسات الصفوف الثلاثين ═══
+//
+// Supabase كانت تحرس الصفوف في القاعدة نفسها: ثلاثون `CREATE POLICY` تقول
+// من يقرأ ومن يكتب ومن يحذف. و D1 لا تعرف من ذلك شيئاً — تنفّذ ما يصلها.
+//
+// فالحراسة انتقلت إلى هنا، إلى **دالّة واحدة** يمرّ بها كل مسار. ولم
+// تُفرَّق على المسارات: مسارٌ يُنسى حارسُه يفتح جدولَه لكل عضو مهما كان
+// دورُه، ويفشل فشلاً صامتاً — لا خطأ، ولا سطر في سجلّ، وإنما موظّفٌ يقرأ
+// ما ليس له.
+
+import { RESOURCES, orderOf, toClient, toRow } from './resources.js';
+
+const json = (body, status = 200) => Response.json(body, { status });
+const fail = (error, status) => json({ ok: false, error }, status);
+
+/** فعلُ كل طريقة. `convert` فعلٌ خاص يُطلب صراحةً. */
+const ACTION = { GET: 'read', POST: 'create', PATCH: 'update', PUT: 'update', DELETE: 'delete' };
+
+/**
+ * أيملك هذا العضو هذا الفعل على هذا المورد؟
+ *
+ * `permission: null` يعني «كلُّ عضوٍ مفعَّل» — وهو سجلُّ الأنشطة وحده،
+ * لأنه أثرٌ لا محتوى.
+ */
+export function may(user, resource, action) {
+  if (!resource.permission) return true;
+  const granted = user.permissions?.[resource.permission];
+  return Boolean(granted && granted[action]);
+}
+
+function nowSeconds() {
+  return Math.floor(Date.now() / 1000);
+}
+
+/** معرّفٌ عشوائي بالكامل — لا يُشتقّ من محتوى الصفّ ولا يُعدّ. */
+function newId() {
+  return crypto.randomUUID();
+}
+
+export async function listRows(env, resource) {
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM ${resource.table} ORDER BY ${orderOf(resource)}`,
+  ).all();
+  return (results ?? []).map((row) => toClient(resource, row));
+}
+
+export async function getRow(env, resource, id) {
+  const row = await env.DB.prepare(`SELECT * FROM ${resource.table} WHERE id = ?`)
+    .bind(id)
+    .first();
+  return toClient(resource, row);
+}
+
+export async function createRow(env, resource, body) {
+  const row = { ...(resource.defaults ?? {}), ...toRow(resource, body) };
+  const now = nowSeconds();
+
+  row.id = newId();
+  row.created_at = now;
+  if (resource.timestamps !== 'created') row.updated_at = now;
+
+  for (const column of resource.required ?? []) {
+    if (row[column] === undefined || row[column] === null || row[column] === '') {
+      return { error: 'missing_field', status: 400 };
+    }
+  }
+
+  const columns = Object.keys(row);
+  const placeholders = columns.map(() => '?').join(', ');
+
+  try {
+    await env.DB.prepare(
+      `INSERT INTO ${resource.table} (${columns.join(', ')}) VALUES (${placeholders})`,
+    )
+      .bind(...columns.map((c) => row[c]))
+      .run();
+  } catch (err) {
+    return constraintError(err);
+  }
+
+  return { data: await getRow(env, resource, row.id) };
+}
+
+export async function updateRow(env, resource, id, body) {
+  const row = toRow(resource, body);
+  if (resource.timestamps !== 'created') row.updated_at = nowSeconds();
+
+  const columns = Object.keys(row);
+  if (!columns.length) return { error: 'empty_update', status: 400 };
+
+  const assignments = columns.map((c) => `${c} = ?`).join(', ');
+
+  let result;
+  try {
+    result = await env.DB.prepare(`UPDATE ${resource.table} SET ${assignments} WHERE id = ?`)
+      .bind(...columns.map((c) => row[c]), id)
+      .run();
+  } catch (err) {
+    return constraintError(err);
+  }
+
+  /* صفٌّ لم يُصب يعني معرّفاً لا وجود له — ٤٠٤ لا ٢٠٠ بجسمٍ فارغ، وإلا
+     قرأت الشاشةُ نجاحاً حيث لم يقع شيء. */
+  if (!result.meta?.changes) return { error: 'not_found', status: 404 };
+
+  return { data: await getRow(env, resource, id) };
+}
+
+export async function deleteRow(env, resource, id) {
+  const result = await env.DB.prepare(`DELETE FROM ${resource.table} WHERE id = ?`)
+    .bind(id)
+    .run();
+  if (!result.meta?.changes) return { error: 'not_found', status: 404 };
+  return { data: { ok: true } };
+}
+
+/* تفرّدُ `id_number` و`case_number` مضمونٌ في المخطّط. ورسالةُ SQLite
+   تُترجم رمزاً معروفاً، فتقول الشاشةُ «مسجَّل من قبل» بدل «خطأ في النظام». */
+function constraintError(err) {
+  const text = String(err?.message ?? '');
+  if (/UNIQUE constraint/i.test(text)) return { error: 'duplicate', status: 409 };
+  if (/FOREIGN KEY constraint/i.test(text)) return { error: 'invalid_reference', status: 409 };
+  if (/NOT NULL constraint/i.test(text)) return { error: 'missing_field', status: 400 };
+  throw err;
+}
+
+/**
+ * موجِّهُ الموارد.
+ *
+ * `‎/api/{resource}` و`‎/api/{resource}/{id}` لا أكثر. والأفعالُ الخاصة —
+ * التحويل والإحصاءات — تُعالَج قبل النداء عليه.
+ */
+export async function handleResource(request, env, user, name, id) {
+  const resource = RESOURCES[name];
+  if (!resource) return fail('not_found', 404);
+
+  const action = ACTION[request.method];
+  if (!action) return fail('method_not_allowed', 405);
+
+  if (!may(user, resource, action)) return fail('forbidden', 403);
+
+  if (request.method === 'GET') {
+    if (!id) return json({ ok: true, data: await listRows(env, resource) });
+    const row = await getRow(env, resource, id);
+    return row ? json({ ok: true, data: row }) : fail('not_found', 404);
+  }
+
+  if (request.method === 'DELETE') {
+    if (!id) return fail('not_found', 404);
+    return respond(await deleteRow(env, resource, id));
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+  if (!body || typeof body !== 'object') return fail('invalid_body', 400);
+
+  if (request.method === 'POST') {
+    if (id) return fail('not_found', 404);
+    return respond(await createRow(env, resource, body), 201);
+  }
+
+  if (!id) return fail('not_found', 404);
+  return respond(await updateRow(env, resource, id, body));
+}
+
+function respond(result, okStatus = 200) {
+  if (result.error) return fail(result.error, result.status);
+  return json({ ok: true, data: result.data }, okStatus);
+}
