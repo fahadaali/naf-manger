@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# أسرار التطوير المحلي لـ Cloudflare — المثال وحده يُلتزم
+.dev.vars
+
+# حالة wrangler المحلية: قاعدة D1 المحلية وكاش المحاكي
+.wrangler
