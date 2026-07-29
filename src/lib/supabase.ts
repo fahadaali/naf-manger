@@ -1,20 +1,54 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // متغيرات البيئة لـ Supabase
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+/* ═══ العميل يُنشأ عند أول استعمال، لا عند تحميل الوحدة ═══
+ *
+ * كان هنا `throw` عارياً في جسم الوحدة حين يغيب المتغيّران. و`Vite` يحقن
+ * هذين المتغيّرين **وقت البناء**، فبناءٌ لا يجدهما يُدرج الرمية في الحزمة —
+ * فتقع لحظةَ تحميلها، قبل أن يُركّب React شيئاً.
+ *
+ * والنتيجة صفحةٌ بيضاء تامّة في كل مسار: لا رسالة، ولا تحويلة إلى المركز،
+ * ولا حتى صفحة `‎/denied`. لأن `App` يستورد `data/database` وهو يستورد هذا
+ * الملفّ، فالسلسلة تنكسر عند أوّل `import`.
+ *
+ * والدخول لم يعد يمرّ بـSupabase أصلاً — المركز هو الباب — فغيابُ إعدادها
+ * يجب أن يُعطّل شاشات البيانات وحدها، لا أن يُسقط التطبيق كلَّه قبل أن يبدأ.
+ *
+ * فصار الخطأ يقع عند أول نداء فعليّ: من يسأل القاعدة يُخفق ويُخفق وحده.
+ */
+let client: SupabaseClient | null = null;
+
+function requireClient(): SupabaseClient {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables. Please check your .env file.');
+  }
+  if (!client) {
+    client = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    });
+  }
+  return client;
 }
 
-// إنشاء عميل Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
+/** أهو مضبوط؟ تسأله الشاشات قبل أن تنادي، فتعرض تعذّراً بدل أن ترمي. */
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+/* الوسيط يحفظ السطح كما هو — `supabase.from(...)` و`supabase.auth` —
+   فلا يُمسّ أيٌّ من المواضع العشرة التي تستورده. والدوالُّ تُربط بالعميل
+   لأن `supabase-js` يعتمد على `this` داخلها. */
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, property) {
+    const instance = requireClient();
+    const value = Reflect.get(instance, property, instance);
+    return typeof value === 'function' ? value.bind(instance) : value;
+  },
 });
 
 // أنواع قاعدة البيانات المُولدة

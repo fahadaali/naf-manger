@@ -138,8 +138,25 @@ jobs:
       - name: تطبيق الهجرات
         run: npx wrangler d1 migrations apply "$DB_NAME" --remote
 
+      # ── متغيّرات البناء ──
+      # `Vite` يحقن ما بدأ بـ`VITE_` **وقت البناء** لا وقت التشغيل: يُدرجه
+      # في الحزمة نصّاً. فلا ينفع فيه `wrangler secret` — ذاك يصل العامل
+      # ولا يصل المتصفّح.
+      #
+      # وغيابُها لا يُسقط الصفحة بعد اليوم — العميل صار يُنشأ عند أول
+      # استعمال — لكنه يُعطّل شاشات البيانات. فيُنبَّه ولا يُفشل.
+      #
+      # ومفتاح `ANON` ليس سرّاً في حقيقته: يُشحن في الحزمة ويقرؤه كل زائر،
+      # وحارسُه سياساتُ الصفوف في Supabase لا خفاؤه.
       - name: البناء
-        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+        run: |
+          [ -n "$VITE_SUPABASE_URL" ] && [ -n "$VITE_SUPABASE_ANON_KEY" ] \
+            || echo "::warning::لا إعداد Supabase — التطبيق يعمل والدخول يعمل، وشاشات البيانات تُخفق."
+          npm run build
 
       # ── النشر يسبق السرّ، ولا بدّ ──
       # `wrangler secret put` يشترط وجود الـWorker: على عاملٍ لم يُنشر بعد
