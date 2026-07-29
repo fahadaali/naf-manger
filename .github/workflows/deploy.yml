@@ -6,6 +6,16 @@ on:
   push:
     branches: [main]
 
+# ── صلاحيات رمز Cloudflare ──
+# السير يلمس أربعة موارد، ولكلٍّ صلاحيته. ورمزٌ ناقصُ واحدةٍ منها يمرّ في
+# الخطوات التي يملكها ويسقط عند أوّل ما لا يملك، برسالة
+# «Authentication error [code: 10000]» — وهي لا تسمّي المورد ولا الصلاحية،
+# فتبدو رمزاً باطلاً وهو صحيح.
+#
+#   Account · Workers Scripts        · Edit   ← النشر والسرّ
+#   Account · Workers KV Storage     · Edit   ← مساحة الجلسات
+#   Account · D1                     · Edit   ← القاعدة والهجرات
+#   Account · Workers R2 Storage     · Edit   ← حاوية الملفّات
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -82,8 +92,20 @@ jobs:
           echo "مساحة KV: $KV_ID"
           sed -i "s/REPLACE_WITH_KV_ID/$KV_ID/" wrangler.toml
 
+      # `|| true` وحده كان يبتلع كل شيء — ومنه «الرمز لا يملك R2». فتمضي
+      # الخطوة خضراء، ثم يسقط النشر بخطأ ارتباطٍ لا يذكر الصلاحيات، بعد
+      # خمس خطوات من موضع العطل. فيُفحص النصّ: «قائمة» تُقبل، وما عداها يُردّ.
       - name: تجهيز حاوية R2
-        run: npx wrangler r2 bucket create naf-manger-files || true
+        run: |
+          OUT=$(npx wrangler r2 bucket create naf-manger-files 2>&1) || true
+          echo "$OUT"
+          if echo "$OUT" | grep -qiE "already (exists|owned)|10004"; then
+            echo "الحاوية قائمة."
+          elif echo "$OUT" | grep -qiE "Authentication error|10000|not authorized"; then
+            echo "::error::الرمز لا يملك صلاحية R2 — أضف «Workers R2 Storage: Edit»."; exit 1
+          elif echo "$OUT" | grep -q "✘"; then
+            echo "::error::تعذّر تجهيز حاوية R2."; exit 1
+          fi
 
       # ── بريد الآدمن الأول ──
       # يُحقن من أسرار المستودع ولا يُكتب في ملفّ متتبَّع: بريدُ شخصٍ بعينه
