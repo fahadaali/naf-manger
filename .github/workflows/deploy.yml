@@ -21,20 +21,23 @@ jobs:
           node-version: 22
 
       # ── الوصول إلى naf-auth ──
-      # الحزمة مستودعٌ خاص، وملفّ القفل يحلّها عبر `git+ssh`. والعدّاء لا
-      # مفتاح ssh له، و`GITHUB_TOKEN` الافتراضي مقصورٌ على هذا المستودع
-      # وحده فلا يقرأ naf-auth. فيلزم رمزٌ يملك قراءتها.
+      # ملفّ القفل يحلّ الحزمة عبر `git+ssh` — وهو ما يكتبه npm لاختصار
+      # `github:` مهما كان المستودع عامّاً. والعدّاء لا مفتاح ssh له، فيسقط
+      # `npm ci` برسالة صلاحيات لا تقول إن العلّة بروتوكولٌ لا إذن.
       #
-      # ويُفحص قبل `npm ci` لا بعده: بدونه يسقط التثبيت برسالة صلاحيات
-      # من git لا تقول إن الناقص رمزٌ في أسرار المستودع.
-      - name: ترخيص الوصول إلى naf-auth
+      # فيُحوَّل الجلب إلى https. والمستودع عامّ فلا رمز يلزم —
+      # و`NAF_PACKAGES_TOKEN` يُقرأ إن وُجد ليبقى السير عاملاً لو صار خاصّاً.
+      - name: تحويل جلب naf-auth إلى https
         env:
           NAF_PACKAGES_TOKEN: ${{ secrets.NAF_PACKAGES_TOKEN }}
         run: |
-          [ -n "$NAF_PACKAGES_TOKEN" ] \
-            || { echo "::error::لا رمز: اضبط السرّ NAF_PACKAGES_TOKEN برمزٍ يقرأ fahadaali/naf-auth."; exit 1; }
-          git config --global url."https://x-access-token:${NAF_PACKAGES_TOKEN}@github.com/".insteadOf "git+ssh://git@github.com/"
-          git config --global url."https://x-access-token:${NAF_PACKAGES_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          if [ -n "$NAF_PACKAGES_TOKEN" ]; then
+            PREFIX="https://x-access-token:${NAF_PACKAGES_TOKEN}@github.com/"
+          else
+            PREFIX="https://github.com/"
+          fi
+          git config --global url."$PREFIX".insteadOf "git+ssh://git@github.com/"
+          git config --global url."$PREFIX".insteadOf "ssh://git@github.com/"
 
       - name: تثبيت الاعتماديات
         run: npm ci
@@ -123,11 +126,18 @@ jobs:
       #
       # ولا يُطبع ولا يُمرَّر في سطر أوامر: يدخل من المجرى القياسي، فلا
       # يظهر في `ps` ولا في سجلّ التشغيل.
+      #
+      # والفحص في الصدفة لا في `if:` — سياق `secrets` لا يُقرأ في شرط خطوة،
+      # ووجودُه هناك خطأُ تحقّقٍ يردّ الملفّ كلَّه قبل أن تُنشأ وظيفة واحدة:
+      # يظهر تشغيلاً فاشلاً بلا وظائف ولا سجلّ، ولا يقول أين العطل.
       - name: حمل سرّ المنصة إلى Pages
-        if: ${{ secrets.AUTH_CLIENT_SECRET != '' }}
         env:
           AUTH_CLIENT_SECRET: ${{ secrets.AUTH_CLIENT_SECRET }}
         run: |
+          if [ -z "$AUTH_CLIENT_SECRET" ]; then
+            echo "لا سرّ في أسرار المستودع — يُتوقَّع أنه مضبوط في Pages مباشرةً."
+            exit 0
+          fi
           printf '%s' "$AUTH_CLIENT_SECRET" \
             | npx wrangler pages secret put AUTH_CLIENT_SECRET --project-name "$PROJECT"
 
@@ -144,5 +154,10 @@ jobs:
       - name: البناء
         run: npm run build
 
+      # `--commit-dirty=true` لازم: الخطوات أعلاه تكتب في `wrangler.toml`
+      # بمعرّفات الموارد وبريد الآدمن، فالشجرة متّسخة حتماً عند هذه النقطة.
+      # وبدونه يسأل wrangler سؤالاً لا مجيب له في عدّاءٍ بلا طرفية.
       - name: النشر
-        run: npx wrangler pages deploy dist --project-name "$PROJECT" --branch main
+        run: |
+          npx wrangler pages deploy dist \
+            --project-name "$PROJECT" --branch main --commit-dirty=true
