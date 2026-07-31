@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, X } from 'lucide-react';
 import { CustomReport, ReportField, ReportFilter, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { formatNumber } from '@/registry/naf/lib/format';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
@@ -172,7 +173,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
               <h1 className="text-xl font-bold text-foreground">
                 {report ? 'تعديل التقرير' : 'إنشاء تقرير جديد'}
               </h1>
-              <p className="text-sm text-muted-foreground">الخطوة {currentStep} من {steps.length}</p>
+              <p className="text-sm text-muted-foreground">الخطوة <bdi>{formatNumber(currentStep)}</bdi> من <bdi>{formatNumber(steps.length)}</bdi></p>
             </div>
           </div>
           <div className="flex items-center gap-3">

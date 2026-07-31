@@ -5,7 +5,7 @@ import { Marketer, MarketerStats } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
-import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -135,11 +135,11 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div>
             <p className="text-muted-foreground">القضايا</p>
-            <p className="font-semibold text-foreground">{stats.totalCases}</p>
+            <p className="font-semibold text-foreground"><bdi>{formatNumber(stats.totalCases)}</bdi></p>
           </div>
           <div>
             <p className="text-muted-foreground">المكتملة</p>
-            <p className="font-semibold text-success">{stats.completedCases}</p>
+            <p className="font-semibold text-success"><bdi>{formatNumber(stats.completedCases)}</bdi></p>
           </div>
           <div>
             <p className="text-muted-foreground">الإيرادات</p>
@@ -164,7 +164,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           عرض التفاصيل
         </button>
         <div className="text-xs text-muted-foreground">
-          معدل النجاح: {stats.conversionRate}%
+          معدل النجاح: <bdi>{formatNumber(stats.conversionRate)}%</bdi>
         </div>
       </div>
     </Card>

@@ -5,6 +5,7 @@ import MarketerCard from './MarketerCard';
 import MarketerModal from './MarketerModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Card } from '@/registry/naf/ui/card';
@@ -165,24 +166,24 @@ export default function MarketersView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي المسوّقين</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{marketers.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(marketers.length)}</bdi></p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">النشطين</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
-            {marketers.filter(m => m.status === 'active').length}
+            <bdi>{formatNumber(marketers.filter(m => m.status === 'active').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الموظفين</p>
           <p className="text-xl sm:text-2xl font-bold text-primary">
-            {marketers.filter(m => m.relationshipType === 'employee').length}
+            <bdi>{formatNumber(marketers.filter(m => m.relationshipType === 'employee').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">المستقلين</p>
           <p className="text-xl sm:text-2xl font-bold text-info">
-            {marketers.filter(m => m.relationshipType === 'freelancer').length}
+            <bdi>{formatNumber(marketers.filter(m => m.relationshipType === 'freelancer').length)}</bdi>
           </p>
         </Card>
       </div>

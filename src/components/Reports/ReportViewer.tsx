@@ -4,7 +4,7 @@ import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport } from '../../types';
 import { db } from '../../data/database';
 import ChartCard from '../Dashboard/ChartCard';
-import { formatDate } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 import { Card } from '@/registry/naf/ui/card';
@@ -164,7 +164,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             </div>
             <div>
               <span className="text-muted-foreground">عدد السجلات:</span>
-              <span className="font-medium text-foreground ms-2">{reportData.length}</span>
+              <span className="font-medium text-foreground ms-2"><bdi>{formatNumber(reportData.length)}</bdi></span>
             </div>
             <div>
               <span className="text-muted-foreground">آخر تحديث:</span>

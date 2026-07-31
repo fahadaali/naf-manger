@@ -7,7 +7,7 @@ import { Client, Prospect, Case, ActivityLog } from '../../types';
 import { subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
-import { formatDateTime, formatMonth } from '@/registry/naf/lib/format';
+import { formatDateTime, formatMonth, formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
@@ -367,7 +367,7 @@ export default function Analytics() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">العملاء الجدد</p>
-              <p className="text-2xl font-bold text-foreground">{kpis.totalClients}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(kpis.totalClients)}</bdi></p>
             </div>
           </div>
         </Card>
@@ -379,7 +379,7 @@ export default function Analytics() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">العملاء المحتملين</p>
-              <p className="text-2xl font-bold text-foreground">{kpis.totalProspects}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(kpis.totalProspects)}</bdi></p>
             </div>
           </div>
         </Card>
@@ -391,7 +391,7 @@ export default function Analytics() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">القضايا الجديدة</p>
-              <p className="text-2xl font-bold text-foreground">{kpis.totalCases}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(kpis.totalCases)}</bdi></p>
             </div>
           </div>
         </Card>
@@ -403,7 +403,7 @@ export default function Analytics() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">معدل الربح</p>
-              <p className="text-2xl font-bold text-foreground">{kpis.winRate}%</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(kpis.winRate)}%</bdi></p>
             </div>
           </div>
         </Card>
@@ -468,11 +468,11 @@ export default function Analytics() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-muted rounded">
                   <span className="text-foreground">إجمالي العملاء</span>
-                  <span className="font-bold text-foreground">{clients.length}</span>
+                  <span className="font-bold text-foreground"><bdi>{formatNumber(clients.length)}</bdi></span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-muted rounded">
                   <span className="text-foreground">العملاء الحاليين</span>
-                  <span className="font-bold text-success">{clients.filter(c => c.status === 'current').length}</span>
+                  <span className="font-bold text-success"><bdi>{formatNumber(clients.filter(c => c.status === 'current').length)}</bdi></span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-muted rounded">
                   <span className="text-foreground">متوسط القضايا لكل عميل</span>
@@ -480,7 +480,7 @@ export default function Analytics() {
                 </div>
                 <div className="flex justify-between items-center p-3 bg-muted rounded">
                   <span className="text-foreground">معدل التحويل</span>
-                  <span className="font-bold text-info">{kpis.conversionRate}%</span>
+                  <span className="font-bold text-info"><bdi>{formatNumber(kpis.conversionRate)}%</bdi></span>
                 </div>
               </div>
             </Card>
@@ -573,11 +573,11 @@ export default function Analytics() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">القضايا النشطة</span>
-                  <span className="font-medium text-primary">{kpis.activeCases}</span>
+                  <span className="font-medium text-primary"><bdi>{formatNumber(kpis.activeCases)}</bdi></span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">معدل النجاح</span>
-                  <span className="font-medium text-warning">{kpis.winRate}%</span>
+                  <span className="font-medium text-warning"><bdi>{formatNumber(kpis.winRate)}%</bdi></span>
                 </div>
               </div>
             </div>
@@ -587,7 +587,7 @@ export default function Analytics() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">معدل التحويل</span>
-                  <span className="font-medium text-info">{kpis.conversionRate}%</span>
+                  <span className="font-medium text-info"><bdi>{formatNumber(kpis.conversionRate)}%</bdi></span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">العملاء المحتملين النشطين</span>

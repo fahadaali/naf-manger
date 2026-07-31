@@ -212,23 +212,23 @@ export default function CasesView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي القضايا</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{cases.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(cases.length)}</bdi></p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">قيد المعالجة</p>
           <p className="text-xl sm:text-2xl font-bold text-primary">
-            {activeCases.filter(c => c.status === 'in-progress').length}
+            <bdi>{formatNumber(activeCases.filter(c => c.status === 'in-progress').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">المكتملة</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
-            {completedCases.length}
+            <bdi>{formatNumber(completedCases.length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">معدل الربح</p>
-          <p className="text-xl sm:text-2xl font-bold text-warning">{winRate}%</p>
+          <p className="text-xl sm:text-2xl font-bold text-warning"><bdi>{formatNumber(winRate)}%</bdi></p>
         </Card>
       </div>
 

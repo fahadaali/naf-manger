@@ -201,15 +201,15 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{stats.totalCases}</p>
+                  <p className="text-2xl font-bold text-primary"><bdi>{formatNumber(stats.totalCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">إجمالي القضايا</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-success">{stats.completedCases}</p>
+                  <p className="text-2xl font-bold text-success"><bdi>{formatNumber(stats.completedCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">المكتملة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-warning">{stats.conversionRate}%</p>
+                  <p className="text-2xl font-bold text-warning"><bdi>{formatNumber(stats.conversionRate)}%</bdi></p>
                   <p className="text-sm text-muted-foreground">معدل النجاح</p>
                 </div>
                 <div className="text-center">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CircleCheck, Database, FileOutput, RefreshCw, Settings, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { formatNumber } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 
 export default function SupabaseMigration() {
@@ -127,23 +128,23 @@ export default function SupabaseMigration() {
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-primary">{localDataStats.clients}</p>
+              <p className="text-2xl font-bold text-primary"><bdi>{formatNumber(localDataStats.clients)}</bdi></p>
               <p className="text-sm text-muted-foreground">العملاء</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-info">{localDataStats.prospects}</p>
+              <p className="text-2xl font-bold text-info"><bdi>{formatNumber(localDataStats.prospects)}</bdi></p>
               <p className="text-sm text-muted-foreground">العملاء المحتملين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-success">{localDataStats.cases}</p>
+              <p className="text-2xl font-bold text-success"><bdi>{formatNumber(localDataStats.cases)}</bdi></p>
               <p className="text-sm text-muted-foreground">القضايا</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-warning">{localDataStats.marketers}</p>
+              <p className="text-2xl font-bold text-warning"><bdi>{formatNumber(localDataStats.marketers)}</bdi></p>
               <p className="text-sm text-muted-foreground">المسوّقين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-destructive">{localDataStats.activities}</p>
+              <p className="text-2xl font-bold text-destructive"><bdi>{formatNumber(localDataStats.activities)}</bdi></p>
               <p className="text-sm text-muted-foreground">الأنشطة</p>
             </div>
           </div>

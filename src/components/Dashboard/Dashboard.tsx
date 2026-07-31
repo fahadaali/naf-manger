@@ -5,6 +5,7 @@ import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
 import { db } from '../../data/database';
 import { useChartPalette } from '../../lib/chart-tokens';
+import { formatNumber } from '@/registry/naf/lib/format';
 
 export default function Dashboard() {
   // لوحة الرسوم تُقرأ من الرموز وتُعاد قراءتها عند تبديل المظهر
@@ -122,7 +123,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="معدل الربح"
-          value={`${stats.winRate}%`}
+          value={`${formatNumber(stats.winRate)}%`}
           icon={Award}
           color="bg-chart-5"
           trend={{ value: 5, label: 'الشهر الماضي' }}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Plus, Send, Trash2, User, Users, Video } from 'lucide-react';
 import { Client, Prospect } from '../../types';
-import { formatDateTime, isolate } from '@/registry/naf/lib/format';
+import { formatDateTime, formatNumber, isolate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -404,7 +404,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
               <p><strong>العنوان:</strong> {meetingData.title}</p>
               <p><strong>التاريخ والوقت:</strong> {meetingData.date} في {meetingData.time}</p>
               <p><strong>المدة:</strong> {meetingData.duration} دقيقة</p>
-              <p><strong>عدد المدعوين:</strong> {invitees.length}</p>
+              <p><strong>عدد المدعوين:</strong> <bdi>{formatNumber(invitees.length)}</bdi></p>
               {meetingData.password && (
                 <p><strong>محمي بكلمة مرور:</strong> نعم</p>
               )}

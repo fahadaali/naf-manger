@@ -4,7 +4,7 @@ import { Client } from '../../types';
 import { mockCases } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
-import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -195,19 +195,19 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <h3 className="text-lg font-semibold text-foreground mb-3">إحصائيات القضايا</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary-strong">{clientCases.length}</p>
+                  <p className="text-2xl font-bold text-primary-strong"><bdi>{formatNumber(clientCases.length)}</bdi></p>
                   <p className="text-sm text-muted-foreground">إجمالي القضايا</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-warning">{pendingCases}</p>
+                  <p className="text-2xl font-bold text-warning"><bdi>{formatNumber(pendingCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">المنظورة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-success">{wonCases}</p>
+                  <p className="text-2xl font-bold text-success"><bdi>{formatNumber(wonCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">الرابحة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-destructive">{lostCases}</p>
+                  <p className="text-2xl font-bold text-destructive"><bdi>{formatNumber(lostCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">الخاسرة</p>
                 </div>
               </div>
