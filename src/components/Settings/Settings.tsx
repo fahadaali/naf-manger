@@ -25,7 +25,7 @@ export default function Settings() {
     name: user?.name || '',
     email: user?.email || '',
     phone: '+966501234567',
-    jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري',
+    jobTitle: user?.role === 'admin' ? 'مسؤول النظام' : user?.role === 'lawyer' ? 'محامٍ' : 'إداري',
     profilePicture: user?.profilePicture || ''
   });
 
@@ -279,7 +279,7 @@ export default function Settings() {
 
             <div className="max-w-2xl mx-auto border-t border-border pt-6">
               <div className="flex justify-end gap-4">
-                <Button onClick={() => setProfileData({ name: user?.name || '', email: user?.email || '', phone: '+966501234567', jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري', profilePicture: user?.profilePicture || '' })} variant="ghost" size="lg">
+                <Button onClick={() => setProfileData({ name: user?.name || '', email: user?.email || '', phone: '+966501234567', jobTitle: user?.role === 'admin' ? 'مسؤول النظام' : user?.role === 'lawyer' ? 'محامٍ' : 'إداري', profilePicture: user?.profilePicture || '' })} variant="ghost" size="lg">
                   إلغاء
                 </Button>
                 <Button onClick={handleProfileSave} disabled={isSaving} size="lg">

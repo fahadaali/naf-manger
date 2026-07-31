@@ -39,8 +39,8 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin': return 'مدير النظام';
-      case 'lawyer': return 'محامي';
+      case 'admin': return 'مسؤول النظام';
+      case 'lawyer': return 'محامٍ';
       case 'staff': return 'إداري';
       default: return role;
     }

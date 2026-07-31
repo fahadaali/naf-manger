@@ -133,6 +133,17 @@ export default function CasesView() {
     STATUS[status as keyof typeof STATUS] ??
     { variant: 'default' as const, Icon: CircleHelp };
 
+  /* نتيجة القضية حالة كغيرها: أيقونة ولون ونصّ معاً كما تُلزم §٦،
+     والمقابلات مسجَّلة في naf-icons.md تحت «نتيجة القضية». */
+  const OUTCOME = {
+    won: { variant: 'success' as const, Icon: CircleCheck },
+    lost: { variant: 'destructive' as const, Icon: CircleX },
+    settled: { variant: 'warning' as const, Icon: Handshake }
+  };
+
+  const outcomeOf = (outcome: string) =>
+    OUTCOME[outcome as keyof typeof OUTCOME] ?? OUTCOME.settled;
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completed': return 'مكتملة';
@@ -294,11 +305,17 @@ export default function CasesView() {
                         </Badge>
                       );
                     })()}
-                    {case_.outcome && (
-                      <div className="text-xs text-muted-foreground mt-1 hidden sm:block">
-                        {getOutcomeLabel(case_.outcome)}
-                      </div>
-                    )}
+                    {case_.outcome && (() => {
+                      const { variant, Icon } = outcomeOf(case_.outcome);
+                      return (
+                        <div className="mt-1 hidden sm:block">
+                          <Badge variant={variant}>
+                            <Icon aria-hidden="true" />
+                            {getOutcomeLabel(case_.outcome)}
+                          </Badge>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="sm:px-6 sm:text-sm hidden lg:table-cell">
                     <bdi>{formatDate(case_.createdDate)}</bdi>
@@ -408,13 +425,7 @@ export default function CasesView() {
                       </TableCell>
                       <TableCell>
                         {case_.outcome && (() => {
-                          const map = {
-                            won: { variant: 'success' as const, Icon: CircleCheck },
-                            lost: { variant: 'destructive' as const, Icon: CircleX },
-                            settled: { variant: 'warning' as const, Icon: Handshake }
-                          };
-                          const { variant, Icon } =
-                            map[case_.outcome as keyof typeof map] ?? map.settled;
+                          const { variant, Icon } = outcomeOf(case_.outcome);
                           return (
                             <Badge variant={variant}>
                               <Icon aria-hidden="true" />

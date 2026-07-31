@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { CircleCheck, CircleX, ExternalLink, Handshake } from 'lucide-react';
 import { Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
@@ -9,6 +9,7 @@ import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
 
 interface CaseModalProps {
   case?: Case;
@@ -218,7 +219,23 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 {existingCase.outcome && (
                   <div>
                     <label className="block text-sm font-medium text-foreground">نتيجة القضية</label>
-                    <p className="text-foreground">{getOutcomeLabel(existingCase.outcome)}</p>
+                    {(() => {
+                      /* المقابلات مسجَّلة في naf-icons.md تحت «نتيجة القضية».
+                         §٦: لا تُبلَّغ الحالة بالنصّ وحده ولا باللون وحده. */
+                      const map = {
+                        won: { variant: 'success' as const, Icon: CircleCheck },
+                        lost: { variant: 'destructive' as const, Icon: CircleX },
+                        settled: { variant: 'warning' as const, Icon: Handshake }
+                      };
+                      const { variant, Icon } =
+                        map[existingCase.outcome as keyof typeof map] ?? map.settled;
+                      return (
+                        <Badge variant={variant}>
+                          <Icon aria-hidden="true" />
+                          {getOutcomeLabel(existingCase.outcome)}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
