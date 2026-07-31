@@ -170,11 +170,11 @@ export default function SystemConfiguration() {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-slate-900">إعدادات النظام</h3>
+      <h3 className="text-lg font-semibold text-foreground">إعدادات النظام</h3>
       
       {saveMessage && (
         <div className={`p-3 rounded-lg ${
-          saveMessage.includes('نجاح') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong' : 'bg-destructive-soft text-destructive-strong'
         }`}>
           {saveMessage}
         </div>
@@ -184,12 +184,12 @@ export default function SystemConfiguration() {
         {Object.entries(settings)
           .filter(([category, items]) => Array.isArray(items))
           .map(([category, items]) => (
-          <div key={category} className="bg-slate-50 rounded-lg p-6">
+          <div key={category} className="bg-muted rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
-              <h4 className="font-medium text-slate-900">{getCategoryLabel(category)}</h4>
+              <h4 className="font-medium text-foreground">{getCategoryLabel(category)}</h4>
               <button
                 onClick={() => setEditingCategory(category)}
-                className="text-blue-600 hover:text-blue-800 p-1"
+                className="text-primary hover:text-primary-strong p-1"
                 title="إضافة عنصر جديد"
               >
                 <PlusIcon className="h-5 w-5" />
@@ -198,11 +198,11 @@ export default function SystemConfiguration() {
             
             <div className="space-y-2">
               {items.map((item, index) => (
-                <div key={index} className="flex justify-between items-center bg-white rounded p-3">
-                  <span className="text-sm text-slate-900">{getItemLabel(category, item)}</span>
+                <div key={index} className="flex justify-between items-center bg-card rounded p-3">
+                  <span className="text-sm text-foreground">{getItemLabel(category, item)}</span>
                   <button
                     onClick={() => removeItem(category, index)}
-                    className="text-red-600 hover:text-red-800 p-1"
+                    className="text-destructive hover:text-destructive-strong p-1"
                     title="حذف"
                   >
                     <TrashIcon className="h-4 w-4" />
@@ -211,20 +211,20 @@ export default function SystemConfiguration() {
               ))}
               
               {editingCategory === category && (
-                <div className="bg-white rounded p-3 border-2 border-blue-200">
+                <div className="bg-card rounded p-3 border-2 border-primary/30">
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={newItem}
                       onChange={(e) => setNewItem(e.target.value)}
                       placeholder="اسم العنصر الجديد"
-                      className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-3 py-2 border border-border rounded text-sm focus-visible:ring-2 focus-visible:ring-ring"
                       onKeyPress={(e) => e.key === 'Enter' && addItem(category)}
                       autoFocus
                     />
                     <button
                       onClick={() => addItem(category)}
-                      className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
+                      className="bg-primary text-primary-foreground px-3 py-2 rounded text-sm hover:bg-primary/90"
                     >
                       إضافة
                     </button>
@@ -233,7 +233,7 @@ export default function SystemConfiguration() {
                         setEditingCategory(null);
                         setNewItem('');
                       }}
-                      className="bg-slate-300 text-slate-700 px-3 py-2 rounded text-sm hover:bg-slate-400"
+                      className="bg-muted text-foreground px-3 py-2 rounded text-sm hover:bg-muted-foreground"
                     >
                       إلغاء
                     </button>
@@ -245,9 +245,9 @@ export default function SystemConfiguration() {
         ))}
       </div>
       
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">ملاحظة مهمة</h4>
-        <p className="text-sm text-blue-800">
+      <div className="bg-primary-soft rounded-lg p-4">
+        <h4 className="font-medium text-primary-strong mb-2">ملاحظة مهمة</h4>
+        <p className="text-sm text-primary-strong">
           تغيير هذه الإعدادات سيؤثر على جميع البيانات الموجودة في النظام. تأكد من صحة التغييرات قبل الحفظ.
         </p>
       </div>
@@ -256,11 +256,11 @@ export default function SystemConfiguration() {
         <button 
           onClick={handleSaveSettings}
           disabled={isSaving}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg flex items-center gap-2"
+          className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-2 rounded-lg flex items-center gap-2"
         >
           {isSaving ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
               جاري الحفظ...
             </>
           ) : (

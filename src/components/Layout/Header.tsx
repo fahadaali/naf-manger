@@ -47,26 +47,26 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-slate-200">
+    <header className="bg-card shadow-sm border-b border-border">
       <div className="flex justify-between items-center px-4 sm:px-6 py-4">
         {/* Mobile menu button */}
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           <Bars3Icon className="h-6 w-6" />
         </button>
         
         <div>
-          <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
             {viewTitles[currentView] || settings?.companyName || 'NAF Law'}
           </h2>
-          <p className="text-sm sm:text-base text-slate-600 hidden sm:block">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
+          <p className="text-sm sm:text-base text-muted-foreground hidden sm:block">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
         </div>
         
         <div className="flex items-center gap-4">
-          <button className="p-2 hover:bg-slate-100 rounded-full transition-colors hidden sm:block">
-            <BellIcon className="h-6 w-6 text-slate-600" />
+          <button className="p-2 hover:bg-muted rounded-full transition-colors hidden sm:block">
+            <BellIcon className="h-6 w-6 text-muted-foreground" />
           </button>
           
           <div className="flex items-center gap-3">
@@ -76,12 +76,12 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
               size="sm" 
             />
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-slate-900 truncate max-w-32">{user?.name}</p>
-              <p className="text-xs text-slate-500">{getRoleLabel(user?.role || '')}</p>
+              <p className="text-sm font-medium text-foreground truncate max-w-32">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">{getRoleLabel(user?.role || '')}</p>
             </div>
             <button
               onClick={logout}
-              className="p-1 sm:p-2 hover:bg-red-50 hover:text-red-600 rounded-full transition-colors"
+              className="p-1 sm:p-2 hover:bg-destructive-soft hover:text-destructive rounded-full transition-colors"
               title="تسجيل الخروج"
             >
               <ArrowRightOnRectangleIcon className="h-4 w-4 sm:h-5 sm:w-5" />

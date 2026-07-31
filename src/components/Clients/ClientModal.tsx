@@ -109,13 +109,13 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
     const pendingCases = clientCases.filter(c => c.status === 'pending' || c.status === 'in-progress').length;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
+        <div className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-xl font-bold text-slate-900">تفاصيل العميل</h2>
+            <h2 className="text-xl font-bold text-foreground">تفاصيل العميل</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-full"
+              className="p-2 hover:bg-muted rounded-full"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -123,15 +123,15 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
           <div className="p-6 space-y-6">
             {/* Client Information */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">المعلومات الأساسية</h3>
+            <div className="bg-muted rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">المعلومات الأساسية</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">الاسم الكامل</label>
-                  <p className="text-slate-900">{client.fullName}</p>
+                  <label className="block text-sm font-medium text-foreground">الاسم الكامل</label>
+                  <p className="text-foreground">{client.fullName}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">الصورة الشخصية</label>
+                  <label className="block text-sm font-medium text-foreground">الصورة الشخصية</label>
                   <div className="mt-2">
                     <ProfileAvatar 
                       src={client.profilePicture} 
@@ -141,42 +141,42 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">رقم الهوية</label>
-                  <p className="text-slate-900">{client.idNumber}</p>
+                  <label className="block text-sm font-medium text-foreground">رقم الهوية</label>
+                  <p className="text-foreground">{client.idNumber}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">رقم الجوال</label>
-                  <p className="text-slate-900">{client.phone}</p>
+                  <label className="block text-sm font-medium text-foreground">رقم الجوال</label>
+                  <p className="text-foreground">{client.phone}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">البريد الإلكتروني</label>
-                  <p className="text-slate-900">{client.email}</p>
+                  <label className="block text-sm font-medium text-foreground">البريد الإلكتروني</label>
+                  <p className="text-foreground">{client.email}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">تاريخ الانضمام</label>
-                  <p className="text-slate-900">{format(client.joinDate, 'dd/MM/yyyy')}</p>
+                  <label className="block text-sm font-medium text-foreground">تاريخ الانضمام</label>
+                  <p className="text-foreground">{format(client.joinDate, 'dd/MM/yyyy')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">نوع العميل</label>
-                  <p className="text-slate-900">{client.clientType}</p>
+                  <label className="block text-sm font-medium text-foreground">نوع العميل</label>
+                  <p className="text-foreground">{client.clientType}</p>
                 </div>
               </div>
 
               {client.clientType === 'company' && client.legalRepresentative && (
                 <div className="mt-4 pt-4 border-t">
-                  <h4 className="font-medium text-slate-900 mb-2">الممثل القانوني</h4>
+                  <h4 className="font-medium text-foreground mb-2">الممثل القانوني</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">الاسم</label>
-                      <p className="text-slate-900">{client.legalRepresentative.name}</p>
+                      <label className="block text-sm font-medium text-foreground">الاسم</label>
+                      <p className="text-foreground">{client.legalRepresentative.name}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">رقم الهوية</label>
-                      <p className="text-slate-900">{client.legalRepresentative.idNumber}</p>
+                      <label className="block text-sm font-medium text-foreground">رقم الهوية</label>
+                      <p className="text-foreground">{client.legalRepresentative.idNumber}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">وسيلة التواصل</label>
-                      <p className="text-slate-900">{client.legalRepresentative.contact}</p>
+                      <label className="block text-sm font-medium text-foreground">وسيلة التواصل</label>
+                      <p className="text-foreground">{client.legalRepresentative.contact}</p>
                     </div>
                   </div>
                 </div>
@@ -184,62 +184,62 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
               {client.notes && (
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-slate-700">الملاحظات</label>
-                  <p className="text-slate-900">{client.notes}</p>
+                  <label className="block text-sm font-medium text-foreground">الملاحظات</label>
+                  <p className="text-foreground">{client.notes}</p>
                 </div>
               )}
             </div>
 
             {/* Cases Statistics */}
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">إحصائيات القضايا</h3>
+            <div className="bg-primary-soft rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">إحصائيات القضايا</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{clientCases.length}</p>
-                  <p className="text-sm text-slate-600">إجمالي القضايا</p>
+                  <p className="text-2xl font-bold text-primary">{clientCases.length}</p>
+                  <p className="text-sm text-muted-foreground">إجمالي القضايا</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-amber-600">{pendingCases}</p>
-                  <p className="text-sm text-slate-600">المنظورة</p>
+                  <p className="text-2xl font-bold text-warning">{pendingCases}</p>
+                  <p className="text-sm text-muted-foreground">المنظورة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{wonCases}</p>
-                  <p className="text-sm text-slate-600">الرابحة</p>
+                  <p className="text-2xl font-bold text-success">{wonCases}</p>
+                  <p className="text-sm text-muted-foreground">الرابحة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-600">{lostCases}</p>
-                  <p className="text-sm text-slate-600">الخاسرة</p>
+                  <p className="text-2xl font-bold text-destructive">{lostCases}</p>
+                  <p className="text-sm text-muted-foreground">الخاسرة</p>
                 </div>
               </div>
             </div>
 
             {/* Cases List */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">قائمة القضايا</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">قائمة القضايا</h3>
               {clientCases.length > 0 ? (
                 <div className="space-y-3">
                   {clientCases.map((case_) => (
                     <div key={case_.id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h4 className="font-medium text-slate-900">{case_.caseNumber}</h4>
-                          <p className="text-sm text-slate-600">{case_.caseType}</p>
+                          <h4 className="font-medium text-foreground">{case_.caseNumber}</h4>
+                          <p className="text-sm text-muted-foreground">{case_.caseType}</p>
                         </div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          case_.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          case_.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                          'bg-amber-100 text-amber-800'
+                          case_.status === 'completed' ? 'bg-success-soft text-success-strong' :
+                          case_.status === 'in-progress' ? 'bg-primary-soft text-primary-strong' :
+                          'bg-warning-soft text-warning-strong'
                         }`}>
                           {case_.status}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-600 mb-2">{case_.summary}</p>
+                      <p className="text-sm text-muted-foreground mb-2">{case_.summary}</p>
                       {case_.basecampUrl && (
                         <a
                           href={case_.basecampUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          className="text-primary hover:text-primary-strong text-sm"
                         >
                           رابط Basecamp
                         </a>
@@ -248,7 +248,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-500 text-center py-8">لا توجد قضايا مرتبطة بهذا العميل</p>
+                <p className="text-muted-foreground text-center py-8">لا توجد قضايا مرتبطة بهذا العميل</p>
               )}
             </div>
           </div>
@@ -259,15 +259,15 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
   // Edit/Create mode
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-full sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
+      <div className="bg-card rounded-lg max-w-full sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+          <h2 className="text-lg sm:text-xl font-bold text-foreground">
             {client ? 'تعديل العميل' : 'إضافة عميل جديد'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full"
+            className="p-2 hover:bg-muted rounded-full"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -285,81 +285,81 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 الاسم الكامل *
               </label>
               <input
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.fullName ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                  errors.fullName ? 'border-destructive/30' : 'border-border'
                 }`}
               />
               {errors.fullName && (
-                <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>
+                <p className="text-destructive text-sm mt-1">{errors.fullName}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الهوية *
               </label>
               <input
                 type="text"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.idNumber ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                  errors.idNumber ? 'border-destructive/30' : 'border-border'
                 }`}
               />
               {errors.idNumber && (
-                <p className="text-red-600 text-sm mt-1">{errors.idNumber}</p>
+                <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الجوال *
               </label>
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.phone ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                  errors.phone ? 'border-destructive/30' : 'border-border'
                 }`}
               />
               {errors.phone && (
-                <p className="text-red-600 text-sm mt-1">{errors.phone}</p>
+                <p className="text-destructive text-sm mt-1">{errors.phone}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 البريد الإلكتروني *
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.email ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                  errors.email ? 'border-destructive/30' : 'border-border'
                 }`}
               />
               {errors.email && (
-                <p className="text-red-600 text-sm mt-1">{errors.email}</p>
+                <p className="text-destructive text-sm mt-1">{errors.email}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 نوع العميل
               </label>
               <select
                 value={formData.clientType}
                 onChange={(e) => handleInputChange('clientType', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="individual">فرد</option>
                 <option value="company">شركة</option>
@@ -369,13 +369,13 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 حالة العميل
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="current">حالي</option>
                 <option value="former">سابق</option>
@@ -384,60 +384,60 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
           </div>
 
           {formData.clientType === 'company' && (
-            <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-slate-900">معلومات الشركة</h4>
+            <div className="space-y-4 p-4 bg-primary-soft rounded-lg">
+              <h4 className="font-medium text-foreground">معلومات الشركة</h4>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   السجل التجاري *
                 </label>
                 <input
                   type="text"
                   value={formData.commercialRegister}
                   onChange={(e) => handleInputChange('commercialRegister', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    errors.commercialRegister ? 'border-red-300' : 'border-slate-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                    errors.commercialRegister ? 'border-destructive/30' : 'border-border'
                   }`}
                 />
                 {errors.commercialRegister && (
-                  <p className="text-red-600 text-sm mt-1">{errors.commercialRegister}</p>
+                  <p className="text-destructive text-sm mt-1">{errors.commercialRegister}</p>
                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     اسم الممثل القانوني
                   </label>
                   <input
                     type="text"
                     value={formData.legalRepresentativeName}
                     onChange={(e) => handleInputChange('legalRepresentativeName', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     رقم هوية الممثل القانوني
                   </label>
                   <input
                     type="text"
                     value={formData.legalRepresentativeId}
                     onChange={(e) => handleInputChange('legalRepresentativeId', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     وسيلة التواصل
                   </label>
                   <input
                     type="text"
                     value={formData.legalRepresentativeContact}
                     onChange={(e) => handleInputChange('legalRepresentativeContact', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               </div>
@@ -445,14 +445,14 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               الملاحظات
             </label>
             <textarea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="ملاحظات إضافية..."
             />
           </div>
@@ -461,13 +461,13 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800"
+              className="px-4 py-2 text-muted-foreground hover:text-foreground"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg"
             >
               {client ? 'حفظ التغييرات' : 'إضافة العميل'}
             </button>

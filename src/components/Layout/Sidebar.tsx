@@ -59,7 +59,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
   };
 
   return (
-    <div className={`bg-slate-900 text-white w-64 min-h-screen fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+    <div className={`bg-sidebar text-sidebar-foreground w-64 min-h-screen fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
       isOpen ? 'translate-x-0' : 'translate-x-full'
     }`}>
       <div className="p-4 sm:p-6">
@@ -73,13 +73,13 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
                 className="h-6 w-6 object-contain"
               />
             ) : (
-              <Scale className="h-6 w-6 text-amber-400" />
+              <Scale className="h-6 w-6 text-sidebar-primary" />
             )}
             <span className="text-lg font-bold">{settings?.companyName || 'NAF Law'}</span>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1"
+            className="text-sidebar-foreground/70 hover:text-sidebar-foreground p-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -96,11 +96,11 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
               className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
             />
           ) : (
-            <Scale className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400" />
+            <Scale className="h-6 w-6 sm:h-8 sm:w-8 text-sidebar-primary" />
           )}
           <div className="hidden lg:block">
             <h1 className="text-lg sm:text-xl font-bold">{settings?.companyName || 'NAF Law'}</h1>
-            <p className="text-xs sm:text-sm text-slate-400">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
+            <p className="text-xs sm:text-sm text-sidebar-foreground/70">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
           </div>
         </div>
         
@@ -114,8 +114,8 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
                 onClick={() => onViewChange(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-right transition-colors ${
                   currentView === item.id 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 }`}
               >
                 <item.icon className="h-5 w-5" />
@@ -131,7 +131,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
 
             وهو مجموعةُ أزرارٍ ظاهرة لا قائمةٌ مطويّة، لأن «يتبع النظام»
             المدفونةَ في قائمة خيارٌ منسيّ — وهي الافتراض. */}
-        <div className="mt-8 border-t border-slate-800 pt-4">
+        <div className="mt-8 border-t border-sidebar-border pt-4">
           <ThemeToggle />
         </div>
       </div>

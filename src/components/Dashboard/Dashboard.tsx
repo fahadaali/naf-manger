@@ -5,8 +5,12 @@ import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { useChartPalette } from '../../lib/chart-tokens';
 
 export default function Dashboard() {
+  // لوحة الرسوم تُقرأ من الرموز وتُعاد قراءتها عند تبديل المظهر
+  const palette = useChartPalette();
+
   const [stats, setStats] = useState({
     totalClients: 0,
     totalProspects: 0,
@@ -63,12 +67,7 @@ export default function Dashboard() {
           stats.clientsByType.association,
           stats.clientsByType.government
         ],
-        backgroundColor: [
-          '#3b82f6',
-          '#10b981',
-          '#f59e0b',
-          '#ef4444'
-        ],
+        backgroundColor: palette.slice(0, 4),
         borderWidth: 0
       }
     ]
@@ -85,7 +84,7 @@ export default function Dashboard() {
           stats.casesByStatus.postponed,
           stats.casesByStatus['in-progress']
         ],
-        backgroundColor: '#3b82f6',
+        backgroundColor: palette[1],
         borderRadius: 4
       }
     ]
@@ -99,34 +98,34 @@ export default function Dashboard() {
           title="إجمالي العملاء"
           value={stats.totalClients}
           icon={Users}
-          color="bg-blue-500"
+          color="bg-chart-1"
           trend={{ value: 12, label: 'الشهر الماضي' }}
         />
         <StatsCard
           title="العملاء المحتملين"
           value={stats.totalProspects}
           icon={UserPlus}
-          color="bg-purple-500"
+          color="bg-chart-2"
           trend={{ value: 8, label: 'الشهر الماضي' }}
         />
         <StatsCard
           title="إجمالي القضايا"
           value={stats.totalCases}
           icon={FileText}
-          color="bg-green-500"
+          color="bg-chart-3"
           trend={{ value: 8, label: 'الشهر الماضي' }}
         />
         <StatsCard
           title="القضايا المنظورة"
           value={stats.pendingCases}
           icon={TrendingUp}
-          color="bg-amber-500"
+          color="bg-chart-4"
         />
         <StatsCard
           title="معدل الربح"
           value={`${stats.winRate}%`}
           icon={Award}
-          color="bg-red-500"
+          color="bg-chart-5"
           trend={{ value: 5, label: 'الشهر الماضي' }}
         />
       </div>

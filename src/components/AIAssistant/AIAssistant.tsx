@@ -175,11 +175,11 @@ export default function AIAssistant() {
   const getConnectionStatusIcon = () => {
     switch (connectionStatus) {
       case 'checking':
-        return <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />;
+        return <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />;
       case 'connected':
-        return <CheckCircleIcon className="w-4 h-4 text-green-500" />;
+        return <CheckCircleIcon className="w-4 h-4 text-success" />;
       case 'disconnected':
-        return <ExclamationTriangleIcon className="w-4 h-4 text-red-500" />;
+        return <ExclamationTriangleIcon className="w-4 h-4 text-destructive" />;
     }
   };
 
@@ -196,17 +196,17 @@ export default function AIAssistant() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-surface-deep text-surface-deep-foreground rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <SparklesIcon className="h-8 w-8" />
             <div>
               <h1 className="text-2xl font-bold">المساعد الذكي القانوني</h1>
-              <p className="text-blue-100">مدعوم بتقنية Gemini AI من Google</p>
+              <p className="text-surface-deep-muted">مدعوم بتقنية Gemini AI من Google</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 bg-white bg-opacity-20 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 bg-card bg-opacity-20 rounded-lg px-3 py-2">
             {getConnectionStatusIcon()}
             <span className="text-sm">{getConnectionStatusText()}</span>
           </div>
@@ -217,7 +217,7 @@ export default function AIAssistant() {
             <button
               key={index}
               onClick={() => setInputMessage(question)}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-3 text-right transition-all text-sm"
+              className="bg-card bg-opacity-20 hover:bg-opacity-30 rounded-lg p-3 text-right transition-all text-sm"
               disabled={isTyping}
             >
               <p>{question}</p>
@@ -226,12 +226,12 @@ export default function AIAssistant() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200">
-          <h3 className="font-semibold text-slate-900">المحادثة</h3>
+      <div className="bg-card rounded-lg shadow-sm border border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h3 className="font-semibold text-foreground">المحادثة</h3>
           <button
             onClick={clearChat}
-            className="text-slate-500 hover:text-slate-700 text-sm"
+            className="text-muted-foreground hover:text-foreground text-sm"
             disabled={isTyping}
           >
             مسح المحادثة
@@ -246,26 +246,26 @@ export default function AIAssistant() {
             >
               <div className={`flex gap-3 max-w-3xl ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`flex-shrink-0 ${
-                  message.type === 'user' ? 'bg-blue-500' : 
-                  message.isError ? 'bg-red-500' : 'bg-purple-500'
+                  message.type === 'user' ? 'bg-primary' : 
+                  message.isError ? 'bg-destructive' : 'bg-info'
                 } rounded-full p-2`}>
                   {message.type === 'user' ? (
-                    <UserIcon className="h-5 w-5 text-white" />
+                    <UserIcon className="h-5 w-5 text-primary-foreground" />
                   ) : message.isError ? (
-                    <ExclamationTriangleIcon className="h-5 w-5 text-white" />
+                    <ExclamationTriangleIcon className="h-5 w-5 text-destructive-foreground" />
                   ) : (
-                    <SparklesIcon className="h-5 w-5 text-white" />
+                    <SparklesIcon className="h-5 w-5 text-info-foreground" />
                   )}
                 </div>
                 <div className={`rounded-lg p-3 ${
                   message.type === 'user' 
-                    ? 'bg-blue-50 text-blue-900' 
+                    ? 'bg-primary-soft text-primary-strong' 
                     : message.isError
-                    ? 'bg-red-50 text-red-900'
-                    : 'bg-slate-50 text-slate-900'
+                    ? 'bg-destructive-soft text-destructive-strong'
+                    : 'bg-muted text-foreground'
                 }`}>
                   <p className="whitespace-pre-wrap">{message.content}</p>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     {message.timestamp.toLocaleTimeString('ar-SA')}
                   </p>
                 </div>
@@ -276,17 +276,17 @@ export default function AIAssistant() {
           {isTyping && (
             <div className="flex gap-3 justify-start">
               <div className="flex gap-3 max-w-3xl">
-                <div className="flex-shrink-0 bg-purple-500 rounded-full p-2">
-                  <SparklesIcon className="h-5 w-5 text-white" />
+                <div className="flex-shrink-0 bg-info rounded-full p-2">
+                  <SparklesIcon className="h-5 w-5 text-info-foreground" />
                 </div>
-                <div className="bg-slate-50 rounded-lg p-3">
+                <div className="bg-muted rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100"></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200"></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-100"></div>
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-200"></div>
                     </div>
-                    <span className="text-sm text-slate-500">Gemini يفكر...</span>
+                    <span className="text-sm text-muted-foreground">Gemini يفكر...</span>
                   </div>
                 </div>
               </div>
@@ -296,12 +296,12 @@ export default function AIAssistant() {
           <div ref={messagesEndRef} />
         </div>
         
-        <div className="border-t border-slate-200 p-4">
+        <div className="border-t border-border p-4">
           <div className="flex gap-2">
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isTyping}
-              className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white p-2 rounded-lg transition-colors"
+              className="flex-shrink-0 bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground p-2 rounded-lg transition-colors"
             >
               <PaperAirplaneIcon className="h-5 w-5" />
             </button>
@@ -310,14 +310,14 @@ export default function AIAssistant() {
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="اكتب سؤالك هنا... (اضغط Enter للإرسال)"
-              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              className="flex-1 px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring resize-none"
               disabled={isTyping}
               rows={2}
             />
             <button
               onClick={checkConnection}
               disabled={isTyping}
-              className="flex-shrink-0 text-slate-500 hover:text-slate-700 p-2"
+              className="flex-shrink-0 text-muted-foreground hover:text-foreground p-2"
               title="فحص الاتصال"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,12 +328,12 @@ export default function AIAssistant() {
         </div>
       </div>
 
-      <div className="bg-blue-50 rounded-lg p-4">
+      <div className="bg-primary-soft rounded-lg p-4">
         <div className="flex items-center gap-2 mb-2">
-          <ChatBubbleLeftRightIcon className="h-5 w-5 text-blue-600" />
-          <h3 className="font-semibold text-blue-900">ميزات المساعد الذكي:</h3>
+          <ChatBubbleLeftRightIcon className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold text-primary-strong">ميزات المساعد الذكي:</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">
           <ul className="space-y-1">
             <li>• إجابات ذكية مدعومة بـ Gemini AI</li>
             <li>• تحليل البيانات والإحصائيات</li>
@@ -349,8 +349,8 @@ export default function AIAssistant() {
         </div>
         
         {connectionStatus === 'disconnected' && (
-          <div className="mt-3 p-3 bg-yellow-100 rounded-lg">
-            <p className="text-yellow-800 text-sm">
+          <div className="mt-3 p-3 bg-warning-soft rounded-lg">
+            <p className="text-warning-strong text-sm">
               <strong>ملاحظة:</strong> المساعد يعمل حالياً في الوضع المحلي. للحصول على إجابات أكثر ذكاءً من Gemini AI، تأكد من:
               <br />• صحة مفتاح API في ملف .env
               <br />• الاتصال بالإنترنت
@@ -360,8 +360,8 @@ export default function AIAssistant() {
         )}
         
         {connectionStatus === 'connected' && (
-          <div className="mt-3 p-3 bg-green-100 rounded-lg">
-            <p className="text-green-800 text-sm">
+          <div className="mt-3 p-3 bg-success-soft rounded-lg">
+            <p className="text-success-strong text-sm">
               <strong>✅ متصل بـ Gemini AI:</strong> المساعد جاهز لتقديم إجابات ذكية ومتقدمة بناءً على بيانات مكتبك وخبرة الذكاء الاصطناعي.
             </p>
           </div>

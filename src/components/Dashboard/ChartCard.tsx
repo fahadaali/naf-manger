@@ -25,8 +25,8 @@ export default function ChartCard({ title, type, data, options }: ChartCardProps
   const chartOptions = { ...defaultOptions, ...options };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 border border-slate-200">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">{title}</h3>
+    <div className="bg-card rounded-lg shadow-sm p-6 border border-border">
+      <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
       <div className="h-64">
         {type === 'doughnut' ? (
           <Doughnut data={data} options={chartOptions} />

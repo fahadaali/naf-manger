@@ -88,33 +88,33 @@ export default function SupabaseMigration() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <CloudIcon className="h-6 w-6 text-blue-600" />
+        <CloudIcon className="h-6 w-6 text-primary" />
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">قاعدة البيانات المركزية</h3>
-          <p className="text-sm text-slate-600">إعداد وترحيل البيانات إلى Supabase</p>
+          <h3 className="text-lg font-semibold text-foreground">قاعدة البيانات المركزية</h3>
+          <p className="text-sm text-muted-foreground">إعداد وترحيل البيانات إلى Supabase</p>
         </div>
       </div>
 
       {/* Connection Status */}
       <div className={`rounded-lg p-4 border ${
         isSupabaseConnected 
-          ? 'bg-green-50 border-green-200' 
-          : 'bg-red-50 border-red-200'
+          ? 'bg-success-soft border-success/30' 
+          : 'bg-destructive-soft border-destructive/30'
       }`}>
         <div className="flex items-center gap-3">
           {isSupabaseConnected ? (
-            <CheckCircleIcon className="h-6 w-6 text-green-600" />
+            <CheckCircleIcon className="h-6 w-6 text-success" />
           ) : (
-            <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+            <ExclamationTriangleIcon className="h-6 w-6 text-destructive" />
           )}
           <div>
             <h4 className={`font-medium ${
-              isSupabaseConnected ? 'text-green-900' : 'text-red-900'
+              isSupabaseConnected ? 'text-success-strong' : 'text-destructive-strong'
             }`}>
               {isSupabaseConnected ? 'Supabase متصل' : 'Supabase غير متصل'}
             </h4>
             <p className={`text-sm ${
-              isSupabaseConnected ? 'text-green-800' : 'text-red-800'
+              isSupabaseConnected ? 'text-success-strong' : 'text-destructive-strong'
             }`}>
               {isSupabaseConnected 
                 ? 'تم العثور على إعدادات Supabase صحيحة. يمكنك الآن ترحيل البيانات.'
@@ -127,31 +127,31 @@ export default function SupabaseMigration() {
 
       {/* Local Data Overview */}
       {localDataStats && (
-        <div className="bg-slate-50 rounded-lg p-6">
-          <h4 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
+        <div className="bg-muted rounded-lg p-6">
+          <h4 className="font-medium text-foreground mb-4 flex items-center gap-2">
             <CogIcon className="h-5 w-5" />
             البيانات المحلية الحالية
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{localDataStats.clients}</p>
-              <p className="text-sm text-slate-600">العملاء</p>
+              <p className="text-2xl font-bold text-primary">{localDataStats.clients}</p>
+              <p className="text-sm text-muted-foreground">العملاء</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{localDataStats.prospects}</p>
-              <p className="text-sm text-slate-600">العملاء المحتملين</p>
+              <p className="text-2xl font-bold text-info">{localDataStats.prospects}</p>
+              <p className="text-sm text-muted-foreground">العملاء المحتملين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{localDataStats.cases}</p>
-              <p className="text-sm text-slate-600">القضايا</p>
+              <p className="text-2xl font-bold text-success">{localDataStats.cases}</p>
+              <p className="text-sm text-muted-foreground">القضايا</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-amber-600">{localDataStats.marketers}</p>
-              <p className="text-sm text-slate-600">المسوّقين</p>
+              <p className="text-2xl font-bold text-warning">{localDataStats.marketers}</p>
+              <p className="text-sm text-muted-foreground">المسوّقين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">{localDataStats.activities}</p>
-              <p className="text-sm text-slate-600">الأنشطة</p>
+              <p className="text-2xl font-bold text-destructive">{localDataStats.activities}</p>
+              <p className="text-sm text-muted-foreground">الأنشطة</p>
             </div>
           </div>
         </div>
@@ -160,30 +160,30 @@ export default function SupabaseMigration() {
       {/* Migration Status */}
       {migrationMessage && (
         <div className={`rounded-lg p-4 border ${
-          migrationStatus === 'success' ? 'bg-green-50 border-green-200' :
-          migrationStatus === 'error' ? 'bg-red-50 border-red-200' :
-          'bg-blue-50 border-blue-200'
+          migrationStatus === 'success' ? 'bg-success-soft border-success/30' :
+          migrationStatus === 'error' ? 'bg-destructive-soft border-destructive/30' :
+          'bg-primary-soft border-primary/30'
         }`}>
           <div className="flex items-start gap-3">
-            {migrationStatus === 'success' && <CheckCircleIcon className="h-6 w-6 text-green-600 flex-shrink-0" />}
-            {migrationStatus === 'error' && <ExclamationTriangleIcon className="h-6 w-6 text-red-600 flex-shrink-0" />}
+            {migrationStatus === 'success' && <CheckCircleIcon className="h-6 w-6 text-success flex-shrink-0" />}
+            {migrationStatus === 'error' && <ExclamationTriangleIcon className="h-6 w-6 text-destructive flex-shrink-0" />}
             {migrationStatus === 'migrating' && (
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 flex-shrink-0"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary flex-shrink-0"></div>
             )}
             <div>
               <p className={`font-medium ${
-                migrationStatus === 'success' ? 'text-green-900' :
-                migrationStatus === 'error' ? 'text-red-900' :
-                'text-blue-900'
+                migrationStatus === 'success' ? 'text-success-strong' :
+                migrationStatus === 'error' ? 'text-destructive-strong' :
+                'text-primary-strong'
               }`}>
                 {migrationStatus === 'success' ? 'نجح الترحيل' :
                  migrationStatus === 'error' ? 'فشل الترحيل' :
                  migrationStatus === 'migrating' ? 'جاري الترحيل' : 'معلومات'}
               </p>
               <p className={`text-sm ${
-                migrationStatus === 'success' ? 'text-green-800' :
-                migrationStatus === 'error' ? 'text-red-800' :
-                'text-blue-800'
+                migrationStatus === 'success' ? 'text-success-strong' :
+                migrationStatus === 'error' ? 'text-destructive-strong' :
+                'text-primary-strong'
               }`}>
                 {migrationMessage}
               </p>
@@ -193,18 +193,18 @@ export default function SupabaseMigration() {
       )}
 
       {/* Migration Steps */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6">
-        <h4 className="font-medium text-slate-900 mb-4">خطوات الترحيل إلى Supabase</h4>
+      <div className="bg-card rounded-lg border border-border p-6">
+        <h4 className="font-medium text-foreground mb-4">خطوات الترحيل إلى Supabase</h4>
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              isSupabaseConnected ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-600'
+              isSupabaseConnected ? 'bg-success-soft text-success' : 'bg-muted text-muted-foreground'
             }`}>
               1
             </div>
             <div>
-              <h5 className="font-medium text-slate-900">توصيل Supabase</h5>
-              <p className="text-sm text-slate-600">
+              <h5 className="font-medium text-foreground">توصيل Supabase</h5>
+              <p className="text-sm text-muted-foreground">
                 {isSupabaseConnected 
                   ? '✅ تم توصيل Supabase بنجاح'
                   : 'اضغط على "Connect to Supabase" في أعلى الصفحة'
@@ -215,13 +215,13 @@ export default function SupabaseMigration() {
           
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              migrationStatus === 'success' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-600'
+              migrationStatus === 'success' ? 'bg-success-soft text-success' : 'bg-muted text-muted-foreground'
             }`}>
               2
             </div>
             <div>
-              <h5 className="font-medium text-slate-900">ترحيل البيانات</h5>
-              <p className="text-sm text-slate-600">
+              <h5 className="font-medium text-foreground">ترحيل البيانات</h5>
+              <p className="text-sm text-muted-foreground">
                 {migrationStatus === 'success' 
                   ? '✅ تم ترحيل جميع البيانات بنجاح'
                   : 'نقل البيانات من التخزين المحلي إلى قاعدة بيانات Supabase'
@@ -231,12 +231,12 @@ export default function SupabaseMigration() {
           </div>
           
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-600">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-muted text-muted-foreground">
               3
             </div>
             <div>
-              <h5 className="font-medium text-slate-900">التحقق من البيانات</h5>
-              <p className="text-sm text-slate-600">
+              <h5 className="font-medium text-foreground">التحقق من البيانات</h5>
+              <p className="text-sm text-muted-foreground">
                 التأكد من صحة البيانات المرحلة في لوحة تحكم Supabase
               </p>
             </div>
@@ -248,7 +248,7 @@ export default function SupabaseMigration() {
       <div className="flex flex-col sm:flex-row gap-4">
         <button
           onClick={exportBackup}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+          className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80"
         >
           <DocumentArrowDownIcon className="h-5 w-5" />
           تصدير نسخة احتياطية أولاً
@@ -257,11 +257,11 @@ export default function SupabaseMigration() {
         <button
           onClick={handleMigration}
           disabled={!isSupabaseConnected || migrationStatus === 'migrating'}
-          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed"
         >
           {migrationStatus === 'migrating' ? (
             <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-card"></div>
               جاري الترحيل...
             </>
           ) : (
@@ -274,12 +274,12 @@ export default function SupabaseMigration() {
       </div>
 
       {/* Benefits */}
-      <div className="bg-blue-50 rounded-lg p-6">
-        <h4 className="font-medium text-blue-900 mb-4 flex items-center gap-2">
+      <div className="bg-primary-soft rounded-lg p-6">
+        <h4 className="font-medium text-primary-strong mb-4 flex items-center gap-2">
           <ShieldCheckIcon className="h-5 w-5" />
           مزايا استخدام Supabase
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">
           <ul className="space-y-2">
             <li>• قاعدة بيانات مركزية آمنة</li>
             <li>• مزامنة البيانات بين جميع المستخدمين</li>
@@ -296,12 +296,12 @@ export default function SupabaseMigration() {
       </div>
 
       {/* Important Notes */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <ExclamationTriangleIcon className="h-6 w-6 text-amber-600 flex-shrink-0" />
+          <ExclamationTriangleIcon className="h-6 w-6 text-warning flex-shrink-0" />
           <div>
-            <h5 className="font-medium text-amber-900 mb-2">ملاحظات مهمة:</h5>
-            <ul className="text-sm text-amber-800 space-y-1">
+            <h5 className="font-medium text-warning-strong mb-2">ملاحظات مهمة:</h5>
+            <ul className="text-sm text-warning-strong space-y-1">
               <li>• تأكد من إنشاء نسخة احتياطية قبل بدء الترحيل</li>
               <li>• عملية الترحيل قد تستغرق عدة دقائق حسب حجم البيانات</li>
               <li>• بعد الترحيل، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</li>

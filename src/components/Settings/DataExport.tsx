@@ -361,30 +361,30 @@ export default function DataExport() {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-slate-900">تصدير البيانات</h3>
+      <h3 className="text-lg font-semibold text-foreground">تصدير البيانات</h3>
       
       {exportMessage && (
         <div className={`p-3 rounded-lg ${
-          exportMessage.includes('نجاح') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          exportMessage.includes('نجاح') ? 'bg-success-soft text-success-strong' : 'bg-destructive-soft text-destructive-strong'
         }`}>
           {exportMessage}
         </div>
       )}
       
       {/* Data Selection */}
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h4 className="font-medium text-slate-900 mb-4">اختر البيانات المراد تصديرها</h4>
+      <div className="bg-muted rounded-lg p-6">
+        <h4 className="font-medium text-foreground mb-4">اختر البيانات المراد تصديرها</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(selectedData).map(([key, selected]) => (
-            <label key={key} className="flex items-center gap-3 p-3 bg-white rounded-lg cursor-pointer hover:bg-slate-50">
+            <label key={key} className="flex items-center gap-3 p-3 bg-card rounded-lg cursor-pointer hover:bg-muted">
               <input
                 type="checkbox"
                 checked={selected}
                 onChange={() => handleDataToggle(key)}
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-border text-primary focus-visible:ring-ring"
               />
               <div>
-                <span className="font-medium text-slate-900">
+                <span className="font-medium text-foreground">
                   {key === 'clients' ? 'بيانات العملاء' :
                    key === 'prospects' ? 'بيانات العملاء المحتملين' :
                    key === 'cases' ? 'بيانات القضايا' :
@@ -393,7 +393,7 @@ export default function DataExport() {
                    key === 'analytics' ? 'الإحصائيات' :
                    key === 'activities' ? 'سجل الأنشطة' : key}
                 </span>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   {key === 'clients' ? 'جميع العملاء المسجلين' :
                    key === 'prospects' ? 'جميع العملاء المحتملين' :
                    key === 'cases' ? 'جميع القضايا المسجلة' :
@@ -409,8 +409,8 @@ export default function DataExport() {
       </div>
 
       {/* Format Selection */}
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h4 className="font-medium text-slate-900 mb-4">تنسيق الملف</h4>
+      <div className="bg-muted rounded-lg p-6">
+        <h4 className="font-medium text-foreground mb-4">تنسيق الملف</h4>
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -419,9 +419,9 @@ export default function DataExport() {
               value="json"
               checked={selectedFormat === 'json'}
               onChange={(e) => setSelectedFormat(e.target.value)}
-              className="text-blue-600 focus:ring-blue-500"
+              className="text-primary focus-visible:ring-ring"
             />
-            <span className="text-slate-900">JSON (.json) - نسخة احتياطية كاملة</span>
+            <span className="text-foreground">JSON (.json) - نسخة احتياطية كاملة</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -430,9 +430,9 @@ export default function DataExport() {
               value="excel"
               checked={selectedFormat === 'excel'}
               onChange={(e) => setSelectedFormat(e.target.value)}
-              className="text-blue-600 focus:ring-blue-500"
+              className="text-primary focus-visible:ring-ring"
             />
-            <span className="text-slate-900">Excel/CSV (.csv)</span>
+            <span className="text-foreground">Excel/CSV (.csv)</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -441,21 +441,21 @@ export default function DataExport() {
               value="pdf"
               checked={selectedFormat === 'pdf'}
               onChange={(e) => setSelectedFormat(e.target.value)}
-              className="text-blue-600 focus:ring-blue-500"
+              className="text-primary focus-visible:ring-ring"
             />
-            <span className="text-slate-900">نص منسق (.txt)</span>
+            <span className="text-foreground">نص منسق (.txt)</span>
           </label>
         </div>
       </div>
 
       {/* Field Selection */}
       {(selectedData.clients || selectedData.prospects || selectedData.cases || selectedData.marketers) && selectedFormat !== 'json' && (
-        <div className="bg-slate-50 rounded-lg p-6">
-          <h4 className="font-medium text-slate-900 mb-4">اختر الحقول المراد تصديرها</h4>
+        <div className="bg-muted rounded-lg p-6">
+          <h4 className="font-medium text-foreground mb-4">اختر الحقول المراد تصديرها</h4>
           
           {selectedData.clients && (
             <div className="mb-6">
-              <h5 className="font-medium text-slate-800 mb-3">حقول العملاء</h5>
+              <h5 className="font-medium text-foreground mb-3">حقول العملاء</h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries(selectedFields.clients).map(([field, selected]) => (
                   <label key={field} className="flex items-center gap-2 cursor-pointer">
@@ -463,9 +463,9 @@ export default function DataExport() {
                       type="checkbox"
                       checked={selected}
                       onChange={() => handleFieldToggle('clients', field)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-border text-primary focus-visible:ring-ring"
                     />
-                    <span className="text-sm text-slate-900">
+                    <span className="text-sm text-foreground">
                       {field === 'basicInfo' ? 'المعلومات الأساسية' :
                        field === 'contactInfo' ? 'معلومات التواصل' :
                        field === 'notes' ? 'الملاحظات' :
@@ -479,7 +479,7 @@ export default function DataExport() {
 
           {selectedData.prospects && (
             <div className="mb-6">
-              <h5 className="font-medium text-slate-800 mb-3">حقول العملاء المحتملين</h5>
+              <h5 className="font-medium text-foreground mb-3">حقول العملاء المحتملين</h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries(selectedFields.prospects).map(([field, selected]) => (
                   <label key={field} className="flex items-center gap-2 cursor-pointer">
@@ -487,9 +487,9 @@ export default function DataExport() {
                       type="checkbox"
                       checked={selected}
                       onChange={() => handleFieldToggle('prospects', field)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-border text-primary focus-visible:ring-ring"
                     />
-                    <span className="text-sm text-slate-900">
+                    <span className="text-sm text-foreground">
                       {field === 'basicInfo' ? 'المعلومات الأساسية' :
                        field === 'contactInfo' ? 'معلومات التواصل' :
                        field === 'prospectInfo' ? 'معلومات العميل المحتمل' :
@@ -503,7 +503,7 @@ export default function DataExport() {
 
           {selectedData.cases && (
             <div className="mb-6">
-              <h5 className="font-medium text-slate-800 mb-3">حقول القضايا</h5>
+              <h5 className="font-medium text-foreground mb-3">حقول القضايا</h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries(selectedFields.cases).map(([field, selected]) => (
                   <label key={field} className="flex items-center gap-2 cursor-pointer">
@@ -511,9 +511,9 @@ export default function DataExport() {
                       type="checkbox"
                       checked={selected}
                       onChange={() => handleFieldToggle('cases', field)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-border text-primary focus-visible:ring-ring"
                     />
-                    <span className="text-sm text-slate-900">
+                    <span className="text-sm text-foreground">
                       {field === 'basicInfo' ? 'المعلومات الأساسية' :
                        field === 'details' ? 'تفاصيل القضية' :
                        field === 'basecampLinks' ? 'روابط Basecamp' :
@@ -527,7 +527,7 @@ export default function DataExport() {
 
           {selectedData.marketers && (
             <div>
-              <h5 className="font-medium text-slate-800 mb-3">حقول المسوّقين</h5>
+              <h5 className="font-medium text-foreground mb-3">حقول المسوّقين</h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries(selectedFields.marketers).map(([field, selected]) => (
                   <label key={field} className="flex items-center gap-2 cursor-pointer">
@@ -535,9 +535,9 @@ export default function DataExport() {
                       type="checkbox"
                       checked={selected}
                       onChange={() => handleFieldToggle('marketers', field)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-border text-primary focus-visible:ring-ring"
                     />
-                    <span className="text-sm text-slate-900">
+                    <span className="text-sm text-foreground">
                       {field === 'basicInfo' ? 'المعلومات الأساسية' :
                        field === 'contactInfo' ? 'معلومات التواصل' :
                        field === 'performance' ? 'إحصائيات الأداء' :
@@ -552,9 +552,9 @@ export default function DataExport() {
       )}
 
       {/* Export Summary */}
-      <div className="bg-blue-50 rounded-lg p-6">
-        <h4 className="font-medium text-blue-900 mb-3">ملخص التصدير</h4>
-        <div className="space-y-2 text-sm text-blue-800">
+      <div className="bg-primary-soft rounded-lg p-6">
+        <h4 className="font-medium text-primary-strong mb-3">ملخص التصدير</h4>
+        <div className="space-y-2 text-sm text-primary-strong">
           <p>• التنسيق: {
             selectedFormat === 'json' ? 'JSON (نسخة احتياطية كاملة)' :
             selectedFormat === 'excel' ? 'CSV/Excel' : 
@@ -573,7 +573,7 @@ export default function DataExport() {
         <button
           onClick={exportData}
           disabled={!Object.values(selectedData).some(Boolean) || isExporting}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg flex items-center gap-2 font-medium"
+          className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-3 rounded-lg flex items-center gap-2 font-medium"
         >
           <DocumentArrowDownIcon className="h-5 w-5" />
           {isExporting ? 'جاري التصدير...' : 'تصدير البيانات'}
@@ -581,9 +581,9 @@ export default function DataExport() {
       </div>
 
       {/* Migration Notice */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <h4 className="font-medium text-amber-900 mb-2">ملاحظة مهمة حول قاعدة البيانات:</h4>
-        <div className="text-sm text-amber-800 space-y-2">
+      <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
+        <h4 className="font-medium text-warning-strong mb-2">ملاحظة مهمة حول قاعدة البيانات:</h4>
+        <div className="text-sm text-warning-strong space-y-2">
           <p>• التطبيق يدعم الآن قاعدة بيانات Supabase المركزية</p>
           <p>• عند توصيل Supabase، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</p>
           <p>• يمكنك ترحيل البيانات الحالية من localStorage إلى Supabase</p>

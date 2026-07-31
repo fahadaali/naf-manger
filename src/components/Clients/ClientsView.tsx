@@ -120,13 +120,13 @@ export default function ClientsView() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">إدارة العملاء</h1>
-          <p className="text-slate-600">إدارة بيانات العملاء الفعليين والمعلومات المرتبطة بهم</p>
+          <h1 className="text-2xl font-bold text-foreground">إدارة العملاء</h1>
+          <p className="text-muted-foreground">إدارة بيانات العملاء الفعليين والمعلومات المرتبطة بهم</p>
         </div>
         {hasPermission('clients', 'create') && (
           <button 
             onClick={handleCreateClient}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
           >
             <PlusIcon className="h-5 w-5" />
             إضافة عميل جديد
@@ -135,23 +135,23 @@ export default function ClientsView() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث عن عميل..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الأنواع</option>
               <option value="individual">أفراد</option>
@@ -162,7 +162,7 @@ export default function ClientsView() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الحالات</option>
               <option value="current">حالي</option>
@@ -174,25 +174,25 @@ export default function ClientsView() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">إجمالي العملاء</p>
-          <p className="text-xl sm:text-2xl font-bold text-slate-900">{clients.length}</p>
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">إجمالي العملاء</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{clients.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">العملاء الحاليين</p>
-          <p className="text-xl sm:text-2xl font-bold text-green-600">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">العملاء الحاليين</p>
+          <p className="text-xl sm:text-2xl font-bold text-success">
             {clients.filter(c => c.status === 'current').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">الشركات</p>
-          <p className="text-xl sm:text-2xl font-bold text-blue-600">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">الشركات</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">
             {clients.filter(c => c.clientType === 'company').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">الأفراد</p>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">الأفراد</p>
+          <p className="text-xl sm:text-2xl font-bold text-warning">
             {clients.filter(c => c.clientType === 'individual').length}
           </p>
         </div>
@@ -214,7 +214,7 @@ export default function ClientsView() {
 
       {filteredClients.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-slate-500">لا توجد عملاء مطابقين لمعايير البحث</p>
+          <p className="text-muted-foreground">لا توجد عملاء مطابقين لمعايير البحث</p>
         </div>
       )}
 

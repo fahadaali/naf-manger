@@ -23,35 +23,25 @@ function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isAuthenticated, loading } = useAuth();
-  const [settings, setSettings] = useState<any>(null);
 
-  useEffect(() => {
-    // تطبيق ألوان النظام عند تحميل التطبيق
-    const loadAndApplySettings = async () => {
-      console.log('Loading and applying settings...');
-      try {
-        const currentSettings = await db.getSettings();
-        console.log('Settings loaded:', currentSettings);
-        setSettings(currentSettings);
-        const root = document.documentElement;
-        root.style.setProperty('--color-primary', currentSettings.primaryColor);
-        root.style.setProperty('--color-secondary', currentSettings.secondaryColor);
-        root.style.setProperty('--color-accent', currentSettings.accentColor);
-        console.log('Theme colors applied successfully');
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    };
-    
-    loadAndApplySettings();
-  }, []);
+  /* ═══ ما كان هنا ═══
+   *
+   * كان هذا التأثير يقرأ ثلاثة ألوان من قاعدة البيانات ويحقنها على عنصر
+   * الجذر عند كل إقلاع — ‎--color-primary‎ و‎--color-secondary‎
+   * و‎--color-accent‎. وهو الذراع التشغيليّ للثيم الموازي: لوحةٌ تعيش في
+   * صفٍّ في قاعدة بيانات، تختلف بين نسخةٍ وأخرى، ولا يعرفها السجلّ.
+   *
+   * اللوحة الآن من ‎naf-theme.css‎ وحده، تصل مع الحزمة قبل أوّل رسم ولا
+   * تنتظر شبكةً ولا استعلاماً. ولا شيء يُحقن على الجذر إلا صنف ‎.dark‎
+   * من مُبدِّل المظهر.
+   */
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">جاري التحميل...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري التحميل...</p>
         </div>
       </div>
     );
@@ -65,8 +55,8 @@ function AppContent() {
      مسار. حذفُهما قرارٌ مستقل عن ربط الدخول، فلا يُخلط به. */
   if (!isAuthenticated) {
     return (
-      <div dir="rtl" className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <p className="text-slate-700">حدث خطأ في النظام. أعد المحاولة بعد قليل</p>
+      <div dir="rtl" className="min-h-screen bg-muted flex items-center justify-center p-4">
+        <p className="text-foreground">حدث خطأ في النظام. أعد المحاولة بعد قليل</p>
       </div>
     );
   }
@@ -116,16 +106,16 @@ function AppContent() {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="text-red-600 mb-4">
+            <div className="text-destructive mb-4">
               <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 mb-2">حدث خطأ في عرض الصفحة</h2>
-            <p className="text-slate-600 mb-4">يرجى فحص وحدة التحكم للحصول على تفاصيل الخطأ</p>
+            <h2 className="text-xl font-bold text-foreground mb-2">حدث خطأ في عرض الصفحة</h2>
+            <p className="text-muted-foreground mb-4">يرجى فحص وحدة التحكم للحصول على تفاصيل الخطأ</p>
             <button 
               onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90"
             >
               إعادة تحميل الصفحة
             </button>
@@ -136,11 +126,11 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex relative" dir="rtl">
+    <div className="min-h-screen bg-muted flex relative" dir="rtl">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-overlay z-40 lg:hidden"
           onClick={closeSidebar}
         />
       )}

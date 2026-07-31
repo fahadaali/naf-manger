@@ -16,9 +16,9 @@ interface ClientCardProps {
 export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeeting, canEdit }: ClientCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'current': return 'bg-green-100 text-green-800';
-      case 'former': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'current': return 'bg-success-soft text-success-strong';
+      case 'former': return 'bg-muted text-foreground';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -41,7 +41,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-lg shadow-sm border border-border p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <ProfileAvatar 
@@ -52,11 +52,11 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
           <div>
             <button 
               onClick={() => onViewDetails(client)}
-              className="text-lg font-semibold text-blue-600 hover:text-blue-800 hover:underline text-right"
+              className="text-lg font-semibold text-primary hover:text-primary-strong hover:underline text-right"
             >
               {client.fullName}
             </button>
-            <p className="text-sm text-slate-500">{getTypeLabel(client.clientType)}</p>
+            <p className="text-sm text-muted-foreground">{getTypeLabel(client.clientType)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
           {onCreateMeeting && (
             <button
               onClick={() => onCreateMeeting(client)}
-              className="text-blue-600 hover:text-blue-800 p-1"
+              className="text-primary hover:text-primary-strong p-1"
               title="إنشاء اجتماع Zoom"
             >
               <VideoCameraIcon className="h-4 w-4" />
@@ -75,7 +75,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
           {canEdit && (
             <button
               onClick={() => onEdit(client)}
-              className="text-slate-600 hover:text-slate-800 p-1"
+              className="text-muted-foreground hover:text-foreground p-1"
               title="تحرير"
             >
               <PencilIcon className="h-4 w-4" />
@@ -85,32 +85,32 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
       </div>
 
       <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <PhoneIcon className="h-4 w-4" />
           <span>{client.phone}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <EnvelopeIcon className="h-4 w-4" />
           <span>{client.email}</span>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           عميل منذ: {format(client.joinDate, 'dd/MM/yyyy')}
         </p>
       </div>
 
       {client.notes && (
-        <p className="text-sm text-slate-600 mb-4 line-clamp-2">{client.notes}</p>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{client.notes}</p>
       )}
 
       <div className="flex justify-between items-center">
         <button
           onClick={() => onViewDetails(client)}
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          className="text-primary hover:text-primary-strong text-sm font-medium"
         >
           عرض التفاصيل
         </button>
         {client.clientType === 'company' && client.commercialRegister && (
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             س.ت: {client.commercialRegister}
           </span>
         )}

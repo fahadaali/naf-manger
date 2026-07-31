@@ -174,13 +174,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   // View mode
   if (!isEditing && existingCase) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-full sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
+        <div className="bg-card rounded-lg max-w-full sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900">تفاصيل القضية</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-foreground">تفاصيل القضية</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-full"
+              className="p-2 hover:bg-muted rounded-full"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -188,57 +188,57 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
           <div className="p-6 space-y-6">
             {/* Case Information */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">معلومات القضية</h3>
+            <div className="bg-muted rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">معلومات القضية</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">رقم القضية</label>
-                  <p className="text-slate-900 font-medium">{existingCase.caseNumber}</p>
+                  <label className="block text-sm font-medium text-foreground">رقم القضية</label>
+                  <p className="text-foreground font-medium">{existingCase.caseNumber}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">نوع القضية</label>
-                  <p className="text-slate-900">{existingCase.caseType}</p>
+                  <label className="block text-sm font-medium text-foreground">نوع القضية</label>
+                  <p className="text-foreground">{existingCase.caseType}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">العميل</label>
-                  <p className="text-slate-900">{existingCase.clientName}</p>
+                  <label className="block text-sm font-medium text-foreground">العميل</label>
+                  <p className="text-foreground">{existingCase.clientName}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">الحالة</label>
-                  <p className="text-slate-900">{getStatusLabel(existingCase.status)}</p>
+                  <label className="block text-sm font-medium text-foreground">الحالة</label>
+                  <p className="text-foreground">{getStatusLabel(existingCase.status)}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">تاريخ الإنشاء</label>
-                  <p className="text-slate-900">{format(existingCase.createdDate, 'dd/MM/yyyy')}</p>
+                  <label className="block text-sm font-medium text-foreground">تاريخ الإنشاء</label>
+                  <p className="text-foreground">{format(existingCase.createdDate, 'dd/MM/yyyy')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">آخر تحديث</label>
-                  <p className="text-slate-900">{format(existingCase.updatedDate, 'dd/MM/yyyy')}</p>
+                  <label className="block text-sm font-medium text-foreground">آخر تحديث</label>
+                  <p className="text-foreground">{format(existingCase.updatedDate, 'dd/MM/yyyy')}</p>
                 </div>
                 {existingCase.outcome && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">نتيجة القضية</label>
-                    <p className="text-slate-900">{getOutcomeLabel(existingCase.outcome)}</p>
+                    <label className="block text-sm font-medium text-foreground">نتيجة القضية</label>
+                    <p className="text-foreground">{getOutcomeLabel(existingCase.outcome)}</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Case Summary */}
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">ملخص القضية</h3>
-              <p className="text-slate-900 whitespace-pre-wrap">{existingCase.summary}</p>
+            <div className="bg-primary-soft rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">ملخص القضية</h3>
+              <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
             </div>
 
             {/* Basecamp Link */}
             {existingCase.basecampUrl && (
-              <div className="bg-yellow-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-slate-900 mb-3">رابط Basecamp</h3>
+              <div className="bg-warning-soft rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-3">رابط Basecamp</h3>
                 <a
                   href={existingCase.basecampUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+                  className="inline-flex items-center gap-2 text-primary hover:text-primary-strong font-medium"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
@@ -249,11 +249,11 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             )}
           </div>
 
-          <div className="border-t border-slate-200 px-6 py-4">
+          <div className="border-t border-border px-6 py-4">
             <div className="flex justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                className="px-4 py-2 text-muted-foreground hover:text-foreground"
               >
                 إغلاق
               </button>
@@ -266,15 +266,15 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
   // Edit/Create mode
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-full sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
+      <div className="bg-card rounded-lg max-w-full sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+          <h2 className="text-lg sm:text-xl font-bold text-foreground">
             {existingCase ? 'تعديل القضية' : 'إضافة قضية جديدة'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full"
+            className="p-2 hover:bg-muted rounded-full"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -283,31 +283,31 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 رقم القضية *
               </label>
               <input
                 type="text"
                 value={formData.caseNumber}
                 onChange={(e) => handleInputChange('caseNumber', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.caseNumber ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                  errors.caseNumber ? 'border-destructive/30' : 'border-border'
                 }`}
                 placeholder="NAF-2024-001"
               />
               {errors.caseNumber && (
-                <p className="text-red-600 text-sm mt-1">{errors.caseNumber}</p>
+                <p className="text-destructive text-sm mt-1">{errors.caseNumber}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 نوع القضية *
               </label>
               <select
                 value={formData.caseType}
                 onChange={(e) => handleInputChange('caseType', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="قضية تجارية">قضية تجارية</option>
                 <option value="قضية عمالية">قضية عمالية</option>
@@ -317,14 +317,14 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 العميل *
               </label>
               <select
                 value={formData.clientId}
                 onChange={(e) => handleInputChange('clientId', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.clientId ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                  errors.clientId ? 'border-destructive/30' : 'border-border'
                 }`}
               >
                 <option value="">اختر العميل</option>
@@ -335,18 +335,18 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 ))}
               </select>
               {errors.clientId && (
-                <p className="text-red-600 text-sm mt-1">{errors.clientId}</p>
+                <p className="text-destructive text-sm mt-1">{errors.clientId}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 حالة القضية
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="pending">منظورة</option>
                 <option value="in-progress">قيد المعالجة</option>
@@ -357,13 +357,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
             {formData.status === 'completed' && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   نتيجة القضية
                 </label>
                 <select
                   value={formData.outcome}
                   onChange={(e) => handleInputChange('outcome', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">اختر النتيجة</option>
                   <option value="won">رابحة</option>
@@ -376,13 +376,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
           {/* Marketer Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               المسوّق (اختياري)
             </label>
             <select
               value={formData.marketerId}
               onChange={(e) => handleInputChange('marketerId', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">بدون مسوّق</option>
               {marketers.map((marketer) => (
@@ -394,17 +394,17 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
           </div>
 
           {/* Fee Structure */}
-          <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-slate-900">هيكل الأتعاب القانونية</h4>
+          <div className="space-y-4 p-4 bg-primary-soft rounded-lg">
+            <h4 className="font-medium text-foreground">هيكل الأتعاب القانونية</h4>
             
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 نوع الأتعاب
               </label>
               <select
                 value={formData.feeType}
                 onChange={(e) => handleInputChange('feeType', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="advance_only">مقدم فقط</option>
                 <option value="deferred_only">مؤخر فقط</option>
@@ -414,40 +414,40 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
             {/* Advance Fee */}
             {(formData.feeType === 'advance_only' || formData.feeType === 'advance_and_deferred') && (
-              <div className="space-y-3 p-3 bg-white rounded border">
-                <h5 className="font-medium text-slate-800">الأتعاب المقدمة</h5>
+              <div className="space-y-3 p-3 bg-card rounded border">
+                <h5 className="font-medium text-foreground">الأتعاب المقدمة</h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">النوع</label>
+                    <label className="block text-sm font-medium text-foreground mb-1">النوع</label>
                     <select
                       value={formData.advanceFeeType}
                       onChange={(e) => handleInputChange('advanceFeeType', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border rounded focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <option value="fixed_amount">مبلغ ثابت</option>
                       <option value="percentage">نسبة مئوية</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       {formData.advanceFeeType === 'percentage' ? 'النسبة (%)' : 'المبلغ (ر.س)'}
                     </label>
                     <input
                       type="number"
                       value={formData.advanceFeeValue}
                       onChange={(e) => handleInputChange('advanceFeeValue', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border rounded focus-visible:ring-2 focus-visible:ring-ring"
                       placeholder={formData.advanceFeeType === 'percentage' ? '10' : '5000'}
                     />
                   </div>
                   {formData.advanceFeeType === 'percentage' && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">المبلغ الأساسي (ر.س)</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">المبلغ الأساسي (ر.س)</label>
                       <input
                         type="number"
                         value={formData.advanceBaseAmount}
                         onChange={(e) => handleInputChange('advanceBaseAmount', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-border rounded focus-visible:ring-2 focus-visible:ring-ring"
                         placeholder="100000"
                       />
                     </div>
@@ -458,40 +458,40 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
             {/* Deferred Fee */}
             {(formData.feeType === 'deferred_only' || formData.feeType === 'advance_and_deferred') && (
-              <div className="space-y-3 p-3 bg-white rounded border">
-                <h5 className="font-medium text-slate-800">الأتعاب المؤخرة</h5>
+              <div className="space-y-3 p-3 bg-card rounded border">
+                <h5 className="font-medium text-foreground">الأتعاب المؤخرة</h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">النوع</label>
+                    <label className="block text-sm font-medium text-foreground mb-1">النوع</label>
                     <select
                       value={formData.deferredFeeType}
                       onChange={(e) => handleInputChange('deferredFeeType', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border rounded focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <option value="fixed_amount">مبلغ ثابت</option>
                       <option value="percentage">نسبة مئوية</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       {formData.deferredFeeType === 'percentage' ? 'النسبة (%)' : 'المبلغ (ر.س)'}
                     </label>
                     <input
                       type="number"
                       value={formData.deferredFeeValue}
                       onChange={(e) => handleInputChange('deferredFeeValue', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border rounded focus-visible:ring-2 focus-visible:ring-ring"
                       placeholder={formData.deferredFeeType === 'percentage' ? '15' : '10000'}
                     />
                   </div>
                   {formData.deferredFeeType === 'percentage' && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">المبلغ الأساسي (ر.س)</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">المبلغ الأساسي (ر.س)</label>
                       <input
                         type="number"
                         value={formData.deferredBaseAmount}
                         onChange={(e) => handleInputChange('deferredBaseAmount', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-border rounded focus-visible:ring-2 focus-visible:ring-ring"
                         placeholder="100000"
                       />
                     </div>
@@ -502,44 +502,44 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
           </div>
 
           {/* Payment Status */}
-          <div className="space-y-4 p-4 bg-green-50 rounded-lg">
-            <h4 className="font-medium text-slate-900">حالة التحصيل من العميل</h4>
+          <div className="space-y-4 p-4 bg-success-soft rounded-lg">
+            <h4 className="font-medium text-foreground">حالة التحصيل من العميل</h4>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   المبلغ الإجمالي (ر.س)
                 </label>
                 <input
                   type="number"
                   value={formData.totalAmount}
                   onChange={(e) => handleInputChange('totalAmount', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="50000"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   المبلغ المحصل (ر.س)
                 </label>
                 <input
                   type="number"
                   value={formData.collectedAmount}
                   onChange={(e) => handleInputChange('collectedAmount', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="30000"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   حالة التحصيل
                 </label>
                 <select
                   value={formData.collectionStatus}
                   onChange={(e) => handleInputChange('collectionStatus', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="unpaid">غير مدفوع</option>
                   <option value="partially_paid">مدفوع جزئياً</option>
@@ -549,9 +549,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             </div>
             
             {formData.totalAmount && formData.collectedAmount && (
-              <div className="p-3 bg-white rounded border">
-                <p className="text-sm text-slate-600">
-                  المبلغ المتبقي: <span className="font-medium text-red-600">
+              <div className="p-3 bg-card rounded border">
+                <p className="text-sm text-muted-foreground">
+                  المبلغ المتبقي: <span className="font-medium text-destructive">
                     {(parseFloat(formData.totalAmount) - parseFloat(formData.collectedAmount)).toLocaleString()} ر.س
                   </span>
                 </p>
@@ -561,18 +561,18 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
           {/* Commission Structure (only if marketer is selected) */}
           {formData.marketerId && (
-            <div className="space-y-4 p-4 bg-purple-50 rounded-lg">
-              <h4 className="font-medium text-slate-900">هيكل عمولة المسوّق</h4>
+            <div className="space-y-4 p-4 bg-info-soft rounded-lg">
+              <h4 className="font-medium text-foreground">هيكل عمولة المسوّق</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     نوع العمولة
                   </label>
                   <select
                     value={formData.commissionType}
                     onChange={(e) => handleInputChange('commissionType', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="fixed_amount">مبلغ ثابت</option>
                     <option value="percentage">نسبة مئوية</option>
@@ -580,23 +580,23 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     {formData.commissionType === 'percentage' ? 'النسبة (%)' : 'المبلغ (ر.س)'}
                   </label>
                   <input
                     type="number"
                     value={formData.commissionValue}
                     onChange={(e) => handleInputChange('commissionValue', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                     placeholder={formData.commissionType === 'percentage' ? '10' : '5000'}
                   />
                 </div>
               </div>
               
               {formData.commissionType === 'percentage' && formData.commissionValue && formData.collectedAmount && (
-                <div className="p-3 bg-white rounded border">
-                  <p className="text-sm text-slate-600">
-                    العمولة المحسوبة: <span className="font-medium text-purple-600">
+                <div className="p-3 bg-card rounded border">
+                  <p className="text-sm text-muted-foreground">
+                    العمولة المحسوبة: <span className="font-medium text-info">
                       {((parseFloat(formData.collectedAmount) * parseFloat(formData.commissionValue)) / 100).toLocaleString()} ر.س
                     </span>
                   </p>
@@ -606,32 +606,32 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               ملخص القضية *
             </label>
             <textarea
               value={formData.summary}
               onChange={(e) => handleInputChange('summary', e.target.value)}
               rows={4}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                errors.summary ? 'border-red-300' : 'border-slate-300'
+              className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
+                errors.summary ? 'border-destructive/30' : 'border-border'
               }`}
               placeholder="وصف مختصر للقضية..."
             />
             {errors.summary && (
-              <p className="text-red-600 text-sm mt-1">{errors.summary}</p>
+              <p className="text-destructive text-sm mt-1">{errors.summary}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               رابط Basecamp (اختياري)
             </label>
             <input
               type="url"
               value={formData.basecampUrl}
               onChange={(e) => handleInputChange('basecampUrl', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="https://basecamp.com/projects/..."
             />
           </div>
@@ -640,13 +640,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800"
+              className="px-4 py-2 text-muted-foreground hover:text-foreground"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg"
             >
               {existingCase ? 'حفظ التغييرات' : 'إضافة القضية'}
             </button>

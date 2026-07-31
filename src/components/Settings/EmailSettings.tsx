@@ -112,12 +112,12 @@ export default function EmailSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <EnvelopeIcon className="h-6 w-6 text-slate-600" />
-          <h3 className="text-lg font-semibold text-slate-900">إعدادات البريد الإلكتروني</h3>
+          <EnvelopeIcon className="h-6 w-6 text-muted-foreground" />
+          <h3 className="text-lg font-semibold text-foreground">إعدادات البريد الإلكتروني</h3>
         </div>
         <button
           onClick={resetToDefaults}
-          className="text-slate-600 hover:text-slate-800 text-sm"
+          className="text-muted-foreground hover:text-foreground text-sm"
         >
           إعادة تعيين للافتراضي
         </button>
@@ -126,8 +126,8 @@ export default function EmailSettings() {
       {saveMessage && (
         <div className={`p-3 rounded-lg flex items-center gap-2 ${
           saveMessage.includes('نجاح') || testResult === 'success' 
-            ? 'bg-green-50 text-green-800' 
-            : 'bg-red-50 text-red-800'
+            ? 'bg-success-soft text-success-strong' 
+            : 'bg-destructive-soft text-destructive-strong'
         }`}>
           {testResult === 'success' && <CheckCircleIcon className="h-5 w-5" />}
           {testResult === 'error' && <ExclamationTriangleIcon className="h-5 w-5" />}
@@ -136,32 +136,32 @@ export default function EmailSettings() {
       )}
 
       {/* إعدادات الخادم */}
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h4 className="font-medium text-slate-900 mb-4">إعدادات خادم SMTP</h4>
+      <div className="bg-muted rounded-lg p-6">
+        <h4 className="font-medium text-foreground mb-4">إعدادات خادم SMTP</h4>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               خادم SMTP *
             </label>
             <input
               type="text"
               value={settings?.host || ''}
               onChange={(e) => handleInputChange('host', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="smtp.hostinger.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               المنفذ *
             </label>
             <input
               type="number"
               value={settings?.port || 587}
               onChange={(e) => handleInputChange('port', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="587"
             />
           </div>
@@ -172,34 +172,34 @@ export default function EmailSettings() {
                 type="checkbox"
                 checked={settings?.secure || false}
                 onChange={(e) => handleInputChange('secure', e.target.checked)}
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-border text-primary focus-visible:ring-ring"
               />
-              <span className="text-sm text-slate-700">استخدام SSL/TLS (للمنفذ 465)</span>
+              <span className="text-sm text-foreground">استخدام SSL/TLS (للمنفذ 465)</span>
             </label>
           </div>
         </div>
       </div>
 
       {/* بيانات المصادقة */}
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h4 className="font-medium text-slate-900 mb-4">بيانات المصادقة</h4>
+      <div className="bg-muted rounded-lg p-6">
+        <h4 className="font-medium text-foreground mb-4">بيانات المصادقة</h4>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               اسم المستخدم / البريد الإلكتروني *
             </label>
             <input
               type="email"
               value={settings?.user || ''}
               onChange={(e) => handleInputChange('user', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="your-email@yourdomain.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               كلمة المرور *
             </label>
             <div className="relative">
@@ -207,13 +207,13 @@ export default function EmailSettings() {
                 type={showPassword ? 'text' : 'password'}
                 value={settings?.password || ''}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring pr-10"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? (
                   <EyeSlashIcon className="h-5 w-5" />
@@ -227,32 +227,32 @@ export default function EmailSettings() {
       </div>
 
       {/* إعدادات المرسل */}
-      <div className="bg-slate-50 rounded-lg p-6">
-        <h4 className="font-medium text-slate-900 mb-4">إعدادات المرسل</h4>
+      <div className="bg-muted rounded-lg p-6">
+        <h4 className="font-medium text-foreground mb-4">إعدادات المرسل</h4>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               اسم المرسل *
             </label>
             <input
               type="text"
               value={settings?.fromName || ''}
               onChange={(e) => handleInputChange('fromName', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="NAF Law"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               بريد المرسل *
             </label>
             <input
               type="email"
               value={settings?.fromAddress || ''}
               onChange={(e) => handleInputChange('fromAddress', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="noreply@naflaw.com"
             />
           </div>
@@ -260,9 +260,9 @@ export default function EmailSettings() {
       </div>
 
       {/* معلومات مساعدة */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">معلومات مهمة:</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
+      <div className="bg-primary-soft border border-primary/30 rounded-lg p-4">
+        <h4 className="font-medium text-primary-strong mb-2">معلومات مهمة:</h4>
+        <ul className="text-sm text-primary-strong space-y-1">
           <li>• تأكد من تفعيل SMTP في إعدادات البريد الإلكتروني لدى مزود الخدمة</li>
           <li>• للمنفذ 587 استخدم STARTTLS (غير مؤمن في البداية)</li>
           <li>• للمنفذ 465 استخدم SSL/TLS (مؤمن من البداية)</li>
@@ -275,14 +275,14 @@ export default function EmailSettings() {
       <div className="flex justify-between items-center pt-4 border-t">
         <div className="flex items-center gap-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               بريد إلكتروني للاختبار *
             </label>
             <input
               type="email"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="test@example.com"
             />
           </div>
@@ -291,11 +291,11 @@ export default function EmailSettings() {
         <button
           onClick={testEmailConnection}
           disabled={isTesting || !settings?.host || !settings?.user || !settings?.password || !testEmail.trim()}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg"
+          className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-success/90 disabled:bg-muted disabled:cursor-not-allowed text-success-foreground rounded-lg"
         >
           {isTesting ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
               جاري إرسال البريد التجريبي...
             </>
           ) : (
@@ -311,14 +311,14 @@ export default function EmailSettings() {
         <div className="flex gap-3">
           <button
             onClick={loadSettings}
-            className="px-4 py-2 text-slate-600 hover:text-slate-800"
+            className="px-4 py-2 text-muted-foreground hover:text-foreground"
           >
             إلغاء التغييرات
           </button>
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg"
+            className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-2 rounded-lg"
           >
             {isSaving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
           </button>
@@ -328,13 +328,13 @@ export default function EmailSettings() {
       {/* حالة الخادم */}
       <div className={`border rounded-lg p-4 ${
         settings?.host && settings?.user && settings?.password 
-          ? 'bg-green-50 border-green-200' 
-          : 'bg-blue-50 border-blue-200'
+          ? 'bg-success-soft border-success/30' 
+          : 'bg-primary-soft border-primary/30'
       }`}>
         <h4 className={`font-medium mb-2 ${
           settings?.host && settings?.user && settings?.password 
-            ? 'text-green-900' 
-            : 'text-blue-900'
+            ? 'text-success-strong' 
+            : 'text-primary-strong'
         }`}>
           {settings?.host && settings?.user && settings?.password 
             ? '✅ إعدادات البريد الإلكتروني مكتملة' 
@@ -342,8 +342,8 @@ export default function EmailSettings() {
         </h4>
         <div className={`text-sm space-y-2 ${
           settings?.host && settings?.user && settings?.password 
-            ? 'text-green-800' 
-            : 'text-blue-800'
+            ? 'text-success-strong' 
+            : 'text-primary-strong'
         }`}>
           {settings?.host && settings?.user && settings?.password ? (
             <>
@@ -369,18 +369,18 @@ export default function EmailSettings() {
       </div>
 
       {/* تعليمات تشغيل الخادم */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">
-            <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center">
-              <span className="text-amber-600 text-sm">⚠️</span>
+            <div className="w-6 h-6 bg-warning-soft rounded-full flex items-center justify-center">
+              <span className="text-warning text-sm">⚠️</span>
             </div>
           </div>
           <div>
-            <h5 className="font-medium text-amber-900 mb-2">تعليمات تشغيل خادم البريد الإلكتروني:</h5>
-            <div className="text-sm text-amber-800 space-y-2">
+            <h5 className="font-medium text-warning-strong mb-2">تعليمات تشغيل خادم البريد الإلكتروني:</h5>
+            <div className="text-sm text-warning-strong space-y-2">
               <p><strong>1. انتقل إلى مجلد الخادم:</strong></p>
-              <code className="bg-amber-100 px-2 py-1 rounded text-xs">cd server</code>
+              <code className="bg-warning-soft px-2 py-1 rounded text-xs">cd server</code>
               
               <p>الإرسال غير مربوط. وWorkers لا تتكلّم SMTP، فالإرسال يحتاج
               مزوّداً يتكلّم HTTP — وذلك قرارٌ لم يُتَّخذ بعد. والإعدادات هنا

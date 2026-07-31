@@ -116,11 +116,11 @@ export default function CasesView() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in-progress': return 'bg-blue-100 text-blue-800';
-      case 'pending': return 'bg-amber-100 text-amber-800';
-      case 'postponed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-success-soft text-success-strong';
+      case 'in-progress': return 'bg-primary-soft text-primary-strong';
+      case 'pending': return 'bg-warning-soft text-warning-strong';
+      case 'postponed': return 'bg-destructive-soft text-destructive-strong';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -151,13 +151,13 @@ export default function CasesView() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">إدارة القضايا</h1>
-          <p className="text-slate-600">إدارة القضايا والأعمال القانونية</p>
+          <h1 className="text-2xl font-bold text-foreground">إدارة القضايا</h1>
+          <p className="text-muted-foreground">إدارة القضايا والأعمال القانونية</p>
         </div>
         {hasPermission('cases', 'create') && (
           <button 
             onClick={handleCreateCase}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
           >
             <PlusIcon className="h-5 w-5" />
             إضافة قضية جديدة
@@ -166,23 +166,23 @@ export default function CasesView() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث في القضايا..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الحالات</option>
               <option value="pending">منظورة</option>
@@ -193,7 +193,7 @@ export default function CasesView() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الأنواع</option>
               <option value="قضية تجارية">تجارية</option>
@@ -207,91 +207,91 @@ export default function CasesView() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">إجمالي القضايا</p>
-          <p className="text-xl sm:text-2xl font-bold text-slate-900">{cases.length}</p>
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">إجمالي القضايا</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{cases.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">قيد المعالجة</p>
-          <p className="text-xl sm:text-2xl font-bold text-blue-600">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">قيد المعالجة</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">
             {activeCases.filter(c => c.status === 'in-progress').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">المكتملة</p>
-          <p className="text-xl sm:text-2xl font-bold text-green-600">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">المكتملة</p>
+          <p className="text-xl sm:text-2xl font-bold text-success">
             {completedCases.length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">معدل الربح</p>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600">{winRate}%</p>
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">معدل الربح</p>
+          <p className="text-xl sm:text-2xl font-bold text-warning">{winRate}%</p>
         </div>
       </div>
 
       {/* Active Cases Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">القضايا النشطة</h3>
+      <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">القضايا النشطة</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   رقم القضية
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
                   النوع
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   العميل
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider hidden md:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">
                   الملخص
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   الحالة
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
                   تاريخ الإنشاء
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   إجراءات
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-border">
               {filteredActiveCases.map((case_) => (
-                <tr key={case_.id} className="hover:bg-slate-50">
+                <tr key={case_.id} className="hover:bg-muted">
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <button 
                       onClick={() => handleViewCase(case_)}
-                      className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="text-xs sm:text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                     >
                       {case_.caseNumber}
                     </button>
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
-                    <div className="text-xs sm:text-sm text-slate-900">{case_.caseType}</div>
+                    <div className="text-xs sm:text-sm text-foreground">{case_.caseType}</div>
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                    <div className="text-xs sm:text-sm text-slate-900 truncate max-w-32">{case_.clientName}</div>
+                    <div className="text-xs sm:text-sm text-foreground truncate max-w-32">{case_.clientName}</div>
                   </td>
                   <td className="px-3 sm:px-6 py-4 hidden md:table-cell">
-                    <div className="text-xs sm:text-sm text-slate-900 line-clamp-2">{case_.summary}</div>
+                    <div className="text-xs sm:text-sm text-foreground line-clamp-2">{case_.summary}</div>
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.status)}`}>
                       {getStatusLabel(case_.status)}
                     </span>
                     {case_.outcome && (
-                      <div className="text-xs text-slate-500 mt-1 hidden sm:block">
+                      <div className="text-xs text-muted-foreground mt-1 hidden sm:block">
                         {getOutcomeLabel(case_.outcome)}
                       </div>
                     )}
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-slate-500 hidden lg:table-cell">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">
                     {format(case_.createdDate, 'dd/MM/yyyy')}
                   </td>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
@@ -299,7 +299,7 @@ export default function CasesView() {
                       {hasPermission('cases', 'update') && (
                         <button 
                           onClick={() => handleEditCase(case_)}
-                          className="text-blue-600 hover:text-blue-900 text-xs sm:text-sm"
+                          className="text-primary hover:text-primary-strong text-xs sm:text-sm"
                         >
                           تحرير
                         </button>
@@ -309,7 +309,7 @@ export default function CasesView() {
                           href={case_.basecampUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-white bg-yellow-500 hover:bg-yellow-600 px-1 sm:px-2 py-1 rounded text-xs font-medium transition-colors"
+                          className="inline-flex items-center gap-1 text-warning-foreground bg-warning hover:bg-warning/90 px-1 sm:px-2 py-1 rounded text-xs font-medium transition-colors"
                           title="فتح في Basecamp"
                         >
                           <svg className="w-2 h-2 sm:w-3 sm:h-3" viewBox="0 0 24 24" fill="currentColor">
@@ -329,25 +329,25 @@ export default function CasesView() {
 
       {filteredActiveCases.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-slate-500">لا توجد قضايا نشطة مطابقة لمعايير البحث</p>
+          <p className="text-muted-foreground">لا توجد قضايا نشطة مطابقة لمعايير البحث</p>
         </div>
       )}
 
       {/* Completed Cases Section */}
       {completedCases.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
           <button
             onClick={() => setShowCompletedCases(!showCompletedCases)}
-            className="w-full px-6 py-4 border-b border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            className="w-full px-6 py-4 border-b border-border flex items-center justify-between hover:bg-muted transition-colors"
           >
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-slate-900">منتهية</h3>
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+              <h3 className="text-lg font-semibold text-foreground">منتهية</h3>
+              <span className="bg-success-soft text-success-strong px-2 py-1 rounded-full text-sm font-medium">
                 {completedCases.length}
               </span>
             </div>
             <div className={`transform transition-transform ${showCompletedCases ? 'rotate-180' : ''}`}>
-              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -356,63 +356,63 @@ export default function CasesView() {
           {showCompletedCases && (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       رقم القضية
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       النوع
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       العميل
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       الملخص
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       النتيجة
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       تاريخ الإنجاز
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       إجراءات
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-border">
                   {filteredCompletedCases.map((case_) => (
-                    <tr key={case_.id} className="hover:bg-slate-50">
+                    <tr key={case_.id} className="hover:bg-muted">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button 
                           onClick={() => handleViewCase(case_)}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                          className="text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                         >
                           {case_.caseNumber}
                         </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">{case_.caseType}</div>
+                        <div className="text-sm text-foreground">{case_.caseType}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">{case_.clientName}</div>
+                        <div className="text-sm text-foreground">{case_.clientName}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-slate-900 line-clamp-2">{case_.summary}</div>
+                        <div className="text-sm text-foreground line-clamp-2">{case_.summary}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {case_.outcome && (
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            case_.outcome === 'won' ? 'bg-green-100 text-green-800' :
-                            case_.outcome === 'lost' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            case_.outcome === 'won' ? 'bg-success-soft text-success-strong' :
+                            case_.outcome === 'lost' ? 'bg-destructive-soft text-destructive-strong' :
+                            'bg-warning-soft text-warning-strong'
                           }`}>
                             {getOutcomeLabel(case_.outcome)}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {format(case_.updatedDate, 'dd/MM/yyyy')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -420,7 +420,7 @@ export default function CasesView() {
                           {hasPermission('cases', 'update') && (
                             <button 
                               onClick={() => handleEditCase(case_)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-primary hover:text-primary-strong"
                             >
                               تحرير
                             </button>
@@ -430,7 +430,7 @@ export default function CasesView() {
                               href={case_.basecampUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-white bg-yellow-500 hover:bg-yellow-600 px-2 py-1 rounded text-xs font-medium transition-colors"
+                              className="inline-flex items-center gap-1 text-warning-foreground bg-warning hover:bg-warning/90 px-2 py-1 rounded text-xs font-medium transition-colors"
                               title="فتح في Basecamp"
                             >
                               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
@@ -450,7 +450,7 @@ export default function CasesView() {
           
           {showCompletedCases && filteredCompletedCases.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-slate-500">لا توجد قضايا مكتملة مطابقة لمعايير البحث</p>
+              <p className="text-muted-foreground">لا توجد قضايا مكتملة مطابقة لمعايير البحث</p>
             </div>
           )}
         </div>

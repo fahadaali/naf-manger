@@ -44,10 +44,10 @@ export default function UserManagement() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'lawyer': return 'bg-blue-100 text-blue-800';
-      case 'staff': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'admin': return 'bg-destructive-soft text-destructive-strong';
+      case 'lawyer': return 'bg-primary-soft text-primary-strong';
+      case 'staff': return 'bg-success-soft text-success-strong';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -189,10 +189,10 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-slate-900">إدارة المستخدمين</h3>
+        <h3 className="text-lg font-semibold text-foreground">إدارة المستخدمين</h3>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
         >
           <PlusIcon className="h-5 w-5" />
           إضافة مستخدم جديد
@@ -201,40 +201,40 @@ export default function UserManagement() {
 
       {saveMessage && (
         <div className={`p-3 rounded-lg ${
-          saveMessage.includes('نجاح') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong' : 'bg-destructive-soft text-destructive-strong'
         }`}>
           {saveMessage}
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
         <table className="w-full">
-          <thead className="bg-slate-50">
+          <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 المستخدم
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 الدور
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 آخر تسجيل دخول
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 تاريخ الإنشاء
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 إجراءات
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-border">
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-slate-50">
+              <tr key={user.id} className="hover:bg-muted">
                 <td className="px-6 py-4">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">{user.name}</div>
-                    <div className="text-sm text-slate-500">{user.email}</div>
+                    <div className="text-sm font-medium text-foreground">{user.name}</div>
+                    <div className="text-sm text-muted-foreground">{user.email}</div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -242,17 +242,17 @@ export default function UserManagement() {
                     {getRoleLabel(user.role)}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm text-slate-500">
+                <td className="px-6 py-4 text-sm text-muted-foreground">
                   {formatLastLogin(user.lastLogin)}
                 </td>
-                <td className="px-6 py-4 text-sm text-slate-500">
+                <td className="px-6 py-4 text-sm text-muted-foreground">
                   {user.createdDate.toLocaleDateString('ar-SA')}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEditingUser(user)}
-                      className="text-blue-600 hover:text-blue-900 p-1"
+                      className="text-primary hover:text-primary-strong p-1"
                       title="تعديل الصلاحيات"
                     >
                       <ShieldCheckIcon className="h-4 w-4" />
@@ -260,7 +260,7 @@ export default function UserManagement() {
                     {user.role !== 'admin' && (
                       <button
                         onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-900 p-1"
+                        className="text-destructive hover:text-destructive-strong p-1"
                         title="حذف"
                       >
                         <TrashIcon className="h-4 w-4" />
@@ -276,34 +276,34 @@ export default function UserManagement() {
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">إضافة مستخدم جديد</h3>
+        <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">إضافة مستخدم جديد</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">الاسم الكامل</label>
+                <label className="block text-sm font-medium text-foreground mb-2">الاسم الكامل</label>
                 <input
                   type="text"
                   value={newUserData.name}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">البريد الإلكتروني</label>
+                <label className="block text-sm font-medium text-foreground mb-2">البريد الإلكتروني</label>
                 <input
                   type="email"
                   value={newUserData.email}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">الدور</label>
+                <label className="block text-sm font-medium text-foreground mb-2">الدور</label>
                 <select 
                   value={newUserData.role}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, role: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="staff">إداري</option>
                   <option value="lawyer">محامي</option>
@@ -311,12 +311,12 @@ export default function UserManagement() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">كلمة المرور المؤقتة</label>
+                <label className="block text-sm font-medium text-foreground mb-2">كلمة المرور المؤقتة</label>
                 <input
                   type="password"
                   value={newUserData.password}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
             </div>
@@ -326,14 +326,14 @@ export default function UserManagement() {
                   setShowCreateModal(false);
                   setNewUserData({ name: '', email: '', role: 'staff', password: '' });
                 }}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                className="px-4 py-2 text-muted-foreground hover:text-foreground"
               >
                 إلغاء
               </button>
               <button 
                 onClick={handleCreateUser}
                 disabled={isSaving}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg"
+                className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-4 py-2 rounded-lg"
               >
                 {isSaving ? 'جاري الإنشاء...' : 'إنشاء المستخدم'}
               </button>
@@ -344,16 +344,16 @@ export default function UserManagement() {
 
       {/* Edit Permissions Modal */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">
+        <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               تعديل صلاحيات: {editingUser.name}
             </h3>
             
             <div className="space-y-6">
               {Object.entries(editingUser.permissions).map(([resource, permissions]) => (
                 <div key={resource} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-slate-900 mb-3">
+                  <h4 className="font-medium text-foreground mb-3">
                     {resource === 'clients' ? 'العملاء' :
                      resource === 'prospects' ? 'العملاء المحتملين' :
                      resource === 'cases' ? 'القضايا' :
@@ -377,9 +377,9 @@ export default function UserManagement() {
                             };
                             setEditingUser({ ...editingUser, permissions: newPermissions });
                           }}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-border text-primary focus-visible:ring-ring"
                         />
-                        <span className="text-sm text-slate-700">
+                        <span className="text-sm text-foreground">
                           {action === 'create' ? 'إنشاء' :
                            action === 'read' ? 'قراءة' :
                            action === 'update' ? 'تحديث' :
@@ -396,14 +396,14 @@ export default function UserManagement() {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setEditingUser(null)}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                className="px-4 py-2 text-muted-foreground hover:text-foreground"
               >
                 إلغاء
               </button>
               <button 
                 onClick={() => handleUpdatePermissions(editingUser, editingUser.permissions)}
                 disabled={isSaving}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg"
+                className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-4 py-2 rounded-lg"
               >
                 {isSaving ? 'جاري الحفظ...' : 'حفظ الصلاحيات'}
               </button>

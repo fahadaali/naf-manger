@@ -7,6 +7,7 @@ import {
   ChartBarIcon,
   TableCellsIcon
 } from '@heroicons/react/24/outline';
+import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport } from '../../types';
 import { db } from '../../data/database';
 import ChartCard from '../Dashboard/ChartCard';
@@ -69,14 +70,9 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
       datasets: [{
         label: report.name,
         data: values,
-        backgroundColor: [
-          '#3b82f6',
-          '#10b981',
-          '#f59e0b',
-          '#ef4444',
-          '#8b5cf6',
-          '#06b6d4'
-        ],
+        // ستّ درجات كانت مكتوبةً بيدها، والمسجَّل خمس. اللوحة تدور على
+        // الخمس بدل اختراع سادسة تقارب إحداها فتُبطل التمييز الذي وُضعت له.
+        backgroundColor: chartPalette(values.length),
         borderRadius: 4
       }]
     };
@@ -84,43 +80,43 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">جاري تحميل التقرير...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري تحميل التقرير...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-muted">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
+      <div className="bg-card border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-full"
+              className="p-2 hover:bg-muted rounded-full"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">{report.name}</h1>
+              <h1 className="text-xl font-bold text-foreground">{report.name}</h1>
               {report.description && (
-                <p className="text-sm text-slate-600">{report.description}</p>
+                <p className="text-sm text-muted-foreground">{report.description}</p>
               )}
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="flex items-center bg-slate-100 rounded-lg p-1">
+            <div className="flex items-center bg-muted rounded-lg p-1">
               <button
                 onClick={() => setViewMode('table')}
                 className={`p-2 rounded-md transition-colors ${
                   viewMode === 'table' 
-                    ? 'bg-white text-slate-900 shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-card text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <TableCellsIcon className="h-4 w-4" />
@@ -129,8 +125,8 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                 onClick={() => setViewMode('chart')}
                 className={`p-2 rounded-md transition-colors ${
                   viewMode === 'chart' 
-                    ? 'bg-white text-slate-900 shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-card text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <ChartBarIcon className="h-4 w-4" />
@@ -138,26 +134,26 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             </div>
             
             <div className="relative group">
-              <button className="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50">
+              <button className="flex items-center gap-2 px-4 py-2 text-muted-foreground border border-border rounded-lg hover:bg-muted">
                 <DocumentArrowDownIcon className="h-4 w-4" />
                 تصدير
               </button>
-              <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <div className="absolute left-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                 <button
                   onClick={() => exportReport('csv')}
-                  className="w-full px-4 py-2 text-right hover:bg-slate-50 first:rounded-t-lg"
+                  className="w-full px-4 py-2 text-right hover:bg-muted first:rounded-t-lg"
                 >
                   تصدير CSV
                 </button>
                 <button
                   onClick={() => exportReport('excel')}
-                  className="w-full px-4 py-2 text-right hover:bg-slate-50"
+                  className="w-full px-4 py-2 text-right hover:bg-muted"
                 >
                   تصدير Excel
                 </button>
                 <button
                   onClick={() => exportReport('pdf')}
-                  className="w-full px-4 py-2 text-right hover:bg-slate-50 last:rounded-b-lg"
+                  className="w-full px-4 py-2 text-right hover:bg-muted last:rounded-b-lg"
                 >
                   تصدير PDF
                 </button>
@@ -166,7 +162,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             
             <button
               onClick={onEdit}
-              className="flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
+              className="flex items-center gap-2 px-4 py-2 text-primary border border-primary rounded-lg hover:bg-primary-soft"
             >
               <PencilIcon className="h-4 w-4" />
               تحرير
@@ -178,49 +174,49 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
       {/* Content */}
       <div className="p-6">
         {/* Report Info */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+        <div className="bg-card rounded-lg border border-border p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-slate-500">مصدر البيانات:</span>
-              <span className="font-medium text-slate-900 mr-2">{report.dataSource}</span>
+              <span className="text-muted-foreground">مصدر البيانات:</span>
+              <span className="font-medium text-foreground mr-2">{report.dataSource}</span>
             </div>
             <div>
-              <span className="text-slate-500">عدد السجلات:</span>
-              <span className="font-medium text-slate-900 mr-2">{reportData.length}</span>
+              <span className="text-muted-foreground">عدد السجلات:</span>
+              <span className="font-medium text-foreground mr-2">{reportData.length}</span>
             </div>
             <div>
-              <span className="text-slate-500">آخر تحديث:</span>
-              <span className="font-medium text-slate-900 mr-2">
+              <span className="text-muted-foreground">آخر تحديث:</span>
+              <span className="font-medium text-foreground mr-2">
                 {report.lastModified.toLocaleDateString('ar-SA')}
               </span>
             </div>
             <div>
-              <span className="text-slate-500">نوع العرض:</span>
-              <span className="font-medium text-slate-900 mr-2">{report.visualization.type}</span>
+              <span className="text-muted-foreground">نوع العرض:</span>
+              <span className="font-medium text-foreground mr-2">{report.visualization.type}</span>
             </div>
           </div>
         </div>
 
         {/* Data Display */}
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
           {viewMode === 'table' ? (
             <div className="overflow-x-auto">
               {reportData.length > 0 ? (
                 <table className="w-full">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-muted">
                     <tr>
                       {Object.keys(reportData[0]).map(key => (
-                        <th key={key} className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <th key={key} className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           {key}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-border">
                     {reportData.map((row, index) => (
-                      <tr key={index} className="hover:bg-slate-50">
+                      <tr key={index} className="hover:bg-muted">
                         {Object.values(row).map((value, cellIndex) => (
-                          <td key={cellIndex} className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                          <td key={cellIndex} className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                             {String(value)}
                           </td>
                         ))}
@@ -230,7 +226,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                 </table>
               ) : (
                 <div className="p-12 text-center">
-                  <p className="text-slate-500">لا توجد بيانات لعرضها</p>
+                  <p className="text-muted-foreground">لا توجد بيانات لعرضها</p>
                 </div>
               )}
             </div>
@@ -244,8 +240,8 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                 />
               ) : (
                 <div className="text-center py-12">
-                  <ChartBarIcon className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-500">لا توجد بيانات كافية لعرض الرسم البياني</p>
+                  <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">لا توجد بيانات كافية لعرض الرسم البياني</p>
                 </div>
               )}
             </div>
@@ -254,11 +250,11 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
 
         {/* Applied Filters */}
         {report.filters && report.filters.length > 0 && (
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2">الفلاتر المطبقة:</h3>
+          <div className="mt-6 bg-primary-soft border border-primary/30 rounded-lg p-4">
+            <h3 className="font-medium text-primary-strong mb-2">الفلاتر المطبقة:</h3>
             <div className="space-y-1">
               {report.filters.map((filter, index) => (
-                <div key={filter.id} className="text-sm text-blue-800">
+                <div key={filter.id} className="text-sm text-primary-strong">
                   {index > 0 && <span className="mr-2">{filter.logicalOperator}</span>}
                   <span className="font-medium">{filter.fieldId}</span>
                   <span className="mx-2">{filter.operator}</span>

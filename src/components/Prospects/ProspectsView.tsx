@@ -168,13 +168,13 @@ export default function ProspectsView() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">إدارة العملاء المحتملين</h1>
-          <p className="text-slate-600">إدارة العملاء المحتملين وتحويلهم إلى عملاء فعليين</p>
+          <h1 className="text-2xl font-bold text-foreground">إدارة العملاء المحتملين</h1>
+          <p className="text-muted-foreground">إدارة العملاء المحتملين وتحويلهم إلى عملاء فعليين</p>
         </div>
         {hasPermission('prospects', 'create') && (
           <button 
             onClick={handleCreateProspect}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
           >
             <PlusIcon className="h-5 w-5" />
             إضافة عميل محتمل
@@ -183,23 +183,23 @@ export default function ProspectsView() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث عن عميل محتمل..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الأنواع</option>
               <option value="individual">أفراد</option>
@@ -210,7 +210,7 @@ export default function ProspectsView() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الحالات</option>
               {uniqueStatuses.map(status => (
@@ -223,25 +223,25 @@ export default function ProspectsView() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">إجمالي العملاء المحتملين</p>
-          <p className="text-xl sm:text-2xl font-bold text-slate-900">{prospects.length}</p>
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">إجمالي العملاء المحتملين</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{prospects.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">مهتمين</p>
-          <p className="text-xl sm:text-2xl font-bold text-blue-600">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">مهتمين</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">
             {prospects.filter(p => p.prospectStatus === 'مهتم').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">بانتظار توقيع</p>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">بانتظار توقيع</p>
+          <p className="text-xl sm:text-2xl font-bold text-warning">
             {prospects.filter(p => p.prospectStatus === 'بانتظار توقيع').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">معدل التحويل</p>
-          <p className="text-xl sm:text-2xl font-bold text-green-600">{conversionRate}%</p>
+        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">معدل التحويل</p>
+          <p className="text-xl sm:text-2xl font-bold text-success">{conversionRate}%</p>
         </div>
       </div>
 
@@ -263,7 +263,7 @@ export default function ProspectsView() {
 
       {filteredProspects.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-slate-500">لا توجد عملاء محتملين مطابقين لمعايير البحث</p>
+          <p className="text-muted-foreground">لا توجد عملاء محتملين مطابقين لمعايير البحث</p>
         </div>
       )}
 
