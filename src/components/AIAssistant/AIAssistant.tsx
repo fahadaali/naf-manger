@@ -322,7 +322,7 @@ export default function AIAssistant() {
             </button>
           </div>
         </div>
-      </div>
+      </Card>
 
       <div className="bg-primary-soft rounded-lg p-4">
         <div className="flex items-center gap-2 mb-2">
@@ -363,6 +363,6 @@ export default function AIAssistant() {
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
