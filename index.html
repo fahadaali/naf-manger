@@ -5,11 +5,39 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NAF Law - نظام إدارة المكتب القانوني</title>
-    <style>
-      body {
-        font-family: 'Tahoma', 'Arial', sans-serif;
-      }
-    </style>
+
+    <!--
+      استثناء منصوص عليه في القاعدة: الوسم يقبل لوناً حرفياً ولا متصفّح
+      يحلّ ‎var()‎ بداخله. القيمتان مرآةٌ لـ‎--background‎ في الوضعين من
+      ‎naf-theme.css‎ — الفاتح ‎oklch(0.9383 0.0042 236.4993)‎ والداكن
+      ‎oklch(0.2598 0.0306 262.6666)‎ محوّلتين إلى sRGB.
+      أي تغيير في الثيم يُلزم تحديث هذين السطرين معاً.
+    -->
+    <meta name="theme-color" content="#E8EBED" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1C2433" media="(prefers-color-scheme: dark)" />
+
+    <!--
+      يُطبَّق المظهر قبل أوّل رسم. بدونه ترسم الصفحة فاتحةً ثم تنقلب
+      داكنةً بعد تركيب React — ومضةٌ بيضاء في وجه من اختار الداكن.
+
+      المنطق نسخةٌ مصغّرة من ‎naf-theme-toggle‎ ويقرأ مفتاح التخزين نفسه
+      (‎naf-theme‎)، فلا حالة ثانية. والغياب يعني «يتبع النظام» كما في
+      المكوّن حرفاً بحرف — لا افتراض محلّي هنا.
+    -->
+    <script>
+      (function () {
+        try {
+          var choice = window.localStorage.getItem('naf-theme');
+          var dark =
+            choice === 'dark' ||
+            (choice !== 'light' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) {
+          /* التخزين غير متاح — يبقى الوضع الفاتح حتى يتولّى المكوّن */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

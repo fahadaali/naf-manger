@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 /* ═══ لماذا يُحذف `_redirects` من ناتج البناء ═══
  *
@@ -35,7 +36,16 @@ function dropPagesRedirects() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), dropPagesRedirects()],
+  plugins: [react(), tailwindcss(), dropPagesRedirects()],
+  resolve: {
+    /* ‎@/‎ يشير إلى ‎src‎ ليصل ملفّ السجلّ إلى أخيه بالمسار الذي كُتب به
+     * في ‎naf-ui‎ نفسه — ‎@/registry/naf/lib/utils‎. وهذا ما يُبقي الملفّات
+     * المنسوخة مطابقةً للأصل حرفاً بحرف، فتُقارَن بالسجلّ ويُكشف انحرافها
+     * بأمر واحد، وتُحدَّث بنسخٍ فوقها لا بتعديلٍ يدويّ في كلّ سطر. */
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   build: {
     rollupOptions: {
       input: './index.html'

@@ -29,3 +29,6 @@ dist-ssr
 
 # حالة wrangler المحلية: قاعدة D1 المحلية وكاش المحاكي
 .wrangler
+
+# كاش البناء التزايدي لـ TypeScript — ناتج لا مصدر
+*.tsbuildinfo
