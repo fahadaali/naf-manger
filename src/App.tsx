@@ -11,10 +11,10 @@ import Analytics from './components/Analytics/Analytics';
 import AIAssistant from './components/AIAssistant/AIAssistant';
 import Settings from './components/Settings/Settings';
 import ReportsView from './components/Reports/ReportsView';
-import { db } from './data/database';
 import SmartLawyer from './components/SmartLawyer/SmartLawyer';
 import MarketersView from './components/Marketers/MarketersView';
 import Denied from './components/Auth/Denied';
+import { Button } from '@/registry/naf/ui/button';
 
 /* `LoginModal` كان هنا، ويعرض `LoginPage` فوق `LandingPage`. وقد سقط الاثنان
    من المسار حين صار الباب مركزياً: الوسيط يحرس الجذر، فلا يبلغ هذه الحزمةَ
@@ -112,12 +112,9 @@ function AppContent() {
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">حدث خطأ في عرض الصفحة</h2>
             <p className="text-muted-foreground mb-4">يرجى فحص وحدة التحكم للحصول على تفاصيل الخطأ</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90"
-            >
+            <Button onClick={() => window.location.reload()}>
               إعادة تحميل الصفحة
-            </button>
+            </Button>
           </div>
         </div>
       );

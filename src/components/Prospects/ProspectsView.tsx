@@ -6,6 +6,10 @@ import ProspectModal from './ProspectModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function ProspectsView() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -172,77 +176,71 @@ export default function ProspectsView() {
           <p className="text-muted-foreground">إدارة العملاء المحتملين وتحويلهم إلى عملاء فعليين</p>
         </div>
         {hasPermission('prospects', 'create') && (
-          <button 
-            onClick={handleCreateProspect}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
-          >
+          <Button onClick={handleCreateProspect}>
             <Plus className="h-5 w-5" />
             إضافة عميل محتمل
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+      <Card className="p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
             <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="البحث عن عميل محتمل..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pe-10 ps-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
+              onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <select
+            <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الأنواع</option>
               <option value="individual">أفراد</option>
               <option value="company">شركات</option>
               <option value="association">جمعيات</option>
               <option value="government">جهات حكومية</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الحالات</option>
               {uniqueStatuses.map(status => (
                 <option key={status} value={status}>{status}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي العملاء المحتملين</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground">{prospects.length}</p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">مهتمين</p>
           <p className="text-xl sm:text-2xl font-bold text-primary">
             {prospects.filter(p => p.prospectStatus === 'مهتم').length}
           </p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">بانتظار توقيع</p>
           <p className="text-xl sm:text-2xl font-bold text-warning">
             {prospects.filter(p => p.prospectStatus === 'بانتظار توقيع').length}
           </p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">معدل التحويل</p>
           <p className="text-xl sm:text-2xl font-bold text-success">{conversionRate}%</p>
-        </div>
+        </Card>
       </div>
 
       {/* Prospects Grid */}

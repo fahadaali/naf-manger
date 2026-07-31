@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ExternalLink, Plus, Search } from 'lucide-react';
+import { CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Case } from '../../types';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import { db } from '../../data/database';
-import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function CasesView() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -115,15 +120,18 @@ export default function CasesView() {
     setIsEditing(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-success-soft text-success-strong';
-      case 'in-progress': return 'bg-primary-soft text-primary-strong';
-      case 'pending': return 'bg-warning-soft text-warning-strong';
-      case 'postponed': return 'bg-destructive-soft text-destructive-strong';
-      default: return 'bg-muted text-foreground';
-    }
+  /* LoaderCircle لما هو بيد المكتب، و Clock لانتظار موعدٍ عند
+     المحكمة — الفرق مَن يملك الخطوة التالية. مسجَّل في naf-icons.md. */
+  const STATUS = {
+    completed: { variant: 'success' as const, Icon: CircleCheck },
+    'in-progress': { variant: 'primary' as const, Icon: LoaderCircle },
+    pending: { variant: 'warning' as const, Icon: Clock },
+    postponed: { variant: 'destructive' as const, Icon: CalendarX }
   };
+
+  const statusOf = (status: string) =>
+    STATUS[status as keyof typeof STATUS] ??
+    { variant: 'default' as const, Icon: CircleHelp };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -156,146 +164,146 @@ export default function CasesView() {
           <p className="text-muted-foreground">إدارة القضايا والأعمال القانونية</p>
         </div>
         {hasPermission('cases', 'create') && (
-          <button 
-            onClick={handleCreateCase}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
-          >
+          <Button onClick={handleCreateCase}>
             <Plus className="h-5 w-5" />
             إضافة قضية جديدة
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+      <Card className="p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
             <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="البحث في القضايا..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pe-10 ps-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
+              onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <select
+            <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الحالات</option>
               <option value="pending">منظورة</option>
               <option value="in-progress">قيد المعالجة</option>
               <option value="completed">مكتملة</option>
               <option value="postponed">مؤجلة</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الأنواع</option>
               <option value="قضية تجارية">تجارية</option>
               <option value="قضية عمالية">عمالية</option>
               <option value="قضية مدنية">مدنية</option>
               <option value="قضية جزائية">جزائية</option>
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي القضايا</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground">{cases.length}</p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">قيد المعالجة</p>
           <p className="text-xl sm:text-2xl font-bold text-primary">
             {activeCases.filter(c => c.status === 'in-progress').length}
           </p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">المكتملة</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
             {completedCases.length}
           </p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">معدل الربح</p>
           <p className="text-xl sm:text-2xl font-bold text-warning">{winRate}%</p>
-        </div>
+        </Card>
       </div>
 
       {/* Active Cases Table */}
-      <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="px-6 py-4 border-b border-border">
           <h3 className="text-lg font-semibold text-foreground">القضايا النشطة</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="sm:px-6 tracking-wider">
                   رقم القضية
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell tabular-nums">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider hidden sm:table-cell">
                   النوع
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider">
                   العميل
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell tabular-nums">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider hidden md:table-cell">
                   الملخص
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider">
                   الحالة
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell tabular-nums">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider hidden lg:table-cell">
                   تاريخ الإنشاء
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider">
                   إجراءات
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredActiveCases.map((case_) => (
-                <tr key={case_.id} className="hover:bg-muted">
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap tabular-nums">
+                <TableRow key={case_.id}>
+                  <TableCell className="sm:px-6">
                     <button 
                       onClick={() => handleViewCase(case_)}
                       className="text-xs sm:text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                     >
                       <bdi>{case_.caseNumber}</bdi>
                     </button>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell tabular-nums">
+                  </TableCell>
+                  <TableCell className="sm:px-6 hidden sm:table-cell">
                     <div className="text-xs sm:text-sm text-foreground">{case_.caseType}</div>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap tabular-nums">
+                  </TableCell>
+                  <TableCell className="sm:px-6">
                     <div className="text-xs sm:text-sm text-foreground truncate max-w-32">{case_.clientName}</div>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 hidden md:table-cell tabular-nums">
+                  </TableCell>
+                  <TableCell className="sm:px-6 hidden md:table-cell">
                     <div className="text-xs sm:text-sm text-foreground line-clamp-2">{case_.summary}</div>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap tabular-nums">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.status)}`}>
-                      {getStatusLabel(case_.status)}
-                    </span>
+                  </TableCell>
+                  <TableCell className="sm:px-6">
+                    {(() => {
+                      const { variant, Icon } = statusOf(case_.status);
+                      return (
+                        <Badge variant={variant}>
+                          <Icon aria-hidden="true" />
+                          {getStatusLabel(case_.status)}
+                        </Badge>
+                      );
+                    })()}
                     {case_.outcome && (
                       <div className="text-xs text-muted-foreground mt-1 hidden sm:block">
                         {getOutcomeLabel(case_.outcome)}
                       </div>
                     )}
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-muted-foreground hidden lg:table-cell tabular-nums">
+                  </TableCell>
+                  <TableCell className="sm:px-6 sm:text-sm hidden lg:table-cell">
                     {format(case_.createdDate, 'dd/MM/yyyy')}
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium tabular-nums">
+                  </TableCell>
+                  <TableCell className="sm:px-6 sm:text-sm">
                     <div className="flex gap-2">
                       {hasPermission('cases', 'update') && (
                         <button 
@@ -318,13 +326,13 @@ export default function CasesView() {
                         </a>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      </Card>
 
       {filteredActiveCases.length === 0 && (
         <div className="text-center py-12">
@@ -334,16 +342,16 @@ export default function CasesView() {
 
       {/* Completed Cases Section */}
       {completedCases.length > 0 && (
-        <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+        <Card className="overflow-hidden">
           <button
             onClick={() => setShowCompletedCases(!showCompletedCases)}
             className="w-full px-6 py-4 border-b border-border flex items-center justify-between hover:bg-muted transition-colors"
           >
             <div className="flex items-center gap-3">
               <h3 className="text-lg font-semibold text-foreground">منتهية</h3>
-              <span className="bg-success-soft text-success-strong px-2 py-1 rounded-full text-sm font-medium">
-                {completedCases.length}
-              </span>
+              <Badge variant="success">
+                <bdi>{formatNumber(completedCases.length)}</bdi>
+              </Badge>
             </div>
             <div className={`transform transition-transform ${showCompletedCases ? 'rotate-180' : ''}`}>
               <ChevronDown className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
@@ -352,75 +360,78 @@ export default function CasesView() {
           
           {showCompletedCases && (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="tracking-wider">
                       رقم القضية
-                    </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       النوع
-                    </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       العميل
-                    </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       الملخص
-                    </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       النتيجة
-                    </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       تاريخ الإنجاز
-                    </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       إجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filteredCompletedCases.map((case_) => (
-                    <tr key={case_.id} className="hover:bg-muted">
-                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
+                    <TableRow key={case_.id}>
+                      <TableCell>
                         <button 
                           onClick={() => handleViewCase(case_)}
                           className="text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                         >
                           <bdi>{case_.caseNumber}</bdi>
                         </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm text-foreground">{case_.caseType}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm text-foreground">{case_.clientName}</div>
-                      </td>
-                      <td className="px-6 py-4 tabular-nums">
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm text-foreground line-clamp-2">{case_.summary}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
-                        {case_.outcome && (
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            case_.outcome === 'won' ? 'bg-success-soft text-success-strong' :
-                            case_.outcome === 'lost' ? 'bg-destructive-soft text-destructive-strong' :
-                            'bg-warning-soft text-warning-strong'
-                          }`}>
-                            {getOutcomeLabel(case_.outcome)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
+                      </TableCell>
+                      <TableCell>
+                        {case_.outcome && (() => {
+                          const map = {
+                            won: { variant: 'success' as const, Icon: CircleCheck },
+                            lost: { variant: 'destructive' as const, Icon: CircleX },
+                            settled: { variant: 'warning' as const, Icon: Handshake }
+                          };
+                          const { variant, Icon } =
+                            map[case_.outcome as keyof typeof map] ?? map.settled;
+                          return (
+                            <Badge variant={variant}>
+                              <Icon aria-hidden="true" />
+                              {getOutcomeLabel(case_.outcome)}
+                            </Badge>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
                         {format(case_.updatedDate, 'dd/MM/yyyy')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium tabular-nums">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex gap-2">
                           {hasPermission('cases', 'update') && (
-                            <button 
-                              onClick={() => handleEditCase(case_)}
-                              className="text-primary hover:text-primary-strong"
-                            >
+                            <Button onClick={() => handleEditCase(case_)} variant="link">
                               تعديل
-                            </button>
+                            </Button>
                           )}
                           {case_.basecampUrl && (
                             <a
@@ -435,11 +446,11 @@ export default function CasesView() {
                             </a>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
           
@@ -448,7 +459,7 @@ export default function CasesView() {
               <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Case Modal */}

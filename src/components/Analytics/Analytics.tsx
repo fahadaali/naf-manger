@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChartColumn, Download, FileText, Funnel, TrendingUp, Users } from 'lucide-react';
+import { ChartColumn, Download, FileText, TrendingUp, Users } from 'lucide-react';
 import { useChartPalette, softFill } from '../../lib/chart-tokens';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
@@ -7,6 +7,9 @@ import { Client, Prospect, Case, ActivityLog } from '../../types';
 import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
+import { Select } from '@/registry/naf/ui/select';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
@@ -337,30 +340,26 @@ export default function Analytics() {
             <p className="text-surface-deep-muted">تحليل شامل لأداء المكتب وإحصائيات مفصلة</p>
           </div>
           <div className="flex items-center gap-3">
-            <select
+            <Select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="bg-card text-foreground px-4 py-2 rounded-lg border-0 focus-visible:ring-2 focus-visible:ring-ring"
+              onChange={(e) => setDateRange(e.target.value)} className="border-0"
             >
               <option value="7">آخر 7 أيام</option>
               <option value="30">آخر 30 يوم</option>
               <option value="90">آخر 3 أشهر</option>
               <option value="365">آخر سنة</option>
-            </select>
-            <button
-              onClick={exportAnalytics}
-              className="bg-card text-primary px-4 py-2 rounded-lg hover:bg-primary-soft flex items-center gap-2"
-            >
+            </Select>
+            <Button onClick={exportAnalytics} className="text-primary" variant="outline">
               <Download className="h-5 w-5" />
               تصدير
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">
               <Users className="h-6 w-6 text-primary" />
@@ -370,9 +369,9 @@ export default function Analytics() {
               <p className="text-2xl font-bold text-foreground">{kpis.totalClients}</p>
             </div>
           </div>
-        </div>
+        </Card>
         
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-info-soft rounded-lg">
               <TrendingUp className="h-6 w-6 text-info" />
@@ -382,9 +381,9 @@ export default function Analytics() {
               <p className="text-2xl font-bold text-foreground">{kpis.totalProspects}</p>
             </div>
           </div>
-        </div>
+        </Card>
         
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-success-soft rounded-lg">
               <FileText className="h-6 w-6 text-success" />
@@ -394,9 +393,9 @@ export default function Analytics() {
               <p className="text-2xl font-bold text-foreground">{kpis.totalCases}</p>
             </div>
           </div>
-        </div>
+        </Card>
         
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-warning-soft rounded-lg">
               <ChartColumn className="h-6 w-6 text-warning" />
@@ -406,11 +405,11 @@ export default function Analytics() {
               <p className="text-2xl font-bold text-foreground">{kpis.winRate}%</p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Metric Selector */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+      <Card className="p-4">
         <div className="flex flex-wrap gap-2">
           {[
             { id: 'overview', label: 'نظرة عامة' },
@@ -432,38 +431,38 @@ export default function Analytics() {
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Charts based on selected metric */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {selectedMetric === 'overview' && (
           <>
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">توزيع العملاء حسب النوع</h3>
               <div className="h-64">
                 <Doughnut data={getClientTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">حالة القضايا</h3>
               <div className="h-64">
                 <Doughnut data={getCaseStatusDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'clients' && (
           <>
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">توزيع العملاء حسب النوع</h3>
               <div className="h-64">
                 <Bar data={getClientTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">إحصائيات العملاء</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-muted rounded">
@@ -483,60 +482,60 @@ export default function Analytics() {
                   <span className="font-bold text-info">{kpis.conversionRate}%</span>
                 </div>
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'cases' && (
           <>
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">أنواع القضايا</h3>
               <div className="h-64">
                 <Bar data={getCaseTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">معدل النجاح</h3>
               <div className="h-64">
                 <Doughnut data={getWinRateAnalysis()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'prospects' && (
           <>
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">حالة العملاء المحتملين</h3>
               <div className="h-64">
                 <Doughnut data={getProspectStatusDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">قمع التحويل</h3>
               <div className="h-64">
                 <Bar data={getConversionFunnel()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'trends' && (
           <div className="lg:col-span-2">
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+            <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">الاتجاهات الشهرية</h3>
               <div className="h-80">
                 <Line data={getMonthlyTrendsChart()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </div>
         )}
       </div>
 
       {/* Detailed Analytics Table */}
-      <div className="bg-card rounded-lg shadow-sm border border-border">
+      <Card>
         <div className="px-6 py-4 border-b border-border">
           <h3 className="text-lg font-semibold text-foreground">تحليل مفصل</h3>
         </div>
@@ -605,10 +604,10 @@ export default function Analytics() {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Activity Timeline */}
-      <div className="bg-card rounded-lg shadow-sm border border-border">
+      <Card>
         <div className="px-6 py-4 border-b border-border">
           <h3 className="text-lg font-semibold text-foreground">الأنشطة الحديثة</h3>
         </div>
@@ -629,7 +628,7 @@ export default function Analytics() {
             ))}
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

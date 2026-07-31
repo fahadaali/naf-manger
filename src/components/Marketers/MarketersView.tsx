@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Users } from 'lucide-react';
-import { Marketer, MarketerStats } from '../../types';
+import { Marketer } from '../../types';
 import MarketerCard from './MarketerCard';
 import MarketerModal from './MarketerModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function MarketersView() {
   const [marketers, setMarketers] = useState<Marketer[]>([]);
@@ -124,67 +127,64 @@ export default function MarketersView() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+      <Card className="p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
             <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="البحث عن مسوّق..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pe-10 ps-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
+              onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <select
+            <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط</option>
               <option value="suspended">موقوف</option>
               <option value="former">سابق</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             >
               <option value="all">كل الأنواع</option>
               <option value="employee">موظف</option>
               <option value="freelancer">مستقل</option>
               <option value="external_company">شركة خارجية</option>
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي المسوّقين</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground">{marketers.length}</p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">النشطين</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
             {marketers.filter(m => m.status === 'active').length}
           </p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الموظفين</p>
           <p className="text-xl sm:text-2xl font-bold text-primary">
             {marketers.filter(m => m.relationshipType === 'employee').length}
           </p>
-        </div>
-        <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+        </Card>
+        <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">المستقلين</p>
           <p className="text-xl sm:text-2xl font-bold text-info">
             {marketers.filter(m => m.relationshipType === 'freelancer').length}
           </p>
-        </div>
+        </Card>
       </div>
 
       {/* Marketers Grid */}

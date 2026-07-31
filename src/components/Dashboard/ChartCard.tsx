@@ -1,6 +1,7 @@
 import React from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
+import { Card } from '@/registry/naf/ui/card';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -25,7 +26,7 @@ export default function ChartCard({ title, type, data, options }: ChartCardProps
   const chartOptions = { ...defaultOptions, ...options };
 
   return (
-    <div className="bg-card rounded-lg shadow-sm p-6 border border-border">
+    <Card className="p-6">
       <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
       <div className="h-64">
         {type === 'doughnut' ? (
@@ -34,6 +35,6 @@ export default function ChartCard({ title, type, data, options }: ChartCardProps
           <Bar data={data} options={chartOptions} />
         )}
       </div>
-    </div>
+    </Card>
   );
 }

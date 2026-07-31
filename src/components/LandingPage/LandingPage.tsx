@@ -1,6 +1,7 @@
 import React from 'react';
-import { Briefcase, FileText, Mail, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { Briefcase, FileText, Mail, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { NafLogo } from '@/registry/naf/brand/naf-logo';
+import { Button } from '@/registry/naf/ui/button';
 
 interface LandingPageProps {
   onShowLogin: () => void;
@@ -54,20 +55,12 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
               </div>
             </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="text-muted-foreground hover:text-foreground px-4 py-2 rounded-lg font-medium transition-colors"
-            >
+            <Button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }} variant="ghost">
               استعراض الميزات
-            </button>
-            <button
-              onClick={onShowLogin}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-            >
+            </Button>
+            <Button onClick={onShowLogin} className="shadow-md hover:shadow-lg">
               تسجيل الدخول
-            </button>
+            </Button>
           </div>
           </div>
         </div>
@@ -92,20 +85,12 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
               إدارة العملاء والقضايا والتحليلات مع مساعد ذكي مدعوم بالذكاء الاصطناعي
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={onShowLogin}
-                className="bg-card text-primary hover:bg-primary-soft px-8 py-4 rounded-lg font-semibold text-lg shadow-lg transition-all transform hover:scale-105 hover:shadow-xl"
-              >
+              <Button onClick={onShowLogin} className="text-primary shadow-lg hover:shadow-xl" variant="outline" size="lg">
                 دخول
-              </button>
-              <button 
-                onClick={() => {
-                  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="border-2 border-surface-deep-foreground text-surface-deep-foreground hover:bg-card hover:text-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105"
-              >
+              </Button>
+              <Button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }} className="border-2 border-surface-deep-foreground bg-transparent text-surface-deep-foreground hover:bg-card hover:text-foreground" variant="outline" size="lg">
                 استعراض الميزات
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -178,12 +163,9 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
           <p className="text-lg md:text-xl text-surface-deep-muted mb-8 leading-relaxed">
             انضم إلى NAF Law اليوم واستفد من قوة الذكاء الاصطناعي والأدوات المتكاملة لإدارة مكتبك بكفاءة استثنائية
           </p>
-          <button
-            onClick={onShowLogin}
-            className="bg-card text-primary hover:bg-primary-soft px-10 py-4 rounded-lg font-semibold text-lg shadow-lg transition-all transform hover:scale-105 hover:shadow-xl"
-          >
+          <Button onClick={onShowLogin} className="text-primary shadow-lg hover:shadow-xl" variant="outline" size="lg">
             دخول
-          </button>
+          </Button>
         </div>
       </section>
 

@@ -5,7 +5,11 @@ import ReportBuilder from './ReportBuilder';
 import ReportViewer from './ReportViewer';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
-import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
+import { formatDate } from '@/registry/naf/lib/format';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function ReportsView() {
   const [reports, setReports] = useState<CustomReport[]>([]);
@@ -123,45 +127,40 @@ export default function ReportsView() {
             <p className="text-surface-deep-muted">إنشاء وإدارة التقارير المخصصة والتحليلات المتقدمة</p>
           </div>
           {hasPermission('analytics', 'read') && (
-            <button
-              onClick={handleCreateReport}
-              className="bg-card text-primary px-4 py-2 rounded-lg hover:bg-primary-soft flex items-center gap-2 font-medium"
-            >
+            <Button onClick={handleCreateReport} className="text-primary" variant="outline">
               <Plus className="h-5 w-5" />
               إنشاء تقرير جديد
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+      <Card className="p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Funnel className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="البحث في التقارير..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pe-10 ps-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
+              onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
           </div>
-          <select
+          <Select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
           >
             <option value="all">جميع التقارير</option>
             <option value="my">تقاريري</option>
             <option value="public">التقارير العامة</option>
             <option value="templates">القوالب</option>
-          </select>
+          </Select>
         </div>
-      </div>
+      </Card>
 
       {/* Quick Templates */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+      <Card className="p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">قوالب سريعة</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
@@ -181,10 +180,10 @@ export default function ReportsView() {
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Reports List */}
-      <div className="bg-card rounded-lg shadow-sm border border-border">
+      <Card>
         <div className="px-6 py-4 border-b border-border">
           <h3 className="text-lg font-semibold text-foreground">التقارير المحفوظة</h3>
         </div>
@@ -225,36 +224,20 @@ export default function ReportsView() {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleViewReport(report)}
-                        className="p-2 text-muted-foreground hover:text-primary hover:bg-primary-soft rounded-lg"
-                        title="عرض التقرير"
-                      >
+                      <Button onClick={() => handleViewReport(report)} title="عرض التقرير" variant="ghost" size="icon-md">
                         <Eye className="h-4 w-4" />
-                      </button>
+                      </Button>
                       {(report.createdBy === user?.id || hasPermission('analytics', 'read')) && (
                         <>
-                          <button
-                            onClick={() => handleEditReport(report)}
-                            className="p-2 text-muted-foreground hover:text-primary hover:bg-primary-soft rounded-lg"
-                            title="تعديل التقرير"
-                          >
+                          <Button onClick={() => handleEditReport(report)} title="تعديل التقرير" variant="ghost" size="icon-md">
                             <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => {/* Share report */}}
-                            className="p-2 text-muted-foreground hover:text-success hover:bg-success-soft rounded-lg"
-                            title="مشاركة التقرير"
-                          >
+                          </Button>
+                          <Button onClick={() => {/* Share report */}} title="مشاركة التقرير" variant="ghost" size="icon-md">
                             <Share2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteReport(report.id)}
-                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive-soft rounded-lg"
-                            title="حذف التقرير"
-                          >
+                          </Button>
+                          <Button onClick={() => handleDeleteReport(report.id)} title="حذف التقرير" variant="ghost" size="icon-md">
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>
@@ -268,15 +251,12 @@ export default function ReportsView() {
             <ChartColumn className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">لم تُنشئ أي تقرير بعد. ابدأ بإنشاء أول تقرير.</h3>
             <p className="text-muted-foreground mb-4">ابدأ بإنشاء تقرير مخصص أو استخدم أحد القوالب السريعة</p>
-            <button
-              onClick={handleCreateReport}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90"
-            >
+            <Button onClick={handleCreateReport}>
               إنشاء تقرير جديد
-            </button>
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

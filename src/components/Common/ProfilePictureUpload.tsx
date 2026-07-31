@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Image, User } from 'lucide-react';
+import { Input } from '@/registry/naf/ui/input';
 
 interface ProfilePictureUploadProps {
   currentPicture?: string;
@@ -109,12 +110,11 @@ export default function ProfilePictureUpload({
       </div>
 
       {/* File input */}
-      <input
+      <Input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
+        onChange={handleFileSelect} className="hidden"
       />
 
       {/* Action buttons */}

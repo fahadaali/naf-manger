@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CircleCheck, Database, FileOutput, RefreshCw, Settings, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { Button } from '@/registry/naf/ui/button';
 
 export default function SupabaseMigration() {
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'migrating' | 'success' | 'error'>('idle');
@@ -238,19 +239,12 @@ export default function SupabaseMigration() {
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <button
-          onClick={exportBackup}
-          className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80"
-        >
+        <Button onClick={exportBackup} variant="secondary">
           <FileOutput className="h-5 w-5" />
           تصدير نسخة احتياطية أولاً
-        </button>
+        </Button>
         
-        <button
-          onClick={handleMigration}
-          disabled={!isSupabaseConnected || migrationStatus === 'migrating'}
-          className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed"
-        >
+        <Button onClick={handleMigration} disabled={!isSupabaseConnected || migrationStatus === 'migrating'}>
           {migrationStatus === 'migrating' ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-card"></div>
@@ -262,7 +256,7 @@ export default function SupabaseMigration() {
               بدء ترحيل البيانات
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Benefits */}

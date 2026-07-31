@@ -1,12 +1,15 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { ChartColumn, Mail, Pencil, Phone, User } from 'lucide-react';
+import { Archive, ChartColumn, CircleCheck, CircleSlash, Mail, Pencil, Phone } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
-import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { formatPhone } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Card } from '@/registry/naf/ui/card';
 
 interface MarketerCardProps {
   marketer: Marketer;
@@ -56,14 +59,14 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
     loadStats();
   }, [marketer.id]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'نشط': return 'bg-success-soft text-success-strong';
-      case 'موقوف': return 'bg-warning-soft text-warning-strong';
-      case 'سابق': return 'bg-muted text-foreground';
-      default: return 'bg-muted text-foreground';
-    }
+  const STATUS = {
+    'نشط': { variant: 'success' as const, Icon: CircleCheck },
+    'موقوف': { variant: 'warning' as const, Icon: CircleSlash },
+    'سابق': { variant: 'default' as const, Icon: Archive }
   };
+
+  const statusOf = (status: string) =>
+    STATUS[status as keyof typeof STATUS] ?? STATUS['سابق'];
 
   const getStatusLabel = (status: string) => {
     return status;
@@ -74,7 +77,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
   };
 
   return (
-    <div className="bg-card rounded-lg shadow-sm border border-border p-6 hover:shadow-md transition-shadow">
+    <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <ProfileAvatar 
@@ -93,17 +96,19 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(marketer.status)}`}>
-            {getStatusLabel(marketer.status)}
-          </span>
+          {(() => {
+            const { variant, Icon } = statusOf(marketer.status);
+            return (
+              <Badge variant={variant}>
+                <Icon aria-hidden="true" />
+                {getStatusLabel(marketer.status)}
+              </Badge>
+            );
+          })()}
           {canEdit && (
-            <button
-              onClick={() => onEdit(marketer)}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title="تعديل"
-            >
+            <Button onClick={() => onEdit(marketer)} title="تعديل" variant="ghost" size="icon-sm">
               <Pencil className="h-4 w-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -163,6 +168,6 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           معدل النجاح: {stats.conversionRate}%
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

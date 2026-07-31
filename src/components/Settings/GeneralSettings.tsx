@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Image, Palette } from 'lucide-react';
+import { Building2, CircleCheck, Image, Palette, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function GeneralSettings() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -129,21 +133,21 @@ export default function GeneralSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-foreground">الإعدادات العامة</h3>
-        <button
-          onClick={resetToDefaults}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
+        <Button onClick={resetToDefaults} variant="ghost" size="sm">
           إعادة تعيين للافتراضي
-        </button>
+        </Button>
       </div>
 
-      {saveMessage && (
-        <div className={`p-3 rounded-lg ${
-          saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong' : 'bg-destructive-soft text-destructive-strong'
-        }`}>
-          {saveMessage}
-        </div>
-      )}
+      {saveMessage && (() => {
+        const tone = messageTone(saveMessage);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{saveMessage}</span>
+          </Alert>
+        );
+      })()}
 
       {/* معلومات الشركة */}
       <div className="bg-muted rounded-lg p-6">
@@ -157,11 +161,10 @@ export default function GeneralSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               اسم الشركة
             </label>
-            <input
+            <Input
               type="text"
               value={settings.companyName}
               onChange={(e) => handleInputChange('companyName', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="اسم الشركة"
             />
           </div>
@@ -170,11 +173,10 @@ export default function GeneralSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               وصف الشركة
             </label>
-            <input
+            <Input
               type="text"
               value={settings.companyDescription}
               onChange={(e) => handleInputChange('companyDescription', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="وصف مختصر للشركة"
             />
           </div>
@@ -193,11 +195,10 @@ export default function GeneralSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               رفع شعار جديد
             </label>
-            <input
+            <Input
               type="file"
               accept="image/*"
               onChange={handleLogoUpload}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             />
             <p className="text-xs text-muted-foreground mt-1">
               يُفضل استخدام صور بصيغة PNG أو SVG، الحد الأقصى 2MB
@@ -263,19 +264,12 @@ export default function GeneralSettings() {
 
       {/* أزرار الحفظ */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <button
-          onClick={() => loadSettings()}
-          className="px-4 py-2 text-muted-foreground hover:text-foreground"
-        >
+        <Button onClick={() => loadSettings()} variant="ghost">
           إلغاء التغييرات
-        </button>
-        <button 
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-2 rounded-lg"
-        >
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
-        </button>
+        </Button>
       </div>
     </div>
   );

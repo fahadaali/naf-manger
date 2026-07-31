@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { FileOutput } from 'lucide-react';
+import { CircleCheck, FileOutput, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
-import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
+import { formatDate, formatTime } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function DataExport() {
   const [selectedData, setSelectedData] = useState({
@@ -198,7 +201,7 @@ export default function DataExport() {
         'البريد الإلكتروني': user.email,
         'الدور': user.role,
         'تاريخ الإنشاء': formatDate(user.createdDate),
-        'آخر تسجيل دخول': user.lastLogin ? formatDate(user.lastLogin) : 'لم يسجل دخول'
+        'آخر نشاط': user.lastLogin ? formatDate(user.lastLogin) : 'لم يدخل بعد'
       }));
       data.users = usersData;
     }
@@ -364,13 +367,16 @@ export default function DataExport() {
     <div className="space-y-6">
       <h3 className="text-lg font-semibold text-foreground">تصدير البيانات</h3>
       
-      {exportMessage && (
-        <div className={`p-3 rounded-lg ${
-          exportMessage.includes('نجاح') ? 'bg-success-soft text-success-strong' : 'bg-destructive-soft text-destructive-strong'
-        }`}>
-          {exportMessage}
-        </div>
-      )}
+      {exportMessage && (() => {
+        const tone = messageTone(exportMessage);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{exportMessage}</span>
+          </Alert>
+        );
+      })()}
       
       {/* Data Selection */}
       <div className="bg-muted rounded-lg p-6">
@@ -571,14 +577,10 @@ export default function DataExport() {
 
       {/* Export Button */}
       <div className="flex justify-end">
-        <button
-          onClick={exportData}
-          disabled={!Object.values(selectedData).some(Boolean) || isExporting}
-          className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-3 rounded-lg flex items-center gap-2 font-medium"
-        >
+        <Button onClick={exportData} disabled={!Object.values(selectedData).some(Boolean) || isExporting} size="lg">
           <FileOutput className="h-5 w-5" />
           {isExporting ? 'جارٍ التصدير...' : 'تصدير البيانات'}
-        </button>
+        </Button>
       </div>
 
       {/* Migration Notice */}

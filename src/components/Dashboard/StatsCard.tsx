@@ -1,5 +1,6 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { Card } from '@/registry/naf/ui/card';
 
 interface StatsCardProps {
   title: string;
@@ -14,7 +15,7 @@ interface StatsCardProps {
 
 export default function StatsCard({ title, value, icon: Icon, color, trend }: StatsCardProps) {
   return (
-    <div className="bg-card rounded-lg shadow-sm p-6 border border-border">
+    <Card className="p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -33,6 +34,6 @@ export default function StatsCard({ title, value, icon: Icon, color, trend }: St
           <Icon className="h-6 w-6 text-background" />
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

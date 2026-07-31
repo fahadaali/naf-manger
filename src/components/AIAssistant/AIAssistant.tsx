@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CircleCheck, MessageSquare, RefreshCw, Send, Sparkles, TriangleAlert, Tv, User } from 'lucide-react';
-import { db } from '../../data/database';
+import { CircleCheck, MessageSquare, RefreshCw, Send, Sparkles, TriangleAlert, User } from 'lucide-react';
 import { geminiService } from '../../services/geminiService';
-import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
+import { formatTime } from '@/registry/naf/lib/format';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
 
 interface Message {
   id: string;
@@ -231,16 +233,12 @@ export default function AIAssistant() {
         </div>
       </div>
 
-      <div className="bg-card rounded-lg shadow-sm border border-border">
+      <Card>
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="font-semibold text-foreground">المحادثة</h3>
-          <button
-            onClick={clearChat}
-            className="text-muted-foreground hover:text-foreground text-sm"
-            disabled={isTyping}
-          >
+          <Button onClick={clearChat} disabled={isTyping} variant="ghost" size="sm">
             مسح المحادثة
-          </button>
+          </Button>
         </div>
         
         <div className="h-96 overflow-y-auto p-4 space-y-4">
@@ -303,19 +301,14 @@ export default function AIAssistant() {
         
         <div className="border-t border-border p-4">
           <div className="flex gap-2">
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isTyping}
-              className="flex-shrink-0 bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground p-2 rounded-lg transition-colors"
-            >
+            <Button onClick={handleSendMessage} disabled={!inputMessage.trim() || isTyping} className="flex-shrink-0" size="icon-md">
               <Send className="h-5 w-5" />
-            </button>
-            <textarea
+            </Button>
+            <Textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="اكتب سؤالك هنا... (اضغط Enter للإرسال)"
-              className="flex-1 px-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring resize-none"
+              placeholder="اكتب سؤالك هنا... (اضغط Enter للإرسال)" className="flex-1 resize-none"
               disabled={isTyping}
               rows={2}
             />
@@ -370,6 +363,6 @@ export default function AIAssistant() {
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

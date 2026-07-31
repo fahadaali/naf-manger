@@ -1,5 +1,4 @@
 import React from 'react';
-import { User } from 'lucide-react';
 
 interface ProfileAvatarProps {
   src?: string;

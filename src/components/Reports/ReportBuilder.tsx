@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, X } from 'lucide-react';
 import { CustomReport, ReportField, ReportFilter, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 
 interface ReportBuilderProps {
   report?: CustomReport | null;
@@ -160,12 +165,9 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
       <div className="bg-card border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-muted rounded-full"
-            >
+            <Button onClick={onClose} className="rounded-full" variant="ghost" size="icon-md">
               <X className="h-6 w-6" />
-            </button>
+            </Button>
             <div>
               <h1 className="text-xl font-bold text-foreground">
                 {report ? 'تعديل التقرير' : 'إنشاء تقرير جديد'}
@@ -174,18 +176,12 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={generatePreview}
-              className="px-4 py-2 text-primary border border-primary rounded-lg hover:bg-primary-soft"
-            >
+            <Button onClick={generatePreview} className="border-primary text-primary" variant="outline">
               معاينة
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
+            </Button>
+            <Button onClick={handleSave}>
               حفظ التقرير
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -221,11 +217,10 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 <label className="block text-sm font-medium text-foreground mb-2">
                   اسم التقرير *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={reportData.name || ''}
                   onChange={(e) => setReportData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="مثال: تقرير الأداء الشهري"
                 />
               </div>
@@ -234,11 +229,10 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 <label className="block text-sm font-medium text-foreground mb-2">
                   الوصف
                 </label>
-                <textarea
+                <Textarea
                   value={reportData.description || ''}
                   onChange={(e) => setReportData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="وصف مختصر للتقرير وهدفه..."
                 />
               </div>
@@ -247,17 +241,16 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 <label className="block text-sm font-medium text-foreground mb-2">
                   مصدر البيانات *
                 </label>
-                <select
+                <Select
                   value={reportData.dataSource || ''}
                   onChange={(e) => handleDataSourceChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="clients">العملاء</option>
                   <option value="prospects">العملاء المحتملين</option>
                   <option value="cases">القضايا</option>
                   <option value="users">المستخدمين</option>
                   <option value="activities">الأنشطة</option>
-                </select>
+                </Select>
               </div>
 
               <div className="flex items-center gap-6">
@@ -325,12 +318,9 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                           className="flex items-center justify-between p-3 bg-primary-soft border border-primary/30 rounded-lg"
                         >
                           <span className="font-medium text-primary-strong">{field.name}</span>
-                          <button
-                            onClick={() => handleFieldToggle(fieldId)}
-                            className="text-primary hover:text-primary-strong"
-                          >
+                          <Button onClick={() => handleFieldToggle(fieldId)} variant="link">
                             <X className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </div>
                       ) : null;
                     })}
@@ -351,65 +341,55 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium text-foreground">فلاتر البيانات</h3>
-                  <button
-                    onClick={handleAddFilter}
-                    className="flex items-center gap-2 px-3 py-2 text-primary border border-primary rounded-lg hover:bg-primary-soft"
-                  >
+                  <Button onClick={handleAddFilter} className="border-primary text-primary" variant="outline" size="sm">
                     <Plus className="h-4 w-4" />
                     إضافة فلتر
-                  </button>
+                  </Button>
                 </div>
                 
                 <div className="space-y-3">
                   {reportData.filters?.map((filter, index) => (
                     <div key={filter.id} className="flex items-center gap-3 p-4 border border-border rounded-lg">
                       {index > 0 && (
-                        <select
+                        <Select
                           value={filter.logicalOperator || 'AND'}
-                          onChange={(e) => handleUpdateFilter(filter.id, { logicalOperator: e.target.value as 'AND' | 'OR' })}
-                          className="px-2 py-1 border border-border rounded text-sm"
+                          onChange={(e) => handleUpdateFilter(filter.id, { logicalOperator: e.target.value as 'AND' | 'OR' })} className="text-sm"
                         >
                           <option value="AND">و</option>
                           <option value="OR">أو</option>
-                        </select>
+                        </Select>
                       )}
                       
-                      <select
+                      <Select
                         value={filter.fieldId}
                         onChange={(e) => handleUpdateFilter(filter.id, { fieldId: e.target.value })}
-                        className="px-3 py-2 border border-border rounded-lg"
                       >
                         {availableFields.map(field => (
                           <option key={field.id} value={field.id}>{field.name}</option>
                         ))}
-                      </select>
+                      </Select>
                       
-                      <select
+                      <Select
                         value={filter.operator}
                         onChange={(e) => handleUpdateFilter(filter.id, { operator: e.target.value as any })}
-                        className="px-3 py-2 border border-border rounded-lg"
                       >
                         <option value="equals">يساوي</option>
                         <option value="not_equals">لا يساوي</option>
                         <option value="contains">يحتوي على</option>
                         <option value="greater_than">أكبر من</option>
                         <option value="less_than">أصغر من</option>
-                      </select>
+                      </Select>
                       
-                      <input
+                      <Input
                         type="text"
                         value={filter.value}
-                        onChange={(e) => handleUpdateFilter(filter.id, { value: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-border rounded-lg"
+                        onChange={(e) => handleUpdateFilter(filter.id, { value: e.target.value })} className="flex-1"
                         placeholder="القيمة"
                       />
                       
-                      <button
-                        onClick={() => handleRemoveFilter(filter.id)}
-                        className="p-2 text-destructive hover:bg-destructive-soft rounded-lg"
-                      >
+                      <Button onClick={() => handleRemoveFilter(filter.id)} className="text-destructive" variant="ghost" size="icon-md">
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
                   ))}
                   
@@ -465,28 +445,28 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 
                 {previewData.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
                           {Object.keys(previewData[0]).map(key => (
-                            <th key={key} className="text-start py-2 px-4 font-medium text-foreground">
+                            <TableHead key={key} className="text-foreground">
                               {key}
-                            </th>
+                            </TableHead>
                           ))}
-                        </tr>
-                      </thead>
-                      <tbody>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {previewData.map((row, index) => (
-                          <tr key={index} className="border-b border-border">
+                          <TableRow key={index}>
                             {Object.values(row).map((value, cellIndex) => (
-                              <td key={cellIndex} className="py-2 px-4 text-foreground">
+                              <TableCell key={cellIndex} className="text-foreground">
                                 {String(value)}
-                              </td>
+                              </TableCell>
                             ))}
-                          </tr>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -510,21 +490,13 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
 
           {/* Navigation */}
           <div className="flex justify-between mt-8 pt-6 border-t border-border">
-            <button
-              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-              disabled={currentStep === 1}
-              className="px-4 py-2 text-muted-foreground border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1} variant="outline">
               السابق
-            </button>
+            </Button>
             
-            <button
-              onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
-              disabled={currentStep === steps.length}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))} disabled={currentStep === steps.length}>
               التالي
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { CircleCheck, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function SystemConfiguration() {
   const [settings, setSettings] = useState<SystemSettings>({
@@ -172,13 +176,16 @@ export default function SystemConfiguration() {
     <div className="space-y-6">
       <h3 className="text-lg font-semibold text-foreground">إعدادات النظام</h3>
       
-      {saveMessage && (
-        <div className={`p-3 rounded-lg ${
-          saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong' : 'bg-destructive-soft text-destructive-strong'
-        }`}>
-          {saveMessage}
-        </div>
-      )}
+      {saveMessage && (() => {
+        const tone = messageTone(saveMessage);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{saveMessage}</span>
+          </Alert>
+        );
+      })()}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Object.entries(settings)
@@ -187,56 +194,38 @@ export default function SystemConfiguration() {
           <div key={category} className="bg-muted rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h4 className="font-medium text-foreground">{getCategoryLabel(category)}</h4>
-              <button
-                onClick={() => setEditingCategory(category)}
-                className="text-primary hover:text-primary-strong p-1"
-                title="إضافة عنصر جديد"
-              >
+              <Button onClick={() => setEditingCategory(category)} className="text-primary hover:text-primary-strong" title="إضافة عنصر جديد" variant="ghost" size="icon-sm">
                 <Plus className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
             
             <div className="space-y-2">
               {items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center bg-card rounded p-3">
                   <span className="text-sm text-foreground">{getItemLabel(category, item)}</span>
-                  <button
-                    onClick={() => removeItem(category, index)}
-                    className="text-destructive hover:text-destructive-strong p-1"
-                    title="حذف"
-                  >
+                  <Button onClick={() => removeItem(category, index)} className="text-destructive hover:text-destructive-strong" title="حذف" variant="ghost" size="icon-sm">
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               ))}
               
               {editingCategory === category && (
                 <div className="bg-card rounded p-3 border-2 border-primary/30">
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       type="text"
                       value={newItem}
                       onChange={(e) => setNewItem(e.target.value)}
-                      placeholder="اسم العنصر الجديد"
-                      className="flex-1 px-3 py-2 border border-border rounded text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder="اسم العنصر الجديد" className="flex-1 text-sm"
                       onKeyPress={(e) => e.key === 'Enter' && addItem(category)}
                       autoFocus
                     />
-                    <button
-                      onClick={() => addItem(category)}
-                      className="bg-primary text-primary-foreground px-3 py-2 rounded text-sm hover:bg-primary/90"
-                    >
+                    <Button onClick={() => addItem(category)} size="sm">
                       إضافة
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingCategory(null);
-                        setNewItem('');
-                      }}
-                      className="bg-muted text-foreground px-3 py-2 rounded text-sm hover:bg-muted-foreground"
-                    >
+                    </Button>
+                    <Button onClick={() => { setEditingCategory(null); setNewItem(''); }} variant="secondary" size="sm">
                       إلغاء
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -253,11 +242,7 @@ export default function SystemConfiguration() {
       </div>
       
       <div className="flex justify-end">
-        <button 
-          onClick={handleSaveSettings}
-          disabled={isSaving}
-          className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-2 rounded-lg flex items-center gap-2"
-        >
+        <Button onClick={handleSaveSettings} disabled={isSaving}>
           {isSaving ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
@@ -266,7 +251,7 @@ export default function SystemConfiguration() {
           ) : (
             'حفظ الإعدادات'
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

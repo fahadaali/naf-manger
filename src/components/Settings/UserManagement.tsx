@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { CircleCheck, CircleHelp, Gavel, Plus, ShieldCheck, Trash2, TriangleAlert, UserCog } from 'lucide-react';
 import { User, UserPermissions } from '../../types';
 import { db } from '../../data/database';
-import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
+import { formatDate } from '@/registry/naf/lib/format';
+import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
@@ -43,17 +52,20 @@ export default function UserManagement() {
     }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'bg-destructive-soft text-destructive-strong';
-      case 'lawyer': return 'bg-primary-soft text-primary-strong';
-      case 'staff': return 'bg-success-soft text-success-strong';
-      default: return 'bg-muted text-foreground';
-    }
+  /* Gavel هنا صلاحيةُ محامٍ لا كيانُ قضية: الجدول عن أدوار
+     المستخدمين ولا تظهر فيه قضية. مسجَّل في naf-icons.md. */
+  const ROLE = {
+    admin: { variant: 'destructive' as const, Icon: ShieldCheck },
+    lawyer: { variant: 'primary' as const, Icon: Gavel },
+    staff: { variant: 'success' as const, Icon: UserCog }
   };
 
+  const roleOf = (role: string) =>
+    ROLE[role as keyof typeof ROLE] ??
+    { variant: 'default' as const, Icon: CircleHelp };
+
   const formatLastLogin = (date?: Date) => {
-    if (!date) return 'لم يسجل دخول';
+    if (!date) return 'لم يدخل بعد';
     
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
@@ -191,165 +203,149 @@ export default function UserManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-foreground">إدارة المستخدمين</h3>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
-        >
+        <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-5 w-5" />
           إضافة مستخدم جديد
-        </button>
+        </Button>
       </div>
 
-      {saveMessage && (
-        <div className={`p-3 rounded-lg ${
-          saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong' : 'bg-destructive-soft text-destructive-strong'
-        }`}>
-          {saveMessage}
-        </div>
-      )}
+      {saveMessage && (() => {
+        const tone = messageTone(saveMessage);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{saveMessage}</span>
+          </Alert>
+        );
+      })()}
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted">
-            <tr>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
+      <Card className="overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
                 المستخدم
-              </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
+              </TableHead>
+              <TableHead>
                 الدور
-              </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
-                آخر تسجيل دخول
-              </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
+              </TableHead>
+              <TableHead>
+                آخر نشاط
+              </TableHead>
+              <TableHead>
                 تاريخ الإنشاء
-              </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
+              </TableHead>
+              <TableHead>
                 إجراءات
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-muted">
-                <td className="px-6 py-4 tabular-nums">
+              <TableRow key={user.id}>
+                <TableCell>
                   <div>
                     <div className="text-sm font-medium text-foreground">{user.name}</div>
                     <div className="text-sm text-muted-foreground"><bdi>{user.email}</bdi></div>
                   </div>
-                </td>
-                <td className="px-6 py-4 tabular-nums">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                    {getRoleLabel(user.role)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-muted-foreground tabular-nums">
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const { variant, Icon } = roleOf(user.role);
+                    return (
+                      <Badge variant={variant}>
+                        <Icon aria-hidden="true" />
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                    );
+                  })()}
+                </TableCell>
+                <TableCell>
                   {formatLastLogin(user.lastLogin)}
-                </td>
-                <td className="px-6 py-4 text-sm text-muted-foreground tabular-nums">
+                </TableCell>
+                <TableCell>
                   <bdi>{formatDate(user.createdDate)}</bdi>
-                </td>
-                <td className="px-6 py-4 tabular-nums">
+                </TableCell>
+                <TableCell>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => setEditingUser(user)}
-                      className="text-primary hover:text-primary-strong p-1"
-                      title="تعديل الصلاحيات"
-                    >
+                    <Button onClick={() => setEditingUser(user)} className="text-primary hover:text-primary-strong" title="تعديل الصلاحيات" variant="ghost" size="icon-sm">
                       <ShieldCheck className="h-4 w-4" />
-                    </button>
+                    </Button>
                     {user.role !== 'admin' && (
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-destructive hover:text-destructive-strong p-1"
-                        title="حذف"
-                      >
+                      <Button onClick={() => handleDeleteUser(user.id)} className="text-destructive hover:text-destructive-strong" title="حذف" variant="ghost" size="icon-sm">
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     )}
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">إضافة مستخدم جديد</h3>
+        <Dialog open onOpenChange={(next) => { if (!next) setShowCreateModal(false); }}>
+        <DialogContent className="max-w-md p-6 p-0">
+            <DialogTitle className="text-lg font-semibold mb-4">إضافة مستخدم جديد</DialogTitle>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">الاسم الكامل</label>
-                <input
+                <Input
                   type="text"
                   value={newUserData.name}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">البريد الإلكتروني</label>
-                <input
+                <Input
                   type="email"
                   value={newUserData.email}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">الدور</label>
-                <select 
+                <Select 
                   value={newUserData.role}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, role: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="staff">إداري</option>
                   <option value="lawyer">محامي</option>
                   <option value="admin">مدير النظام</option>
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">كلمة المرور المؤقتة</label>
-                <input
+                <Input
                   type="password"
                   value={newUserData.password}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setNewUserData({ name: '', email: '', role: 'staff', password: '' });
-                }}
-                className="px-4 py-2 text-muted-foreground hover:text-foreground"
-              >
+              <Button onClick={() => { setShowCreateModal(false); setNewUserData({ name: '', email: '', role: 'staff', password: '' }); }} variant="ghost">
                 إلغاء
-              </button>
-              <button 
-                onClick={handleCreateUser}
-                disabled={isSaving}
-                className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-4 py-2 rounded-lg"
-              >
+              </Button>
+              <Button onClick={handleCreateUser} disabled={isSaving}>
                 {isSaving ? 'جارٍ الإنشاء...' : 'إنشاء المستخدم'}
-              </button>
+              </Button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+      </Dialog>
       )}
 
       {/* Edit Permissions Modal */}
       {editingUser && (
-        <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
+        <Dialog open onOpenChange={(next) => { if (!next) setEditingUser(null); }}>
+        <DialogContent className="max-w-2xl p-6 max-h-[90vh] overflow-y-auto p-0">
+            <DialogTitle className="text-lg font-semibold mb-4">
               تعديل صلاحيات: {editingUser.name}
-            </h3>
+            </DialogTitle>
             
             <div className="space-y-6">
               {Object.entries(editingUser.permissions).map(([resource, permissions]) => (
@@ -395,22 +391,15 @@ export default function UserManagement() {
             </div>
             
             <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setEditingUser(null)}
-                className="px-4 py-2 text-muted-foreground hover:text-foreground"
-              >
+              <Button onClick={() => setEditingUser(null)} variant="ghost">
                 إلغاء
-              </button>
-              <button 
-                onClick={() => handleUpdatePermissions(editingUser, editingUser.permissions)}
-                disabled={isSaving}
-                className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-4 py-2 rounded-lg"
-              >
+              </Button>
+              <Button onClick={() => handleUpdatePermissions(editingUser, editingUser.permissions)} disabled={isSaving}>
                 {isSaving ? 'جارٍ الحفظ...' : 'حفظ الصلاحيات'}
-              </button>
+              </Button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+      </Dialog>
       )}
     </div>
   );

@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { Client, Case } from '../../types';
+import { CircleCheck, Clock, LoaderCircle } from 'lucide-react';
+import { Client } from '../../types';
 import { format } from 'date-fns';
 import { mockCases } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
-import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { formatPhone } from '@/registry/naf/lib/format';
+import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
 
 interface ClientModalProps {
   client?: Client;
@@ -110,16 +116,10 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
     const pendingCases = clientCases.filter(c => c.status === 'pending' || c.status === 'in-progress').length;
 
     return (
-      <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-        <div className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-xl font-bold text-foreground">تفاصيل العميل</h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-muted rounded-full"
-            >
-              <X className="h-6 w-6" />
-            </button>
+            <DialogTitle className="text-xl font-bold">تفاصيل العميل</DialogTitle>
           </div>
 
           <div className="p-6 space-y-6">
@@ -226,13 +226,22 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                           <h4 className="font-medium text-foreground"><bdi>{case_.caseNumber}</bdi></h4>
                           <p className="text-sm text-muted-foreground">{case_.caseType}</p>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          case_.status === 'completed' ? 'bg-success-soft text-success-strong' :
-                          case_.status === 'in-progress' ? 'bg-primary-soft text-primary-strong' :
-                          'bg-warning-soft text-warning-strong'
-                        }`}>
-                          {case_.status}
-                        </span>
+                        {(() => {
+                          const s = case_.status;
+                          const map = {
+                            completed: { variant: 'success' as const, Icon: CircleCheck, label: 'مكتملة' },
+                            'in-progress': { variant: 'primary' as const, Icon: LoaderCircle, label: 'قيد المعالجة' },
+                            pending: { variant: 'warning' as const, Icon: Clock, label: 'منظورة' }
+                          };
+                          const { variant, Icon, label } =
+                            map[s as keyof typeof map] ?? map.pending;
+                          return (
+                            <Badge variant={variant}>
+                              <Icon aria-hidden="true" />
+                              {label}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">{case_.summary}</p>
                       {case_.basecampUrl && (
@@ -253,25 +262,19 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               )}
             </div>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   // Edit/Create mode
   return (
-    <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-      <div className="bg-card rounded-lg max-w-full sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg sm:text-xl font-bold text-foreground">
+          <DialogTitle className="text-lg sm:text-xl font-bold">
             {client ? 'تعديل العميل' : 'إضافة عميل جديد'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-full"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          </DialogTitle>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -289,14 +292,11 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <label className="block text-sm font-medium text-foreground mb-2">
                 الاسم الكامل *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.fullName ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.fullName} />
               {errors.fullName && (
                 <p className="text-destructive text-sm mt-1">{errors.fullName}</p>
               )}
@@ -306,14 +306,11 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الهوية *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.idNumber ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.idNumber} />
               {errors.idNumber && (
                 <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
@@ -323,14 +320,11 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الجوال *
               </label>
-              <input
+              <Input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.phone ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.phone} />
               {errors.phone && (
                 <p className="text-destructive text-sm mt-1">{errors.phone}</p>
               )}
@@ -340,14 +334,11 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <label className="block text-sm font-medium text-foreground mb-2">
                 البريد الإلكتروني *
               </label>
-              <input
+              <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.email ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.email} />
               {errors.email && (
                 <p className="text-destructive text-sm mt-1">{errors.email}</p>
               )}
@@ -357,30 +348,28 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <label className="block text-sm font-medium text-foreground mb-2">
                 نوع العميل
               </label>
-              <select
+              <Select
                 value={formData.clientType}
                 onChange={(e) => handleInputChange('clientType', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="individual">فرد</option>
                 <option value="company">شركة</option>
                 <option value="association">جمعية</option>
                 <option value="government">جهة حكومية</option>
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 حالة العميل
               </label>
-              <select
+              <Select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="current">حالي</option>
                 <option value="former">سابق</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -392,14 +381,11 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 <label className="block text-sm font-medium text-foreground mb-2">
                   السجل التجاري *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formData.commercialRegister}
                   onChange={(e) => handleInputChange('commercialRegister', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                    errors.commercialRegister ? 'border-destructive/30' : 'border-border'
-                  }`}
-                />
+                 aria-invalid={!!errors.commercialRegister} />
                 {errors.commercialRegister && (
                   <p className="text-destructive text-sm mt-1">{errors.commercialRegister}</p>
                 )}
@@ -410,11 +396,10 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                   <label className="block text-sm font-medium text-foreground mb-2">
                     اسم الممثل القانوني
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeName}
                     onChange={(e) => handleInputChange('legalRepresentativeName', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
 
@@ -422,11 +407,10 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                   <label className="block text-sm font-medium text-foreground mb-2">
                     رقم هوية الممثل القانوني
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeId}
                     onChange={(e) => handleInputChange('legalRepresentativeId', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
 
@@ -434,11 +418,10 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                   <label className="block text-sm font-medium text-foreground mb-2">
                     وسيلة التواصل
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeContact}
                     onChange={(e) => handleInputChange('legalRepresentativeContact', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               </div>
@@ -449,32 +432,24 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
             <label className="block text-sm font-medium text-foreground mb-2">
               الملاحظات
             </label>
-            <textarea
+            <Textarea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="ملاحظات إضافية..."
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-muted-foreground hover:text-foreground"
-            >
+            <Button type="button" onClick={onClose} variant="ghost">
               إلغاء
-            </button>
-            <button
-              type="submit"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg"
-            >
+            </Button>
+            <Button type="submit">
               {client ? 'حفظ التغييرات' : 'إضافة العميل'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+      </Dialog>
   );
 }

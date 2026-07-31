@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import { Calendar, ClipboardList, Plus, Send, Trash2, Users, Video, X } from 'lucide-react';
+import { Calendar, Plus, Send, Trash2, User, Users, Video } from 'lucide-react';
 import { Client, Prospect } from '../../types';
-import { formatDate, formatDateTime, formatTime, isolate } from '@/registry/naf/lib/format';
+import { formatDateTime, isolate } from '@/registry/naf/lib/format';
+import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
 
 interface ZoomMeetingModalProps {
   client?: Client | Prospect;
@@ -200,26 +206,20 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
   };
 
   return (
-    <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-      <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">
               <Video className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">إنشاء اجتماع Zoom</h2>
+              <DialogTitle className="text-xl font-bold">إنشاء اجتماع Zoom</DialogTitle>
               {client && (
                 <p className="text-sm text-muted-foreground">مع العميل: {client.fullName}</p>
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-full"
-          >
-            <X className="h-6 w-6" />
-          </button>
         </div>
 
         <div className="p-6 space-y-6">
@@ -234,15 +234,12 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
               <label className="block text-sm font-medium text-foreground mb-2">
                 عنوان الاجتماع *
               </label>
-              <input
+              <Input
                 type="text"
                 value={meetingData.title}
                 onChange={(e) => setMeetingData(prev => ({ ...prev, title: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.title ? 'border-destructive/30' : 'border-border'
-                }`}
                 placeholder="مثال: مناقشة القضية التجارية"
-              />
+               aria-invalid={!!errors.title} />
               {errors.title && (
                 <p className="text-destructive text-sm mt-1">{errors.title}</p>
               )}
@@ -253,14 +250,11 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
                 <label className="block text-sm font-medium text-foreground mb-2">
                   التاريخ *
                 </label>
-                <input
+                <Input
                   type="date"
                   value={meetingData.date}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, date: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                    errors.date ? 'border-destructive/30' : 'border-border'
-                  }`}
-                />
+                 aria-invalid={!!errors.date} />
                 {errors.date && (
                   <p className="text-destructive text-sm mt-1">{errors.date}</p>
                 )}
@@ -270,14 +264,11 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
                 <label className="block text-sm font-medium text-foreground mb-2">
                   الوقت *
                 </label>
-                <input
+                <Input
                   type="time"
                   value={meetingData.time}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, time: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                    errors.time ? 'border-destructive/30' : 'border-border'
-                  }`}
-                />
+                 aria-invalid={!!errors.time} />
                 {errors.time && (
                   <p className="text-destructive text-sm mt-1">{errors.time}</p>
                 )}
@@ -287,16 +278,15 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
                 <label className="block text-sm font-medium text-foreground mb-2">
                   المدة (دقيقة)
                 </label>
-                <select
+                <Select
                   value={meetingData.duration}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value={30}>30 دقيقة</option>
                   <option value={60}>60 دقيقة</option>
                   <option value={90}>90 دقيقة</option>
                   <option value={120}>120 دقيقة</option>
-                </select>
+                </Select>
               </div>
             </div>
 
@@ -304,11 +294,10 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
               <label className="block text-sm font-medium text-foreground mb-2">
                 جدول الأعمال
               </label>
-              <textarea
+              <Textarea
                 value={meetingData.agenda}
                 onChange={(e) => setMeetingData(prev => ({ ...prev, agenda: e.target.value }))}
                 rows={3}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="اكتب جدول أعمال الاجتماع..."
               />
             </div>
@@ -322,23 +311,17 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
             </h3>
 
             <div className="flex gap-2">
-              <input
+              <Input
                 type="email"
                 value={newInviteeEmail}
                 onChange={(e) => setNewInviteeEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addInvitee()}
-                className={`flex-1 px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.newEmail ? 'border-destructive/30' : 'border-border'
-                }`}
+                onKeyPress={(e) => e.key === 'Enter' && addInvitee()} className="flex-1"
                 placeholder="أدخل البريد الإلكتروني"
-              />
-              <button
-                onClick={addInvitee}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
-              >
+               aria-invalid={!!errors.newEmail} />
+              <Button onClick={addInvitee}>
                 <Plus className="h-4 w-4" />
                 إضافة
-              </button>
+              </Button>
             </div>
             {errors.newEmail && (
               <p className="text-destructive text-sm">{errors.newEmail}</p>
@@ -355,18 +338,15 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
                     </div>
                     <span className="text-foreground">{email}</span>
                     {client && email === client.email && (
-                      <span className="bg-success-soft text-success-strong px-2 py-1 rounded-full text-xs">
+                      <Badge variant="success">
+                        <User aria-hidden="true" />
                         العميل
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <button
-                    onClick={() => removeInvitee(email)}
-                    className="text-destructive hover:text-destructive-strong p-1"
-                    title="حذف"
-                  >
+                  <Button onClick={() => removeInvitee(email)} className="text-destructive hover:text-destructive-strong" title="حذف" variant="ghost" size="icon-sm">
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -380,11 +360,10 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
             <h3 className="text-lg font-semibold text-foreground">إعدادات الأمان</h3>
             
             <div className="flex items-center gap-3">
-              <input
+              <Input
                 type="text"
                 value={meetingData.password}
-                onChange={(e) => setMeetingData(prev => ({ ...prev, password: e.target.value }))}
-                className="flex-1 px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
+                onChange={(e) => setMeetingData(prev => ({ ...prev, password: e.target.value }))} className="flex-1"
                 placeholder="كلمة مرور الاجتماع (اختيارية)"
               />
               <button
@@ -435,18 +414,10 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
 
         <div className="border-t border-border px-6 py-4">
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-muted-foreground hover:text-foreground"
-              disabled={isCreating}
-            >
+            <Button onClick={onClose} disabled={isCreating} variant="ghost">
               إلغاء
-            </button>
-            <button
-              onClick={createZoomMeeting}
-              disabled={isCreating}
-              className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-2 rounded-lg flex items-center gap-2"
-            >
+            </Button>
+            <Button onClick={createZoomMeeting} disabled={isCreating}>
               {isCreating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
@@ -458,10 +429,10 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
                   إنشاء الاجتماع وإرسال الدعوات
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+      </Dialog>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Check, ChevronDown, FileOutput, FileText, Globe, Import, Mail, Settings, ShieldCheck, Tv, User, Users } from 'lucide-react';
+import { Bell, Check, ChevronDown, CircleCheck, FileOutput, FileText, Globe, Import, Mail, Settings, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
@@ -9,6 +9,11 @@ import GeneralSettings from './GeneralSettings';
 import DashboardDisplay from './DashboardDisplay';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import SupabaseMigration from './SupabaseMigration';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -228,71 +233,56 @@ export default function Settings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">الاسم الكامل</label>
-                  <input
+                  <Input
                     type="text"
                     value={profileData.name}
                     onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">البريد الإلكتروني</label>
-                  <input
+                  <Input
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">رقم الجوال</label>
-                  <input
+                  <Input
                     type="tel"
                     value={profileData.phone}
                     onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">المسمى الوظيفي</label>
-                  <input
+                  <Input
                     type="text"
                     value={profileData.jobTitle}
-                    disabled
-                    className="w-full px-4 py-3 border border-border rounded-xl bg-muted text-muted-foreground"
+                    disabled className="bg-muted text-muted-foreground"
                   />
                 </div>
               </div>
             </div>
             
-            {saveMessage && (
-              <div className={`max-w-2xl mx-auto p-4 rounded-xl flex items-center gap-3 ${
-                saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong border border-success/30' : 'bg-destructive-soft text-destructive-strong border border-destructive/30'
-              }`}>
-                {saveMessage.includes('نجاح') && <Check className="h-5 w-5" />}
-                {saveMessage}
-              </div>
-            )}
+            {saveMessage && (() => {
+              const tone = messageTone(saveMessage);
+              const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+              return (
+                <Alert variant={tone} className="max-w-2xl mx-auto">
+                  <Icon aria-hidden="true" />
+                  <span>{saveMessage}</span>
+                </Alert>
+              );
+            })()}
 
             <div className="max-w-2xl mx-auto border-t border-border pt-6">
               <div className="flex justify-end gap-4">
-                <button 
-                  onClick={() => setProfileData({
-                    name: user?.name || '',
-                    email: user?.email || '',
-                    phone: '+966501234567',
-                    jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري',
-                    profilePicture: user?.profilePicture || ''
-                  })}
-                  className="px-6 py-3 text-muted-foreground hover:text-foreground font-medium transition-colors"
-                >
+                <Button onClick={() => setProfileData({ name: user?.name || '', email: user?.email || '', phone: '+966501234567', jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري', profilePicture: user?.profilePicture || '' })} variant="ghost" size="lg">
                   إلغاء
-                </button>
-                <button 
-                  onClick={handleProfileSave}
-                  disabled={isSaving}
-                  className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-8 py-3 rounded-xl font-medium transition-colors flex items-center gap-2"
-                >
+                </Button>
+                <Button onClick={handleProfileSave} disabled={isSaving} size="lg">
                   {isSaving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
@@ -304,7 +294,7 @@ export default function Settings() {
                       حفظ التغييرات
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -344,17 +334,16 @@ export default function Settings() {
                     <p className="text-primary">رفع ملف Excel يحتوي على بيانات العملاء</p>
                   </div>
                   <div className="space-y-4">
-                    <button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" size="lg">
                       تنزيل نموذج Excel
-                    </button>
-                    <input
+                    </Button>
+                    <Input
                       type="file"
-                      accept=".xlsx,.xls"
-                      className="w-full px-4 py-3 border border-primary/30 rounded-xl bg-card"
+                      accept=".xlsx,.xls" className="border-primary/30"
                     />
-                    <button className="w-full bg-success hover:bg-success/90 text-success-foreground px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" variant="success" size="lg">
                       رفع الملف
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 
@@ -367,17 +356,16 @@ export default function Settings() {
                     <p className="text-success">رفع ملف Excel يحتوي على بيانات القضايا</p>
                   </div>
                   <div className="space-y-4">
-                    <button className="w-full bg-success hover:bg-success/90 text-success-foreground px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" variant="success" size="lg">
                       تنزيل نموذج Excel
-                    </button>
-                    <input
+                    </Button>
+                    <Input
                       type="file"
-                      accept=".xlsx,.xls"
-                      className="w-full px-4 py-3 border border-success/30 rounded-xl bg-card"
+                      accept=".xlsx,.xls" className="border-success/30"
                     />
-                    <button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" size="lg">
                       رفع الملف
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -402,41 +390,34 @@ export default function Settings() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">كلمة المرور الحالية</label>
-                    <input
+                    <Input
                       type="password"
                       value={securityData.currentPassword}
                       onChange={(e) => setSecurityData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                      className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                       placeholder="أدخل كلمة المرور الحالية"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">كلمة المرور الجديدة</label>
-                    <input
+                    <Input
                       type="password"
                       value={securityData.newPassword}
                       onChange={(e) => setSecurityData(prev => ({ ...prev, newPassword: e.target.value }))}
-                      className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                       placeholder="أدخل كلمة المرور الجديدة"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">تأكيد كلمة المرور الجديدة</label>
-                    <input
+                    <Input
                       type="password"
                       value={securityData.confirmPassword}
                       onChange={(e) => setSecurityData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                       placeholder="أعد إدخال كلمة المرور الجديدة"
                     />
                   </div>
-                  <button
-                    onClick={handleSecuritySave}
-                    disabled={isSaving || !securityData.currentPassword || !securityData.newPassword}
-                    className="w-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-3 rounded-xl font-medium transition-colors"
-                  >
+                  <Button onClick={handleSecuritySave} disabled={isSaving || !securityData.currentPassword || !securityData.newPassword} className="w-full" size="lg">
                     {isSaving ? 'جارٍ الحفظ...' : 'تغيير كلمة المرور'}
-                  </button>
+                  </Button>
                 </div>
               </div>
               
@@ -446,21 +427,23 @@ export default function Settings() {
                     <h4 className="text-lg font-bold text-foreground mb-2">المصادقة الثنائية</h4>
                     <p className="text-muted-foreground">تفعيل المصادقة الثنائية لحماية إضافية لحسابك</p>
                   </div>
-                  <button className="bg-info hover:bg-info/90 text-info-foreground px-6 py-3 rounded-xl font-medium transition-colors">
+                  <Button className="bg-info hover:bg-info/90 text-info-foreground" size="lg">
                     تفعيل
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
             
-            {saveMessage && (
-              <div className={`max-w-2xl mx-auto p-4 rounded-xl flex items-center gap-3 ${
-                saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong border border-success/30' : 'bg-destructive-soft text-destructive-strong border border-destructive/30'
-              }`}>
-                {saveMessage.includes('نجاح') && <Check className="h-5 w-5" />}
-                {saveMessage}
-              </div>
-            )}
+            {saveMessage && (() => {
+              const tone = messageTone(saveMessage);
+              const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+              return (
+                <Alert variant={tone} className="max-w-2xl mx-auto">
+                  <Icon aria-hidden="true" />
+                  <span>{saveMessage}</span>
+                </Alert>
+              );
+            })()}
           </div>
         );
       
@@ -540,49 +523,49 @@ export default function Settings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير يومي</label>
-                    <select className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring bg-card">
+                    <Select>
                       <option value="disabled">معطل</option>
                       <option value="8am" selected>8:00 صباحاً</option>
                       <option value="9am">9:00 صباحاً</option>
                       <option value="10am">10:00 صباحاً</option>
-                    </select>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير أسبوعي</label>
-                    <select className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring bg-card">
+                    <Select>
                       <option value="disabled">معطل</option>
                       <option value="sunday" selected>الأحد</option>
                       <option value="monday">الاثنين</option>
                       <option value="saturday">السبت</option>
-                    </select>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير شهري</label>
-                    <select className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring bg-card">
+                    <Select>
                       <option value="disabled">معطل</option>
                       <option value="1st" selected>أول الشهر</option>
                       <option value="15th">منتصف الشهر</option>
                       <option value="last">آخر الشهر</option>
-                    </select>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">طريقة الإرسال</label>
-                    <select className="w-full px-4 py-3 border border-border rounded-xl focus-visible:ring-2 focus-visible:ring-ring bg-card">
+                    <Select>
                       <option value="email" selected>البريد الإلكتروني</option>
                       <option value="sms">رسائل نصية</option>
                       <option value="both">كلاهما</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
               </div>
               
               <div className="flex justify-center">
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-xl font-medium transition-colors">
+                <Button  size="lg">
                   حفظ إعدادات الإشعارات
-                </button>
+                </Button>
               </div>
             </div>
           </div>

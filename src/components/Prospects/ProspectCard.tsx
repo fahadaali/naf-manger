@@ -1,10 +1,13 @@
 import React from 'react';
-import { ArrowRight, Building2, Mail, Pencil, Phone, User, Video } from 'lucide-react';
+import { ArrowRight, CircleSlash, CircleX, Clock, FileCheck, Info, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Prospect } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
-import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { formatPhone } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Card } from '@/registry/naf/ui/card';
 
 interface ProspectCardProps {
   prospect: Prospect;
@@ -17,16 +20,16 @@ interface ProspectCardProps {
 }
 
 export default function ProspectCard({ prospect, onViewDetails, onEdit, onConvert, onCreateMeeting, canEdit, canConvert }: ProspectCardProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'مهتم': return 'bg-primary-soft text-primary-strong';
-      case 'تم التواصل': return 'bg-warning-soft text-warning-strong';
-      case 'بانتظار توقيع': return 'bg-success-soft text-success-strong';
-      case 'غير مناسب': return 'bg-destructive-soft text-destructive-strong';
-      case 'تم الرفض': return 'bg-muted text-foreground';
-      default: return 'bg-muted text-foreground';
-    }
+  const STATUS = {
+    'مهتم': { variant: 'primary' as const, Icon: Info },
+    'تم التواصل': { variant: 'warning' as const, Icon: Clock },
+    'بانتظار توقيع': { variant: 'success' as const, Icon: FileCheck },
+    'غير مناسب': { variant: 'destructive' as const, Icon: CircleSlash },
+    'تم الرفض': { variant: 'default' as const, Icon: CircleX }
   };
+
+  const statusOf = (status: string) =>
+    STATUS[status as keyof typeof STATUS] ?? STATUS['تم الرفض'];
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -41,7 +44,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
   const isReadyToConvert = prospect.prospectStatus === 'بانتظار توقيع';
 
   return (
-    <div className="bg-card rounded-lg shadow-sm border border-border p-6 hover:shadow-md transition-shadow">
+    <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <ProfileAvatar 
@@ -50,36 +53,31 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
             size="lg" 
           />
           <div>
-            <button 
-              onClick={() => onViewDetails(prospect)}
-              className="text-lg font-semibold text-primary hover:text-primary-strong hover:underline text-start"
-            >
+            <Button onClick={() => onViewDetails(prospect)} className="justify-start text-start" variant="link" size="lg">
               {prospect.fullName}
-            </button>
+            </Button>
             <p className="text-sm text-muted-foreground">{getTypeLabel(prospect.clientType)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(prospect.prospectStatus)}`}>
-            {prospect.prospectStatus}
-          </span>
+          {(() => {
+            const { variant, Icon } = statusOf(prospect.prospectStatus);
+            return (
+              <Badge variant={variant}>
+                <Icon aria-hidden="true" />
+                {prospect.prospectStatus}
+              </Badge>
+            );
+          })()}
           {onCreateMeeting && (
-            <button
-              onClick={() => onCreateMeeting(prospect)}
-              className="text-primary hover:text-primary-strong p-1"
-              title="إنشاء اجتماع Zoom"
-            >
+            <Button onClick={() => onCreateMeeting(prospect)} className="text-primary hover:text-primary-strong" title="إنشاء اجتماع Zoom" variant="ghost" size="icon-sm">
               <Video className="h-4 w-4" />
-            </button>
+            </Button>
           )}
           {canEdit && (
-            <button
-              onClick={() => onEdit(prospect)}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title="تعديل"
-            >
+            <Button onClick={() => onEdit(prospect)} title="تعديل" variant="ghost" size="icon-sm">
               <Pencil className="h-4 w-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -121,13 +119,9 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
             عرض التفاصيل
           </button>
           {canEdit && (
-            <button
-              onClick={() => onEdit(prospect)}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title="تعديل"
-            >
+            <Button onClick={() => onEdit(prospect)} title="تعديل" variant="ghost" size="icon-sm">
               <Pencil className="h-4 w-4" />
-            </button>
+            </Button>
           )}
         </div>
         
@@ -153,6 +147,6 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
           </span>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

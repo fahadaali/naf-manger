@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, FileText, User, Users } from 'lucide-react';
 import { ActivityLog } from '../../types';
 import { db } from '../../data/database';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function ActivityFeed() {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
@@ -82,7 +84,7 @@ export default function ActivityFeed() {
   };
 
   return (
-    <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+    <Card className="p-6">
       <div className="flex items-center gap-2 mb-4">
         <ClipboardList className="h-6 w-6 text-muted-foreground" />
         <h3 className="text-lg font-semibold text-foreground">النشاط الأخير</h3>
@@ -120,12 +122,12 @@ export default function ActivityFeed() {
       </div>
       
       <div className="mt-4 pt-4 border-t border-border">
-        <button className="text-primary hover:text-primary-strong text-sm font-medium">
+        <Button  variant="link" size="sm">
           <span onClick={loadActivities}>
           تحديث الأنشطة
           </span>
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }

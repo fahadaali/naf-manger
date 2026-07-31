@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ChartColumn, FileOutput, Pencil, Share2, Table2, X } from 'lucide-react';
+import { ChartColumn, FileOutput, Pencil, Table2, X } from 'lucide-react';
 import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport } from '../../types';
 import { db } from '../../data/database';
 import ChartCard from '../Dashboard/ChartCard';
-import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
+import { formatDate } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
+import { Card } from '@/registry/naf/ui/card';
 
 interface ReportViewerProps {
   report: CustomReport;
@@ -89,12 +92,9 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
       <div className="bg-card border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-muted rounded-full"
-            >
+            <Button onClick={onClose} className="rounded-full" variant="ghost" size="icon-md">
               <X className="h-6 w-6" />
-            </button>
+            </Button>
             <div>
               <h1 className="text-xl font-bold text-foreground">{report.name}</h1>
               {report.description && (
@@ -128,39 +128,27 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             </div>
             
             <div className="relative group">
-              <button className="flex items-center gap-2 px-4 py-2 text-muted-foreground border border-border rounded-lg hover:bg-muted">
+              <Button  variant="outline">
                 <FileOutput className="h-4 w-4" />
                 تصدير
-              </button>
+              </Button>
               <div className="absolute end-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                <button
-                  onClick={() => exportReport('csv')}
-                  className="w-full px-4 py-2 text-start hover:bg-muted first:rounded-t-lg"
-                >
+                <Button onClick={() => exportReport('csv')} className="w-full justify-start first:rounded-t-lg" variant="ghost">
                   تصدير CSV
-                </button>
-                <button
-                  onClick={() => exportReport('excel')}
-                  className="w-full px-4 py-2 text-start hover:bg-muted"
-                >
+                </Button>
+                <Button onClick={() => exportReport('excel')} className="w-full justify-start" variant="ghost">
                   تصدير Excel
-                </button>
-                <button
-                  onClick={() => exportReport('pdf')}
-                  className="w-full px-4 py-2 text-start hover:bg-muted last:rounded-b-lg"
-                >
+                </Button>
+                <Button onClick={() => exportReport('pdf')} className="w-full justify-start last:rounded-b-lg" variant="ghost">
                   تصدير PDF
-                </button>
+                </Button>
               </div>
             </div>
             
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-2 px-4 py-2 text-primary border border-primary rounded-lg hover:bg-primary-soft"
-            >
+            <Button onClick={onEdit} className="border-primary text-primary" variant="outline">
               <Pencil className="h-4 w-4" />
               تعديل
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -192,32 +180,32 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
         </div>
 
         {/* Data Display */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Card className="overflow-hidden">
           {viewMode === 'table' ? (
             <div className="overflow-x-auto">
               {reportData.length > 0 ? (
-                <table className="w-full">
-                  <thead className="bg-muted">
-                    <tr>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
                       {Object.keys(reportData[0]).map(key => (
-                        <th key={key} className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <TableHead key={key} className="tracking-wider">
                           {key}
-                        </th>
+                        </TableHead>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {reportData.map((row, index) => (
-                      <tr key={index} className="hover:bg-muted">
+                      <TableRow key={index}>
                         {Object.values(row).map((value, cellIndex) => (
-                          <td key={cellIndex} className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          <TableCell key={cellIndex} className="text-foreground">
                             {String(value)}
-                          </td>
+                          </TableCell>
                         ))}
-                      </tr>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               ) : (
                 <div className="p-12 text-center">
                   <p className="text-muted-foreground">لا نتائج تطابق شروط التقرير. وسّع المدى أو امسح الشروط.</p>
@@ -240,7 +228,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
               )}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Applied Filters */}
         {report.filters && report.filters.length > 0 && (

@@ -75,9 +75,9 @@ export default function DashboardDisplay() {
             <div className="text-center">
               <div className="flex items-center gap-2 text-surface-deep-muted text-sm">
                 <Link2 className="h-4 w-4" />
-                <span className="font-mono bg-overlay px-2 py-1 rounded text-xs">
+                <bdi className="bg-surface-deep-foreground/10 px-2 py-1 rounded text-xs">
                   {window.location.origin}
-                </span>
+                </bdi>
               </div>
             </div>
           </div>

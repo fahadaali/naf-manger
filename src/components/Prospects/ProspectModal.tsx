@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
 import { Prospect } from '../../types';
 import { format } from 'date-fns';
 import { mockSystemSettings } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
-import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { formatPhone } from '@/registry/naf/lib/format';
+import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
 
 interface ProspectModalProps {
   prospect?: Prospect;
@@ -114,16 +118,10 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
   if (!isEditing && prospect) {
     // View mode
     return (
-      <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-        <div className="bg-card rounded-lg max-w-full sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto p-0">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-lg sm:text-xl font-bold text-foreground">تفاصيل العميل المحتمل</h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-muted rounded-full"
-            >
-              <X className="h-6 w-6" />
-            </button>
+            <DialogTitle className="text-lg sm:text-xl font-bold">تفاصيل العميل المحتمل</DialogTitle>
           </div>
 
           <div className="p-6 space-y-6">
@@ -224,25 +222,19 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   // Edit/Create mode
   return (
-    <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-      <div className="bg-card rounded-lg max-w-full sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg sm:text-xl font-bold text-foreground">
+          <DialogTitle className="text-lg sm:text-xl font-bold">
             {prospect ? 'تعديل العميل المحتمل' : 'إضافة عميل محتمل جديد'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-full"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          </DialogTitle>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -260,14 +252,11 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 الاسم الكامل *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.fullName ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.fullName} />
               {errors.fullName && (
                 <p className="text-destructive text-sm mt-1">{errors.fullName}</p>
               )}
@@ -277,14 +266,11 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الهوية *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.idNumber ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.idNumber} />
               {errors.idNumber && (
                 <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
@@ -294,14 +280,11 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الجوال *
               </label>
-              <input
+              <Input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.phone ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.phone} />
               {errors.phone && (
                 <p className="text-destructive text-sm mt-1">{errors.phone}</p>
               )}
@@ -311,14 +294,11 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 البريد الإلكتروني *
               </label>
-              <input
+              <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.email ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.email} />
               {errors.email && (
                 <p className="text-destructive text-sm mt-1">{errors.email}</p>
               )}
@@ -328,58 +308,54 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 نوع العميل
               </label>
-              <select
+              <Select
                 value={formData.clientType}
                 onChange={(e) => handleInputChange('clientType', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="individual">فرد</option>
                 <option value="company">شركة</option>
                 <option value="association">جمعية</option>
                 <option value="government">جهة حكومية</option>
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 حالة العميل المحتمل
               </label>
-              <select
+              <Select
                 value={formData.prospectStatus}
                 onChange={(e) => handleInputChange('prospectStatus', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {mockSystemSettings.prospectStatuses.map(status => (
                   <option key={status} value={status}>{status}</option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 مصدر العميل
               </label>
-              <select
+              <Select
                 value={formData.source}
                 onChange={(e) => handleInputChange('source', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">اختر المصدر</option>
                 {mockSystemSettings.prospectSources.map(source => (
                   <option key={source} value={source}>{source}</option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 القيمة المتوقعة بالريال
               </label>
-              <input
+              <Input
                 type="number"
                 value={formData.expectedValue}
                 onChange={(e) => handleInputChange('expectedValue', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="0"
               />
             </div>
@@ -388,11 +364,10 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 موعد المتابعة
               </label>
-              <input
+              <Input
                 type="date"
                 value={formData.followUpDate}
                 onChange={(e) => handleInputChange('followUpDate', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           </div>
@@ -405,14 +380,11 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 <label className="block text-sm font-medium text-foreground mb-2">
                   السجل التجاري *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formData.commercialRegister}
                   onChange={(e) => handleInputChange('commercialRegister', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                    errors.commercialRegister ? 'border-destructive/30' : 'border-border'
-                  }`}
-                />
+                 aria-invalid={!!errors.commercialRegister} />
                 {errors.commercialRegister && (
                   <p className="text-destructive text-sm mt-1">{errors.commercialRegister}</p>
                 )}
@@ -423,11 +395,10 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                   <label className="block text-sm font-medium text-foreground mb-2">
                     اسم الممثل القانوني
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeName}
                     onChange={(e) => handleInputChange('legalRepresentativeName', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
 
@@ -435,11 +406,10 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                   <label className="block text-sm font-medium text-foreground mb-2">
                     رقم هوية الممثل القانوني
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeId}
                     onChange={(e) => handleInputChange('legalRepresentativeId', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
 
@@ -447,11 +417,10 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                   <label className="block text-sm font-medium text-foreground mb-2">
                     وسيلة التواصل
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeContact}
                     onChange={(e) => handleInputChange('legalRepresentativeContact', e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               </div>
@@ -462,32 +431,24 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
             <label className="block text-sm font-medium text-foreground mb-2">
               الملاحظات
             </label>
-            <textarea
+            <Textarea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="ملاحظات إضافية..."
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-muted-foreground hover:text-foreground"
-            >
+            <Button type="button" onClick={onClose} variant="ghost">
               إلغاء
-            </button>
-            <button
-              type="submit"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg"
-            >
+            </Button>
+            <Button type="submit">
               {prospect ? 'حفظ التغييرات' : 'إضافة العميل المحتمل'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+      </Dialog>
   );
 }

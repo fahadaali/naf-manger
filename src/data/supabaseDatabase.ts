@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings, Marketer, CommissionPayment, MarketerStats } from '../types';
-import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
+import { formatDate } from '@/registry/naf/lib/format';
 
 // تحويل البيانات من تنسيق قاعدة البيانات إلى تنسيق التطبيق
 const transformClient = (dbClient: any): Client => ({
@@ -1277,7 +1277,7 @@ export class SupabaseDatabase {
         }
         
         if (user) {
-          // تحديث آخر تسجيل دخول
+          // تحديث آخر نشاط
           await this.updateUser(user.id, { lastLogin: new Date() });
           
           // إضافة نشاط تسجيل الدخول
@@ -1319,7 +1319,7 @@ export class SupabaseDatabase {
           }
           
           if (user) {
-            // تحديث آخر تسجيل دخول
+            // تحديث آخر نشاط
             await this.updateUser(user.id, { lastLogin: new Date() });
             
             // إضافة نشاط تسجيل الدخول

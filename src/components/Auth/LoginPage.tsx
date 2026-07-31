@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import { NafLogo } from '@/registry/naf/brand/naf-logo';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
@@ -80,12 +83,11 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-foreground mb-2">
                 البريد الإلكتروني
               </label>
-              <input
+              <Input
                 type="email"
                 required
                 value={credentials.email}
                 onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-4 py-3 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                 placeholder="admin@naflaw.com"
               />
             </div>
@@ -95,41 +97,33 @@ export default function LoginPage() {
                 كلمة المرور
               </label>
               <div className="relative">
-                <input
+                <Input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={credentials.password}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors pe-12"
+                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))} className="pe-12"
                   placeholder="••••••••"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
+                <Button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-1/2 -translate-y-1/2" variant="ghost" size="icon-sm">
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" aria-hidden="true" />
                   ) : (
                     <Eye className="h-5 w-5" aria-hidden="true" />
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
             {error && (
-              <div className="bg-destructive-soft border border-destructive/30 rounded-lg p-3">
-                <p className="text-destructive text-sm text-center">{error}</p>
-              </div>
+              <Alert variant="destructive">
+                <TriangleAlert aria-hidden="true" />
+                <span className="text-sm">{error}</span>
+              </Alert>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-            >
+            <Button type="submit" disabled={loading} className="w-full" size="lg">
               {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
-            </button>
+            </Button>
           </form>
 
         </div>

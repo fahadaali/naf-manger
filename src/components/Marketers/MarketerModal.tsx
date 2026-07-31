@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
-import { Banknote, ChartColumn, User, X } from 'lucide-react';
-import { Marketer, Case, MarketerStats } from '../../types';
+import { Archive, Banknote, ChartColumn, CircleCheck, CircleSlash, Clock, LoaderCircle, User } from 'lucide-react';
+import { Marketer } from '../../types';
 import { format } from 'date-fns';
 import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
-import { formatDate, formatDateTime, formatNumber, formatPhone, formatTime } from '@/registry/naf/lib/format';
+import { formatNumber, formatPhone } from '@/registry/naf/lib/format';
+import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 
 interface MarketerModalProps {
   marketer?: Marketer;
@@ -96,24 +103,18 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
     const marketerCases = db.getCases().filter(c => (c as any).marketerId === marketer.id);
 
     return (
-      <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-        <div className="bg-card rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+      <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-info-soft rounded-lg">
                 <User className="h-6 w-6 text-info" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-foreground">{marketer.fullName}</h2>
+                <DialogTitle className="text-xl font-bold">{marketer.fullName}</DialogTitle>
                 <p className="text-sm text-muted-foreground">تفاصيل المسوّق والأداء</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-muted rounded-full"
-            >
-              <X className="h-6 w-6" />
-            </button>
           </div>
 
           <div className="p-6 space-y-6">
@@ -163,14 +164,21 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">الحالة</label>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    marketer.status === 'active' ? 'bg-success-soft text-success-strong' :
-                    marketer.status === 'suspended' ? 'bg-warning-soft text-warning-strong' :
-                    'bg-muted text-foreground'
-                  }`}>
-                    {marketer.status === 'active' ? 'نشط' :
-                     marketer.status === 'suspended' ? 'موقوف' : 'سابق'}
-                  </span>
+                  {(() => {
+                    const map = {
+                      active: { variant: 'success' as const, Icon: CircleCheck, label: 'نشط' },
+                      suspended: { variant: 'warning' as const, Icon: CircleSlash, label: 'موقوف' }
+                    };
+                    const { variant, Icon, label } =
+                      map[marketer.status as keyof typeof map] ??
+                      { variant: 'default' as const, Icon: Archive, label: 'سابق' };
+                    return (
+                      <Badge variant={variant}>
+                        <Icon aria-hidden="true" />
+                        {label}
+                      </Badge>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -239,74 +247,76 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               <h3 className="text-lg font-semibold text-foreground mb-3">قائمة القضايا</h3>
               {marketerCases.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full border border-border rounded-lg">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">رقم القضية</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">العميل</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">الحالة</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">المبلغ الإجمالي</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">المحصل</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">العمولة المدفوعة</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">المتبقي</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
+                  <Table className="rounded-lg">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>رقم القضية</TableHead>
+                        <TableHead>العميل</TableHead>
+                        <TableHead>الحالة</TableHead>
+                        <TableHead>المبلغ الإجمالي</TableHead>
+                        <TableHead>المحصل</TableHead>
+                        <TableHead>العمولة المدفوعة</TableHead>
+                        <TableHead>المتبقي</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {marketerCases.map((case_) => (
-                        <tr key={case_.id} className="hover:bg-muted">
-                          <td className="px-4 py-3 text-sm font-medium text-primary tabular-nums"><bdi>{case_.caseNumber}</bdi></td>
-                          <td className="px-4 py-3 text-sm text-foreground tabular-nums">{case_.clientName}</td>
-                          <td className="px-4 py-3 tabular-nums">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              case_.status === 'completed' ? 'bg-success-soft text-success-strong' :
-                              case_.status === 'in-progress' ? 'bg-primary-soft text-primary-strong' :
-                              'bg-warning-soft text-warning-strong'
-                            }`}>
-                              {case_.status === 'completed' ? 'مكتملة' :
-                               case_.status === 'in-progress' ? 'قيد المعالجة' : 'منظورة'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-foreground tabular-nums">
+                        <TableRow key={case_.id}>
+                          <TableCell className="text-primary"><bdi>{case_.caseNumber}</bdi></TableCell>
+                          <TableCell className="text-foreground">{case_.clientName}</TableCell>
+                          <TableCell>
+                            {(() => {
+                          const s = (case_ as any).status;
+                          const map = {
+                            completed: { variant: 'success' as const, Icon: CircleCheck, label: 'مكتملة' },
+                            'in-progress': { variant: 'primary' as const, Icon: LoaderCircle, label: 'قيد المعالجة' },
+                            pending: { variant: 'warning' as const, Icon: Clock, label: 'منظورة' }
+                          };
+                          const { variant, Icon, label } =
+                            map[s as keyof typeof map] ?? map.pending;
+                          return (
+                            <Badge variant={variant}>
+                              <Icon aria-hidden="true" />
+                              {label}
+                            </Badge>
+                          );
+                        })()}
+                          </TableCell>
+                          <TableCell className="text-foreground">
                             <Money value={(case_ as any).paymentStatus?.totalAmount ?? 0} />
-                          </td>
-                          <td className="px-4 py-3 text-sm text-success font-medium tabular-nums">
+                          </TableCell>
+                          <TableCell className="text-success">
                             <Money value={(case_ as any).paymentStatus?.collectedAmount ?? 0} />
-                          </td>
-                          <td className="px-4 py-3 text-sm text-info font-medium tabular-nums">
+                          </TableCell>
+                          <TableCell className="text-info">
                             <Money value={(case_ as any).totalCommissionPaid ?? 0} />
-                          </td>
-                          <td className="px-4 py-3 text-sm text-warning font-medium tabular-nums">
+                          </TableCell>
+                          <TableCell className="text-warning">
                             <Money value={(case_ as any).remainingCommission ?? 0} />
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <p className="text-muted-foreground text-center py-8">لم تُربَط أي قضية بهذا المسوّق بعد.</p>
               )}
             </div>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   // Edit/Create mode
   return (
-    <div className="fixed inset-0 bg-overlay flex items-center justify-center p-4 z-50">
-      <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold text-foreground">
+          <DialogTitle className="text-xl font-bold">
             {marketer ? 'تعديل المسوّق' : 'إضافة مسوّق جديد'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-muted rounded-full"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          </DialogTitle>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -324,14 +334,11 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 الاسم الكامل *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.fullName ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.fullName} />
               {errors.fullName && (
                 <p className="text-destructive text-sm mt-1">{errors.fullName}</p>
               )}
@@ -341,14 +348,11 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الهوية / الإقامة *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.idNumber ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.idNumber} />
               {errors.idNumber && (
                 <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
@@ -358,14 +362,11 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الجوال *
               </label>
-              <input
+              <Input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.phone ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.phone} />
               {errors.phone && (
                 <p className="text-destructive text-sm mt-1">{errors.phone}</p>
               )}
@@ -375,14 +376,11 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 البريد الإلكتروني *
               </label>
-              <input
+              <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.email ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.email} />
               {errors.email && (
                 <p className="text-destructive text-sm mt-1">{errors.email}</p>
               )}
@@ -392,44 +390,39 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               <label className="block text-sm font-medium text-foreground mb-2">
                 نوع العلاقة
               </label>
-              <select
+              <Select
                 value={formData.relationshipType}
                 onChange={(e) => handleInputChange('relationshipType', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="employee">موظف</option>
                 <option value="freelancer">مستقل</option>
                 <option value="external_company">شركة خارجية</option>
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 حالة المسوّق
               </label>
-              <select
+              <Select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="active">نشط</option>
                 <option value="suspended">موقوف</option>
                 <option value="former">سابق</option>
-              </select>
+              </Select>
             </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-foreground mb-2">
                 تاريخ بدء التعاون *
               </label>
-              <input
+              <Input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => handleInputChange('startDate', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-ring ${
-                  errors.startDate ? 'border-destructive/30' : 'border-border'
-                }`}
-              />
+               aria-invalid={!!errors.startDate} />
               {errors.startDate && (
                 <p className="text-destructive text-sm mt-1">{errors.startDate}</p>
               )}
@@ -440,23 +433,18 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
             <label className="block text-sm font-medium text-foreground mb-2">
               الملاحظات
             </label>
-            <textarea
+            <Textarea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="ملاحظات إضافية..."
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-muted-foreground hover:text-foreground"
-            >
+            <Button type="button" onClick={onClose} variant="ghost">
               إلغاء
-            </button>
+            </Button>
             <button
               type="submit"
               className="bg-info hover:bg-info/90 text-info-foreground px-6 py-2 rounded-lg"
@@ -465,7 +453,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+      </Dialog>
   );
 }

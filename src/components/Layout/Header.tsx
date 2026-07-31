@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, LogOut, Menu, User } from 'lucide-react';
+import { Bell, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import ProfileAvatar from '../Common/ProfileAvatar';

@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { CircleCheck, Eye, EyeOff, Mail, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function EmailSettings() {
   const [settings, setSettings] = useState<SystemSettings['emailSettings']>({
@@ -109,25 +113,26 @@ export default function EmailSettings() {
           <Mail className="h-6 w-6 text-muted-foreground" />
           <h3 className="text-lg font-semibold text-foreground">إعدادات البريد الإلكتروني</h3>
         </div>
-        <button
-          onClick={resetToDefaults}
-          className="text-muted-foreground hover:text-foreground text-sm"
-        >
+        <Button onClick={resetToDefaults} variant="ghost" size="sm">
           إعادة تعيين للافتراضي
-        </button>
+        </Button>
       </div>
 
-      {saveMessage && (
-        <div className={`p-3 rounded-lg flex items-center gap-2 ${
-          saveMessage.includes('نجاح') || testResult === 'success' 
-            ? 'bg-success-soft text-success-strong' 
-            : 'bg-destructive-soft text-destructive-strong'
-        }`}>
-          {testResult === 'success' && <CircleCheck className="h-5 w-5" />}
-          {testResult === 'error' && <TriangleAlert className="h-5 w-5" />}
-          {saveMessage}
-        </div>
-      )}
+      {saveMessage && (() => {
+        /* نتيجةُ الفحص تسبق نبرةَ النصّ: «غير مربوط» رسالةُ حالةٍ
+           مسجَّلة لا خطأ لغويّ، والفحصُ هو من يعرف أيّهما. */
+        const tone =
+          testResult === 'success' ? 'success' :
+          testResult === 'error' ? 'destructive' :
+          messageTone(saveMessage);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{saveMessage}</span>
+          </Alert>
+        );
+      })()}
 
       {/* إعدادات الخادم */}
       <div className="bg-muted rounded-lg p-6">
@@ -138,11 +143,10 @@ export default function EmailSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               خادم SMTP *
             </label>
-            <input
+            <Input
               type="text"
               value={settings?.host || ''}
               onChange={(e) => handleInputChange('host', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="smtp.hostinger.com"
             />
           </div>
@@ -151,11 +155,10 @@ export default function EmailSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               المنفذ *
             </label>
-            <input
+            <Input
               type="number"
               value={settings?.port || 587}
               onChange={(e) => handleInputChange('port', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="587"
             />
           </div>
@@ -183,11 +186,10 @@ export default function EmailSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               اسم المستخدم / البريد الإلكتروني *
             </label>
-            <input
+            <Input
               type="email"
               value={settings?.user || ''}
               onChange={(e) => handleInputChange('user', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="your-email@yourdomain.com"
             />
           </div>
@@ -197,24 +199,19 @@ export default function EmailSettings() {
               كلمة المرور *
             </label>
             <div className="relative">
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
                 value={settings?.password || ''}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring pe-10"
+                onChange={(e) => handleInputChange('password', e.target.value)} className="pe-10"
                 placeholder="••••••••"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
+              <Button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-1/2 -translate-y-1/2" variant="ghost" size="icon-sm">
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
                 ) : (
                   <Eye className="h-5 w-5" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -229,11 +226,10 @@ export default function EmailSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               اسم المرسل *
             </label>
-            <input
+            <Input
               type="text"
               value={settings?.fromName || ''}
               onChange={(e) => handleInputChange('fromName', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="NAF Law"
             />
           </div>
@@ -242,11 +238,10 @@ export default function EmailSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               بريد المرسل *
             </label>
-            <input
+            <Input
               type="email"
               value={settings?.fromAddress || ''}
               onChange={(e) => handleInputChange('fromAddress', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="noreply@naflaw.com"
             />
           </div>
@@ -272,21 +267,16 @@ export default function EmailSettings() {
             <label className="block text-sm font-medium text-foreground mb-2">
               بريد إلكتروني للاختبار *
             </label>
-            <input
+            <Input
               type="email"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
               placeholder="test@example.com"
             />
           </div>
         </div>
 
-        <button
-          onClick={testEmailConnection}
-          disabled={isTesting || !settings?.host || !settings?.user || !settings?.password || !testEmail.trim()}
-          className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-success/90 disabled:bg-muted disabled:cursor-not-allowed text-success-foreground rounded-lg"
-        >
+        <Button onClick={testEmailConnection} disabled={isTesting || !settings?.host || !settings?.user || !settings?.password || !testEmail.trim()} variant="success">
           {isTesting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
@@ -298,24 +288,17 @@ export default function EmailSettings() {
               إرسال بريد تجريبي
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       <div className="flex justify-end">
         <div className="flex gap-3">
-          <button
-            onClick={loadSettings}
-            className="px-4 py-2 text-muted-foreground hover:text-foreground"
-          >
+          <Button onClick={loadSettings} variant="ghost">
             إلغاء التغييرات
-          </button>
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-2 rounded-lg"
-          >
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -3,7 +3,6 @@ import { Award, FileText, TrendingUp, UserPlus, Users } from 'lucide-react';
 import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
-import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import { useChartPalette } from '../../lib/chart-tokens';
 

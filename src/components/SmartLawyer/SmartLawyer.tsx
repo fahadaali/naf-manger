@@ -1,6 +1,7 @@
 import React from 'react';
 import { Copy, ExternalLink, FileText, Globe, MessageSquare, ScanText, Search, ShieldCheck } from 'lucide-react';
 import { NafLogo } from '@/registry/naf/brand/naf-logo';
+import { Button } from '@/registry/naf/ui/button';
 
 const SmartLawyer: React.FC = () => {
   const lawyerAIUrl = 'https://chatgpt.com/g/g-CnmXGoaZE-lawyerai';
@@ -109,21 +110,15 @@ const SmartLawyer: React.FC = () => {
               مساعدك القانوني الذكي المدعوم بالذكاء الاصطناعي للحصول على استشارات قانونية دقيقة وسريعة
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => handleOpenLawyerAI()}
-                className="inline-flex items-center px-8 py-4 bg-card text-primary font-semibold rounded-lg hover:bg-primary-soft transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
+              <Button onClick={() => handleOpenLawyerAI()} className="text-primary shadow-lg hover:shadow-xl" variant="outline" size="lg">
                 <MessageSquare className="h-6 w-6 me-2" />
-                بدء محادثة مع المحامي الذكي
+                محادثة المحامي الذكي
                 <ExternalLink className="h-5 w-5 ms-2" />
-              </button>
-              <button
-                onClick={handleCopyLink}
-                className="inline-flex items-center px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
+              </Button>
+              <Button onClick={handleCopyLink} className="shadow-lg hover:shadow-xl" size="lg">
                 <Copy className="h-6 w-6 me-2" />
                 نسخ الرابط
-              </button>
+              </Button>
             </div>
           </div>
         </div>
