@@ -12,6 +12,7 @@ import {
 import { Scale, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { ThemeToggle } from '@/registry/naf/ui/theme-toggle';
 
 interface SidebarProps {
   currentView: string;
@@ -123,6 +124,16 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
             );
           })}
         </nav>
+
+        {/* المظهر في الشريط الجانبي لا في الترويسة: الشريط يظهر في المقاسين
+            — ثابتاً على الحاسوب ودُرجاً على الجوّال — فيبقى المُبدِّل في
+            متناول القارئ في الحالتين، ونسخةٌ واحدة لا نسختان تفترقان.
+
+            وهو مجموعةُ أزرارٍ ظاهرة لا قائمةٌ مطويّة، لأن «يتبع النظام»
+            المدفونةَ في قائمة خيارٌ منسيّ — وهي الافتراض. */}
+        <div className="mt-8 border-t border-slate-800 pt-4">
+          <ThemeToggle />
+        </div>
       </div>
     </div>
   );
