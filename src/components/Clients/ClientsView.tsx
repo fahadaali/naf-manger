@@ -185,13 +185,13 @@ export default function ClientsView() {
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الشركات</p>
-          <p className="text-xl sm:text-2xl font-bold text-primary">
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
             <bdi>{formatNumber(clients.filter(c => c.clientType === 'company').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الأفراد</p>
-          <p className="text-xl sm:text-2xl font-bold text-warning">
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
             <bdi>{formatNumber(clients.filter(c => c.clientType === 'individual').length)}</bdi>
           </p>
         </Card>

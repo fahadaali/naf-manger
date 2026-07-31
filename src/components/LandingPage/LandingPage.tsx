@@ -135,19 +135,19 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">100%</div>
+              <div className="text-4xl font-bold text-surface-deep-foreground mb-2"><bdi>100%</bdi></div>
               <div className="text-surface-deep-muted">أمان البيانات</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-success mb-2">24/7</div>
+              <div className="text-4xl font-bold text-surface-deep-foreground mb-2"><bdi>24/7</bdi></div>
               <div className="text-surface-deep-muted">متاح دائماً</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-info mb-2">AI</div>
+              <div className="text-4xl font-bold text-surface-deep-foreground mb-2">AI</div>
               <div className="text-surface-deep-muted">ذكاء اصطناعي</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-warning mb-2">∞</div>
+              <div className="text-4xl font-bold text-surface-deep-foreground mb-2">∞</div>
               <div className="text-surface-deep-muted">إمكانيات لا محدودة</div>
             </div>
           </div>

@@ -128,23 +128,23 @@ export default function SupabaseMigration() {
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-primary"><bdi>{formatNumber(localDataStats.clients)}</bdi></p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.clients)}</bdi></p>
               <p className="text-sm text-muted-foreground">العملاء</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-info"><bdi>{formatNumber(localDataStats.prospects)}</bdi></p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.prospects)}</bdi></p>
               <p className="text-sm text-muted-foreground">العملاء المحتملين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-success"><bdi>{formatNumber(localDataStats.cases)}</bdi></p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.cases)}</bdi></p>
               <p className="text-sm text-muted-foreground">القضايا</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-warning"><bdi>{formatNumber(localDataStats.marketers)}</bdi></p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.marketers)}</bdi></p>
               <p className="text-sm text-muted-foreground">المسوّقين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-destructive"><bdi>{formatNumber(localDataStats.activities)}</bdi></p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.activities)}</bdi></p>
               <p className="text-sm text-muted-foreground">الأنشطة</p>
             </div>
           </div>

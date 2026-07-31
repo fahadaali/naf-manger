@@ -240,7 +240,7 @@ export default function ProspectsView() {
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">معدل التحويل</p>
-          <p className="text-xl sm:text-2xl font-bold text-success"><bdi>{formatNumber(conversionRate)}%</bdi></p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(conversionRate)}%</bdi></p>
         </Card>
       </div>
 

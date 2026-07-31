@@ -228,7 +228,7 @@ export default function CasesView() {
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">معدل الربح</p>
-          <p className="text-xl sm:text-2xl font-bold text-warning"><bdi>{formatNumber(winRate)}%</bdi></p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(winRate)}%</bdi></p>
         </Card>
       </div>
 

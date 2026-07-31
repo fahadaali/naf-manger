@@ -133,27 +133,27 @@ export default function DashboardDisplay() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">إحصائيات محدثة في الوقت الفعلي</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-success rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">رسوم بيانية تفاعلية</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-info rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">مراقبة أداء الفريق</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-warning rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">تتبع تقدم القضايا</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-destructive rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">معدلات النجاح والتحويل</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-info rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">نشاط المستخدمين الحديث</span>
           </div>
         </div>

@@ -6,6 +6,7 @@ import MarketerModal from './MarketerModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import { formatNumber } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Card } from '@/registry/naf/ui/card';
@@ -116,13 +117,10 @@ export default function MarketersView() {
             </div>
           </div>
           {hasPermission('marketers', 'create') && (
-            <button 
-              onClick={handleCreateMarketer}
-              className="bg-card text-info-strong px-4 py-2 rounded-lg hover:bg-info-soft flex items-center gap-2 font-medium shadow-lg"
-            >
+            <Button onClick={handleCreateMarketer}>
               <Plus className="h-5 w-5" />
               إضافة مسوّق جديد
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -176,13 +174,13 @@ export default function MarketersView() {
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الموظفين</p>
-          <p className="text-xl sm:text-2xl font-bold text-primary">
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
             <bdi>{formatNumber(marketers.filter(m => m.relationshipType === 'employee').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">المستقلين</p>
-          <p className="text-xl sm:text-2xl font-bold text-info">
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
             <bdi>{formatNumber(marketers.filter(m => m.relationshipType === 'freelancer').length)}</bdi>
           </p>
         </Card>

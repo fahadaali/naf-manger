@@ -87,7 +87,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           <div>
             <button 
               onClick={() => onViewDetails(marketer)}
-              className="text-lg font-semibold text-info hover:text-info-strong hover:underline text-start"
+              className="text-lg font-semibold text-primary hover:text-primary-strong hover:underline text-start"
             >
               {marketer.fullName}
             </button>
@@ -159,7 +159,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
       <div className="flex justify-between items-center">
         <button
           onClick={() => onViewDetails(marketer)}
-          className="text-info hover:text-info-strong text-sm font-medium hover:underline"
+          className="text-primary hover:text-primary-strong text-sm font-medium hover:underline"
         >
           عرض التفاصيل
         </button>

@@ -209,7 +209,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                   <p className="text-sm text-muted-foreground">المكتملة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-warning"><bdi>{formatNumber(stats.conversionRate)}%</bdi></p>
+                  <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(stats.conversionRate)}%</bdi></p>
                   <p className="text-sm text-muted-foreground">معدل النجاح</p>
                 </div>
                 <div className="text-center">
