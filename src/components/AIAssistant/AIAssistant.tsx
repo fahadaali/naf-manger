@@ -73,7 +73,7 @@ export default function AIAssistant() {
         const confirmationMessage: Message = {
           id: Date.now().toString(),
           type: 'assistant',
-          content: 'تم الاتصال بـ Gemini AI بنجاح! يمكنني الآن تقديم إجابات أكثر ذكاءً وتفصيلاً.',
+          content: 'تم الاتصال بـ Gemini AI. يمكنني الآن تقديم إجابات أكثر ذكاءً وتفصيلاً.',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, confirmationMessage]);
@@ -130,7 +130,7 @@ export default function AIAssistant() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.',
+        content: 'تعذّرت معالجة طلبك. أعد المحاولة بعد قليل',
         timestamp: new Date(),
         isError: true
       };

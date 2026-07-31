@@ -115,7 +115,7 @@ export default function ActivityFeed() {
             </div>
           );
         }) : (
-          <p className="text-muted-foreground text-center py-4">لا توجد أنشطة حديثة</p>
+          <p className="text-muted-foreground text-center py-4">لم يصل أي نشاط بعد.</p>
         )}
       </div>
       

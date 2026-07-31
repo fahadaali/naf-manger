@@ -155,7 +155,7 @@ export default function SystemConfiguration() {
 
     try {
       await db.updateSettings(settings);
-      setSaveMessage('تم حفظ الإعدادات بنجاح');
+      setSaveMessage('تم الحفظ');
       
       setTimeout(() => {
         setSaveMessage('');
@@ -261,7 +261,7 @@ export default function SystemConfiguration() {
           {isSaving ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-              جاري الحفظ...
+              جارٍ الحفظ...
             </>
           ) : (
             'حفظ الإعدادات'

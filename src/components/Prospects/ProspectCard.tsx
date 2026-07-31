@@ -80,7 +80,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
             <button
               onClick={() => onEdit(prospect)}
               className="text-muted-foreground hover:text-foreground p-1"
-              title="تحرير"
+              title="تعديل"
             >
               <Pencil className="h-4 w-4" />
             </button>
@@ -128,7 +128,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
             <button
               onClick={() => onEdit(prospect)}
               className="text-muted-foreground hover:text-foreground p-1"
-              title="تحرير"
+              title="تعديل"
             >
               <Pencil className="h-4 w-4" />
             </button>

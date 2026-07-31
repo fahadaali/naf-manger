@@ -55,7 +55,7 @@ export default function SupabaseMigration() {
     try {
       await migrateData();
       setMigrationStatus('success');
-      setMigrationMessage('تم ترحيل جميع البيانات بنجاح إلى Supabase! يمكنك الآن الاستفادة من قاعدة البيانات المركزية.');
+      setMigrationMessage('تم ترحيل جميع البيانات إلى Supabase');
     } catch (error) {
       console.error('Migration error:', error);
       setMigrationStatus('error');
@@ -173,7 +173,7 @@ export default function SupabaseMigration() {
               }`}>
                 {migrationStatus === 'success' ? 'نجح الترحيل' :
                  migrationStatus === 'error' ? 'فشل الترحيل' :
-                 migrationStatus === 'migrating' ? 'جاري الترحيل' : 'معلومات'}
+                 migrationStatus === 'migrating' ? 'جارٍ الترحيل' : 'معلومات'}
               </p>
               <p className={`text-sm ${
                 migrationStatus === 'success' ? 'text-success-strong' :
@@ -201,7 +201,7 @@ export default function SupabaseMigration() {
               <h5 className="font-medium text-foreground">توصيل Supabase</h5>
               <p className="text-sm text-muted-foreground">
                 {isSupabaseConnected 
-                  ? 'تم توصيل Supabase'
+                  ? 'تم الربط'
                   : 'اضغط على "Connect to Supabase" في أعلى الصفحة'
                 }
               </p>
@@ -257,7 +257,7 @@ export default function SupabaseMigration() {
           {migrationStatus === 'migrating' ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-card"></div>
-              جاري الترحيل...
+              جارٍ الترحيل...
             </>
           ) : (
             <>

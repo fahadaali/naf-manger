@@ -168,7 +168,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
             </button>
             <div>
               <h1 className="text-xl font-bold text-foreground">
-                {report ? 'تحرير التقرير' : 'إنشاء تقرير جديد'}
+                {report ? 'تعديل التقرير' : 'إنشاء تقرير جديد'}
               </h1>
               <p className="text-sm text-muted-foreground">الخطوة {currentStep} من {steps.length}</p>
             </div>
@@ -414,7 +414,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                   ))}
                   
                   {!reportData.filters?.length && (
-                    <p className="text-muted-foreground text-center py-8">لا توجد فلاتر مضافة</p>
+                    <p className="text-muted-foreground text-center py-8">لم تُضِف أي مرشّح بعد. أضف أول مرشّح.</p>
                   )}
                 </div>
               </div>

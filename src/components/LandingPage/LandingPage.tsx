@@ -59,7 +59,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
               }}
               className="text-muted-foreground hover:text-foreground px-4 py-2 rounded-lg font-medium transition-colors"
             >
-              اعرف المزيد عن الميزات
+              استعراض الميزات
             </button>
             <button
               onClick={onShowLogin}
@@ -95,7 +95,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
                 onClick={onShowLogin}
                 className="bg-card text-primary hover:bg-primary-soft px-8 py-4 rounded-lg font-semibold text-lg shadow-lg transition-all transform hover:scale-105 hover:shadow-xl"
               >
-                ابدأ الآن
+                دخول
               </button>
               <button 
                 onClick={() => {
@@ -103,7 +103,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
                 }}
                 className="border-2 border-surface-deep-foreground text-surface-deep-foreground hover:bg-card hover:text-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105"
               >
-                تعرف على المزيد
+                استعراض الميزات
               </button>
             </div>
           </div>
@@ -181,7 +181,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
             onClick={onShowLogin}
             className="bg-card text-primary hover:bg-primary-soft px-10 py-4 rounded-lg font-semibold text-lg shadow-lg transition-all transform hover:scale-105 hover:shadow-xl"
           >
-            ابدأ رحلتك الآن
+            دخول
           </button>
         </div>
       </section>

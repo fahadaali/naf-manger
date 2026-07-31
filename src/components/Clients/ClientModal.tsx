@@ -249,7 +249,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-8">لا توجد قضايا مرتبطة بهذا العميل</p>
+                <p className="text-muted-foreground text-center py-8">لم تُربَط أي قضية بهذا العميل بعد. أضف أول قضية.</p>
               )}
             </div>
           </div>

@@ -349,7 +349,7 @@ export default function DataExport() {
         downloadPDF(pdfContent, `${filename}.pdf`);
       }
 
-      setExportMessage('تم تصدير البيانات بنجاح!');
+      setExportMessage('تم التصدير');
       setTimeout(() => setExportMessage(''), 3000);
       
     } catch (error) {
@@ -577,7 +577,7 @@ export default function DataExport() {
           className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-3 rounded-lg flex items-center gap-2 font-medium"
         >
           <FileOutput className="h-5 w-5" />
-          {isExporting ? 'جاري التصدير...' : 'تصدير البيانات'}
+          {isExporting ? 'جارٍ التصدير...' : 'تصدير البيانات'}
         </button>
       </div>
 

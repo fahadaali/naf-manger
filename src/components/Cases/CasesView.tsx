@@ -302,7 +302,7 @@ export default function CasesView() {
                           onClick={() => handleEditCase(case_)}
                           className="text-primary hover:text-primary-strong text-xs sm:text-sm"
                         >
-                          تحرير
+                          تعديل
                         </button>
                       )}
                       {case_.basecampUrl && (
@@ -328,7 +328,7 @@ export default function CasesView() {
 
       {filteredActiveCases.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">لا توجد قضايا نشطة مطابقة لمعايير البحث</p>
+          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
         </div>
       )}
 
@@ -419,7 +419,7 @@ export default function CasesView() {
                               onClick={() => handleEditCase(case_)}
                               className="text-primary hover:text-primary-strong"
                             >
-                              تحرير
+                              تعديل
                             </button>
                           )}
                           {case_.basecampUrl && (
@@ -445,7 +445,7 @@ export default function CasesView() {
           
           {showCompletedCases && filteredCompletedCases.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">لا توجد قضايا مكتملة مطابقة لمعايير البحث</p>
+              <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
             </div>
           )}
         </div>

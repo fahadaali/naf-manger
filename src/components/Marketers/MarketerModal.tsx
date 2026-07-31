@@ -287,7 +287,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                   </table>
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-8">لا توجد قضايا مرتبطة بهذا المسوّق</p>
+                <p className="text-muted-foreground text-center py-8">لم تُربَط أي قضية بهذا المسوّق بعد.</p>
               )}
             </div>
           </div>

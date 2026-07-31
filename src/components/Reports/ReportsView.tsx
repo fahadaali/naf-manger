@@ -237,7 +237,7 @@ export default function ReportsView() {
                           <button
                             onClick={() => handleEditReport(report)}
                             className="p-2 text-muted-foreground hover:text-primary hover:bg-primary-soft rounded-lg"
-                            title="تحرير التقرير"
+                            title="تعديل التقرير"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -266,7 +266,7 @@ export default function ReportsView() {
         ) : (
           <div className="p-12 text-center">
             <ChartColumn className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">لا توجد تقارير</h3>
+            <h3 className="text-lg font-medium text-foreground mb-2">لم تُنشئ أي تقرير بعد. ابدأ بإنشاء أول تقرير.</h3>
             <p className="text-muted-foreground mb-4">ابدأ بإنشاء تقرير مخصص أو استخدم أحد القوالب السريعة</p>
             <button
               onClick={handleCreateReport}

@@ -91,7 +91,7 @@ export default function UserManagement() {
       await loadUsers();
       setShowCreateModal(false);
       setNewUserData({ name: '', email: '', role: 'staff', password: '' });
-      setSaveMessage('تم إنشاء المستخدم بنجاح');
+      setSaveMessage('تمت إضافة المستخدم');
 
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
@@ -155,7 +155,7 @@ export default function UserManagement() {
       await db.updateUser(user.id, { permissions: newPermissions });
       await loadUsers();
       setEditingUser(null);
-      setSaveMessage('تم تحديث الصلاحيات بنجاح');
+      setSaveMessage('تم تحديث الصلاحية');
 
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
@@ -175,7 +175,7 @@ export default function UserManagement() {
         const success = await db.deleteUser(userId);
         if (success) {
           await loadUsers();
-          setSaveMessage('تم حذف المستخدم بنجاح');
+          setSaveMessage('تم حذف المستخدم');
           setTimeout(() => setSaveMessage(''), 3000);
         } else {
           setSaveMessage('لا يمكن حذف هذا المستخدم');
@@ -336,7 +336,7 @@ export default function UserManagement() {
                 disabled={isSaving}
                 className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-4 py-2 rounded-lg"
               >
-                {isSaving ? 'جاري الإنشاء...' : 'إنشاء المستخدم'}
+                {isSaving ? 'جارٍ الإنشاء...' : 'إنشاء المستخدم'}
               </button>
             </div>
           </div>
@@ -406,7 +406,7 @@ export default function UserManagement() {
                 disabled={isSaving}
                 className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-4 py-2 rounded-lg"
               >
-                {isSaving ? 'جاري الحفظ...' : 'حفظ الصلاحيات'}
+                {isSaving ? 'جارٍ الحفظ...' : 'حفظ الصلاحيات'}
               </button>
             </div>
           </div>

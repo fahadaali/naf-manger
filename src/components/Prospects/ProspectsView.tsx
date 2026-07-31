@@ -263,7 +263,7 @@ export default function ProspectsView() {
 
       {filteredProspects.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">لا توجد عملاء محتملين مطابقين لمعايير البحث</p>
+          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
         </div>
       )}
 

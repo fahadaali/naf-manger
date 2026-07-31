@@ -169,7 +169,7 @@ export default function Settings() {
         profilePicture: profileData.profilePicture || undefined
       });
       
-      setSaveMessage('تم حفظ التغييرات بنجاح');
+      setSaveMessage('تم الحفظ');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
       setSaveMessage('حدث خطأ أثناء حفظ التغييرات');
@@ -195,7 +195,7 @@ export default function Settings() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setSaveMessage('تم تغيير كلمة المرور بنجاح');
+      setSaveMessage('تم تغيير كلمة المرور');
       setSecurityData({
         currentPassword: '',
         newPassword: '',
@@ -300,7 +300,7 @@ export default function Settings() {
                   {isSaving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-                      جاري الحفظ...
+                      جارٍ الحفظ...
                     </>
                   ) : (
                     <>
@@ -439,7 +439,7 @@ export default function Settings() {
                     disabled={isSaving || !securityData.currentPassword || !securityData.newPassword}
                     className="w-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-3 rounded-xl font-medium transition-colors"
                   >
-                    {isSaving ? 'جاري الحفظ...' : 'تغيير كلمة المرور'}
+                    {isSaving ? 'جارٍ الحفظ...' : 'تغيير كلمة المرور'}
                   </button>
                 </div>
               </div>

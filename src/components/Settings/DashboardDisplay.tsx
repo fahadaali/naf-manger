@@ -65,7 +65,7 @@ export default function DashboardDisplay() {
               {copySuccess ? (
                 <>
                   <CircleCheck className="h-5 w-5" />
-                  تم النسخ بنجاح!
+                  تم النسخ
                 </>
               ) : (
                 <>
@@ -99,7 +99,7 @@ export default function DashboardDisplay() {
             <div className="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-3">
               <span className="text-primary font-bold text-lg">1</span>
             </div>
-            <h5 className="font-medium text-foreground mb-2">انسخ الرابط</h5>
+            <h5 className="font-medium text-foreground mb-2">نسخ الرابط</h5>
             <p className="text-sm text-muted-foreground">
               اضغط على زر "نسخ الرابط" أعلاه لنسخ رابط لوحة التحكم إلى الحافظة
             </p>

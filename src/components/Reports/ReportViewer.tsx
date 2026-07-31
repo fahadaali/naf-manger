@@ -77,7 +77,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
       <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">جاري تحميل التقرير...</p>
+          <p className="text-muted-foreground">جارٍ تحميل التقرير...</p>
         </div>
       </div>
     );
@@ -159,7 +159,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
               className="flex items-center gap-2 px-4 py-2 text-primary border border-primary rounded-lg hover:bg-primary-soft"
             >
               <Pencil className="h-4 w-4" />
-              تحرير
+              تعديل
             </button>
           </div>
         </div>
@@ -220,7 +220,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                 </table>
               ) : (
                 <div className="p-12 text-center">
-                  <p className="text-muted-foreground">لا توجد بيانات لعرضها</p>
+                  <p className="text-muted-foreground">لا نتائج تطابق شروط التقرير. وسّع المدى أو امسح الشروط.</p>
                 </div>
               )}
             </div>
@@ -235,7 +235,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
               ) : (
                 <div className="text-center py-12">
                   <ChartColumn className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">لا توجد بيانات كافية لعرض الرسم البياني</p>
+                  <p className="text-muted-foreground">يظهر الرسم بعد أول مجموعة مكتملة من البيانات.</p>
                 </div>
               )}
             </div>

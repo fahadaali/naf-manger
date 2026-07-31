@@ -203,7 +203,7 @@ export default function MarketersView() {
       {filteredMarketers.length === 0 && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">لا توجد مسوّقين مطابقين لمعايير البحث</p>
+          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
         </div>
       )}
 

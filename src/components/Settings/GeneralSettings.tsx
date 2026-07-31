@@ -277,7 +277,7 @@ export default function GeneralSettings() {
           disabled={isSaving}
           className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-2 rounded-lg"
         >
-          {isSaving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+          {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
         </button>
       </div>
     </div>

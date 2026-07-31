@@ -103,7 +103,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
             <button
               onClick={() => onEdit(marketer)}
               className="text-muted-foreground hover:text-foreground p-1"
-              title="تحرير"
+              title="تعديل"
             >
               <Pencil className="h-4 w-4" />
             </button>

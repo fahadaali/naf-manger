@@ -80,7 +80,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
             <button
               onClick={() => onEdit(client)}
               className="text-muted-foreground hover:text-foreground p-1"
-              title="تحرير"
+              title="تعديل"
             >
               <Pencil className="h-4 w-4" />
             </button>
