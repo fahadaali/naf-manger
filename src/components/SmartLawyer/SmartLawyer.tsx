@@ -1,5 +1,6 @@
 import React from 'react';
-import { Copy, ExternalLink, FileText, Globe, MessageSquare, Scale, Search, ShieldCheck } from 'lucide-react';
+import { Copy, ExternalLink, FileText, Globe, MessageSquare, ScanText, Search, ShieldCheck } from 'lucide-react';
+import { NafLogo } from '@/registry/naf/brand/naf-logo';
 
 const SmartLawyer: React.FC = () => {
   const lawyerAIUrl = 'https://chatgpt.com/g/g-CnmXGoaZE-lawyerai';
@@ -46,7 +47,7 @@ const SmartLawyer: React.FC = () => {
     {
       title: 'تحليل قضايا',
       description: 'تحليل القضايا القانونية المعقدة',
-      icon: Scale,
+      icon: ScanText,
       prompt: 'أحتاج تحليل قانوني لقضية معينة'
     },
     {
@@ -74,7 +75,7 @@ const SmartLawyer: React.FC = () => {
       description: 'البحث في القوانين والسوابق القضائية'
     },
     {
-      icon: Scale,
+      icon: ScanText,
       title: 'تحليل القضايا',
       description: 'تحليل معمق للقضايا والمسائل القانونية'
     },
@@ -97,8 +98,8 @@ const SmartLawyer: React.FC = () => {
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="flex justify-center mb-8">
-              <div className="p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
-                <Scale className="h-16 w-16 text-surface-deep-foreground" />
+              <div className="dark p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
+                <NafLogo variant="mark" className="h-16" />
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-6">

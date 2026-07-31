@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, FileText, TrendingUp, Award, UserPlus, Link, Monitor, Copy, CheckCircle } from 'lucide-react';
+import { Award, FileText, TrendingUp, UserPlus, Users } from 'lucide-react';
 import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';

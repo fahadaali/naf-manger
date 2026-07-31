@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ChartColumn, FileText, LayoutDashboard, Scale, Settings, Sparkles, UserPlus, Users, X } from 'lucide-react';
+import { ChartColumn, FileText, LayoutDashboard, Settings, Sparkles, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import { ThemeToggle } from '@/registry/naf/ui/theme-toggle';
+import { NafLogo } from '@/registry/naf/brand/naf-logo';
 
 interface SidebarProps {
   currentView: string;
@@ -70,7 +71,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
                 className="h-6 w-6 object-contain"
               />
             ) : (
-              <Scale className="h-6 w-6 text-sidebar-primary" />
+              <NafLogo variant="mark" className="h-6" />
             )}
             <span className="text-lg font-bold">{settings?.companyName || 'NAF Law'}</span>
           </div>
@@ -91,7 +92,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
               className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
             />
           ) : (
-            <Scale className="h-6 w-6 sm:h-8 sm:w-8 text-sidebar-primary" />
+            <NafLogo variant="mark" className="h-6 sm:h-8" />
           )}
           <div className="hidden lg:block">
             <h1 className="text-lg sm:text-xl font-bold">{settings?.companyName || 'NAF Law'}</h1>

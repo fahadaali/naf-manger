@@ -1,5 +1,6 @@
 import React from 'react';
-import { Briefcase, FileText, Mail, Scale, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { Briefcase, FileText, Mail, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { NafLogo } from '@/registry/naf/brand/naf-logo';
 
 interface LandingPageProps {
   onShowLogin: () => void;
@@ -46,7 +47,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <Scale className="h-8 w-8 text-primary" />
+              <NafLogo variant="mark" className="h-8" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">NAF Law</h1>
                 <p className="text-sm text-muted-foreground hidden sm:block">نظام إدارة المكتب القانوني</p>
@@ -77,8 +78,8 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="text-center">
             <div className="flex justify-center mb-8">
-              <div className="p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
-                <Scale className="h-16 w-16 text-surface-deep-foreground" />
+              <div className="dark p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
+                <NafLogo variant="mark" className="h-16" />
               </div>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
@@ -192,7 +193,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <Scale className="h-8 w-8 text-primary" />
+                <span className="dark inline-flex"><NafLogo variant="mark" className="h-8" /></span>
                 <h4 className="text-xl font-bold">NAF Law</h4>
               </div>
               <p className="text-surface-deep-muted leading-relaxed">

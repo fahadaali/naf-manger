@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Scale } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { NafLogo } from '@/registry/naf/brand/naf-logo';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
@@ -59,7 +60,7 @@ export default function LoginPage() {
                 className="h-12 w-12 object-contain"
               />
             ) : (
-              <Scale className="h-12 w-12 text-warning" />
+              <NafLogo variant="mark" className="h-12" />
             )}
             <div>
               <h1 className="text-3xl font-bold">{settings?.companyName || 'NAF Law'}</h1>
