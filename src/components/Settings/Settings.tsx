@@ -637,8 +637,8 @@ export default function Settings() {
                             ? `${getColorClasses(category.color, 'bg')} ${getColorClasses(
                                 category.color,
                                 'fg'
-                              )} shadow-lg transform scale-[1.02]`
-                            : `text-foreground ${getColorClasses(category.color, 'hover')} hover:transform hover:scale-[1.01]`
+                              )} shadow-lg`
+                            : `text-foreground ${getColorClasses(category.color, 'hover')}`
                         }`}
                       >
                         <tab.icon className={`h-5 w-5 ${

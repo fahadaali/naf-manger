@@ -119,7 +119,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
     // View mode
     return (
       <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-        <DialogContent className="max-w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-full sm:max-w-4xl max-h-full overflow-y-auto p-0">
           <div className="flex items-center justify-between p-6 border-b">
             <DialogTitle className="text-lg sm:text-xl font-bold">تفاصيل العميل المحتمل</DialogTitle>
           </div>
@@ -230,7 +230,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
   // Edit/Create mode
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-full overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b">
           <DialogTitle className="text-lg sm:text-xl font-bold">
             {prospect ? 'تعديل العميل المحتمل' : 'إضافة عميل محتمل جديد'}

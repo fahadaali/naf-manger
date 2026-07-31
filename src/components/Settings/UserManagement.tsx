@@ -342,7 +342,7 @@ export default function UserManagement() {
       {/* Edit Permissions Modal */}
       {editingUser && (
         <Dialog open onOpenChange={(next) => { if (!next) setEditingUser(null); }}>
-        <DialogContent className="max-w-2xl p-6 max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-2xl p-6 max-h-full overflow-y-auto p-0">
             <DialogTitle className="text-lg font-semibold mb-4">
               تعديل صلاحيات: {editingUser.name}
             </DialogTitle>

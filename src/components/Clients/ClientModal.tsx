@@ -117,7 +117,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
     return (
       <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-4xl max-h-full overflow-y-auto p-0">
           <div className="flex items-center justify-between p-6 border-b">
             <DialogTitle className="text-xl font-bold">تفاصيل العميل</DialogTitle>
           </div>
@@ -270,7 +270,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
   // Edit/Create mode
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-full overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b">
           <DialogTitle className="text-lg sm:text-xl font-bold">
             {client ? 'تعديل العميل' : 'إضافة عميل جديد'}

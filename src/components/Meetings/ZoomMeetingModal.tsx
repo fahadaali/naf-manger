@@ -207,7 +207,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-2xl max-h-full overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">

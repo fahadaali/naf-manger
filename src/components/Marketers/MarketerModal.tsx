@@ -104,7 +104,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
 
     return (
       <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-6xl max-h-full overflow-y-auto p-0">
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-info-soft rounded-lg">
@@ -312,7 +312,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
   // Edit/Create mode
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-2xl max-h-full overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b">
           <DialogTitle className="text-xl font-bold">
             {marketer ? 'تعديل المسوّق' : 'إضافة مسوّق جديد'}
