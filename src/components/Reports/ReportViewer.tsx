@@ -80,7 +80,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
       <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">جارٍ تحميل التقرير...</p>
+          <p className="text-muted-foreground">جارٍ تحميل التقرير</p>
         </div>
       </div>
     );

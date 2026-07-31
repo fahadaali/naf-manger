@@ -122,7 +122,7 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" disabled={loading} className="w-full" size="lg">
-              {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+              {loading ? 'جارٍ تسجيل الدخول' : 'تسجيل الدخول'}
             </Button>
           </form>
 

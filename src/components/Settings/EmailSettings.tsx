@@ -280,7 +280,7 @@ export default function EmailSettings() {
           {isTesting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-              جاري إرسال البريد التجريبي...
+              جارٍ إرسال البريد التجريبي
             </>
           ) : (
             <>
@@ -297,7 +297,7 @@ export default function EmailSettings() {
             إلغاء التغييرات
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
+            {isSaving ? 'جارٍ الحفظ' : 'حفظ الإعدادات'}
           </Button>
         </div>
       </div>

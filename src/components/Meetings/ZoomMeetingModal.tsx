@@ -421,7 +421,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
               {isCreating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-                  جارٍ الإنشاء...
+                  جارٍ الإنشاء
                 </>
               ) : (
                 <>

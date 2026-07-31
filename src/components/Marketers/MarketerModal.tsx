@@ -170,7 +170,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                   {(() => {
                     const map = {
                       active: { variant: 'success' as const, Icon: CircleCheck, label: 'نشط' },
-                      suspended: { variant: 'warning' as const, Icon: CircleSlash, label: 'موقوف' }
+                      suspended: { variant: 'default' as const, Icon: CircleSlash, label: 'معطّل' }
                     };
                     const { variant, Icon, label } =
                       map[marketer.status as keyof typeof map] ??
@@ -412,7 +412,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 onChange={(e) => handleInputChange('status', e.target.value)}
               >
                 <option value="active">نشط</option>
-                <option value="suspended">موقوف</option>
+                <option value="suspended">معطّل</option>
                 <option value="former">سابق</option>
               </Select>
             </div>

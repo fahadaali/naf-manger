@@ -332,7 +332,7 @@ export default function UserManagement() {
                 إلغاء
               </Button>
               <Button onClick={handleCreateUser} disabled={isSaving}>
-                {isSaving ? 'جارٍ الإنشاء...' : 'إنشاء المستخدم'}
+                {isSaving ? 'جارٍ الإنشاء' : 'إنشاء المستخدم'}
               </Button>
             </div>
           </DialogContent>
@@ -395,7 +395,7 @@ export default function UserManagement() {
                 إلغاء
               </Button>
               <Button onClick={() => handleUpdatePermissions(editingUser, editingUser.permissions)} disabled={isSaving}>
-                {isSaving ? 'جارٍ الحفظ...' : 'حفظ الصلاحيات'}
+                {isSaving ? 'جارٍ الحفظ' : 'حفظ الصلاحيات'}
               </Button>
             </div>
           </DialogContent>

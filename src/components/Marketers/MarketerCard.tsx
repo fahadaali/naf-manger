@@ -58,18 +58,18 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
     loadStats();
   }, [marketer.id]);
 
+  /* المفاتيح بقيم Marketer['status'] الإنجليزية لا بتسمياتها العربية:
+     كانت الخريطة مفهرسة بالعربية والقيمة الواردة إنجليزية، فلا تطابق
+     أبداً — فيسقط كل مسوّق إلى الحالة الأخيرة وتظهر الشارة تحمل
+     «active» و«suspended» حرفياً. */
   const STATUS = {
-    'نشط': { variant: 'success' as const, Icon: CircleCheck },
-    'موقوف': { variant: 'warning' as const, Icon: CircleSlash },
-    'سابق': { variant: 'default' as const, Icon: Archive }
+    active: { variant: 'success' as const, Icon: CircleCheck, label: 'نشط' },
+    suspended: { variant: 'default' as const, Icon: CircleSlash, label: 'معطّل' },
+    former: { variant: 'default' as const, Icon: Archive, label: 'سابق' }
   };
 
   const statusOf = (status: string) =>
-    STATUS[status as keyof typeof STATUS] ?? STATUS['سابق'];
-
-  const getStatusLabel = (status: string) => {
-    return status;
-  };
+    STATUS[status as keyof typeof STATUS] ?? STATUS.former;
 
   const getTypeLabel = (type: string) => {
     return type;
@@ -96,11 +96,11 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
         </div>
         <div className="flex items-center gap-2">
           {(() => {
-            const { variant, Icon } = statusOf(marketer.status);
+            const { variant, Icon, label } = statusOf(marketer.status);
             return (
               <Badge variant={variant}>
                 <Icon aria-hidden="true" />
-                {getStatusLabel(marketer.status)}
+                {label}
               </Badge>
             );
           })()}

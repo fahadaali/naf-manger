@@ -49,7 +49,7 @@ export default function SupabaseMigration() {
     }
 
     setMigrationStatus('migrating');
-    setMigrationMessage('جاري ترحيل البيانات...');
+    setMigrationMessage('جارٍ ترحيل البيانات');
 
     try {
       await migrateData();
@@ -249,7 +249,7 @@ export default function SupabaseMigration() {
           {migrationStatus === 'migrating' ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-card"></div>
-              جارٍ الترحيل...
+              جارٍ الترحيل
             </>
           ) : (
             <>

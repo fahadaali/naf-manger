@@ -579,7 +579,7 @@ export default function DataExport() {
       <div className="flex justify-end">
         <Button onClick={exportData} disabled={!Object.values(selectedData).some(Boolean) || isExporting} size="lg">
           <FileOutput className="h-5 w-5" />
-          {isExporting ? 'جارٍ التصدير...' : 'تصدير البيانات'}
+          {isExporting ? 'جارٍ التصدير' : 'تصدير البيانات'}
         </Button>
       </div>
 

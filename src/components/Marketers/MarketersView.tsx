@@ -146,7 +146,7 @@ export default function MarketersView() {
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط</option>
-              <option value="suspended">موقوف</option>
+              <option value="suspended">معطّل</option>
               <option value="former">سابق</option>
             </Select>
             <Select

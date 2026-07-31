@@ -268,7 +268,7 @@ export default function GeneralSettings() {
           إلغاء التغييرات
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
+          {isSaving ? 'جارٍ الحفظ' : 'حفظ الإعدادات'}
         </Button>
       </div>
     </div>

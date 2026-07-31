@@ -286,7 +286,7 @@ export default function Settings() {
                   {isSaving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-                      جارٍ الحفظ...
+                      جارٍ الحفظ
                     </>
                   ) : (
                     <>
@@ -416,7 +416,7 @@ export default function Settings() {
                     />
                   </div>
                   <Button onClick={handleSecuritySave} disabled={isSaving || !securityData.currentPassword || !securityData.newPassword} className="w-full" size="lg">
-                    {isSaving ? 'جارٍ الحفظ...' : 'تغيير كلمة المرور'}
+                    {isSaving ? 'جارٍ الحفظ' : 'تغيير كلمة المرور'}
                   </Button>
                 </div>
               </div>
@@ -524,7 +524,7 @@ export default function Settings() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير يومي</label>
                     <Select>
-                      <option value="disabled">معطل</option>
+                      <option value="disabled">معطّل</option>
                       <option value="8am" selected>8:00 صباحاً</option>
                       <option value="9am">9:00 صباحاً</option>
                       <option value="10am">10:00 صباحاً</option>
@@ -534,7 +534,7 @@ export default function Settings() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير أسبوعي</label>
                     <Select>
-                      <option value="disabled">معطل</option>
+                      <option value="disabled">معطّل</option>
                       <option value="sunday" selected>الأحد</option>
                       <option value="monday">الاثنين</option>
                       <option value="saturday">السبت</option>
@@ -544,7 +544,7 @@ export default function Settings() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير شهري</label>
                     <Select>
-                      <option value="disabled">معطل</option>
+                      <option value="disabled">معطّل</option>
                       <option value="1st" selected>أول الشهر</option>
                       <option value="15th">منتصف الشهر</option>
                       <option value="last">آخر الشهر</option>
