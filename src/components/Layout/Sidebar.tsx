@@ -55,7 +55,14 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
 
   return (
     <div className={`bg-sidebar text-sidebar-foreground w-64 min-h-screen fixed inset-y-0 start-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
-      isOpen ? 'translate-x-0' : 'rtl:translate-x-full ltr:-translate-x-full'
+      /* الإزاحة للدُّرج على الجوّال وحده — ‎max-lg:‎ إلزاميّ لا تجميل:
+         بدونه يتغلّب متغيّرا ‎rtl:‎ و‎ltr:‎ على ‎lg:translate-x-0‎ في ترتيب
+         الإخراج، فيُزاح الشريط خارج الشاشة على الحاسوب أيضاً.
+         و‎translate‎ لا مقابل منطقيّ له في Tailwind، فيُصرَّح للاتجاهين:
+         موجبه يخرج يميناً — صحيح في RTL وخطأ في LTR. */
+      isOpen
+        ? 'translate-x-0'
+        : 'max-lg:rtl:translate-x-full max-lg:ltr:-translate-x-full'
     }`}>
       <div className="p-4 sm:p-6">
         {/* Close button for mobile */}
