@@ -185,11 +185,11 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
             
             <div>
               <h5 className="font-semibold mb-4">الميزات الرئيسية</h5>
-              <ul className="space-y-2 text-surface-deep-muted">
-                <li>• إدارة العملاء والقضايا</li>
-                <li>• تحليلات وتقارير متقدمة</li>
-                <li>• مساعد ذكي بالذكاء الاصطناعي</li>
-                <li>• نظام أمان متطور</li>
+              <ul className="list-disc ps-5 space-y-2 text-surface-deep-muted">
+                <li>إدارة العملاء والقضايا</li>
+                <li>تحليلات وتقارير متقدمة</li>
+                <li>مساعد ذكي بالذكاء الاصطناعي</li>
+                <li>نظام أمان متطور</li>
               </ul>
             </div>
             

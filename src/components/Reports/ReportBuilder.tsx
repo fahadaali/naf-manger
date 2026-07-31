@@ -478,13 +478,13 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
               
               <div className="bg-primary-soft border border-primary/30 rounded-lg p-4">
                 <h4 className="font-medium text-primary-strong mb-2">ملخص التقرير</h4>
-                <div className="text-sm text-primary-strong space-y-1">
-                  <p>• الاسم: {reportData.name}</p>
-                  <p>• مصدر البيانات: {reportData.dataSource}</p>
-                  <p>• عدد الحقول: {reportData.fields?.length || 0}</p>
-                  <p>• عدد الفلاتر: {reportData.filters?.length || 0}</p>
-                  <p>• نوع العرض: {reportData.visualization?.type}</p>
-                </div>
+                <ul className="list-disc ps-5 text-sm text-primary-strong space-y-1">
+                  <li>الاسم: {reportData.name}</li>
+                  <li>مصدر البيانات: {reportData.dataSource}</li>
+                  <li>عدد الحقول: <bdi>{formatNumber(reportData.fields?.length || 0)}</bdi></li>
+                  <li>عدد الفلاتر: <bdi>{formatNumber(reportData.filters?.length || 0)}</bdi></li>
+                  <li>نوع العرض: {reportData.visualization?.type}</li>
+                </ul>
               </div>
             </div>
           )}

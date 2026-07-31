@@ -267,17 +267,17 @@ export default function SupabaseMigration() {
           مزايا استخدام Supabase
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">
-          <ul className="space-y-2">
-            <li>• قاعدة بيانات مركزية آمنة</li>
-            <li>• مزامنة البيانات بين جميع المستخدمين</li>
-            <li>• نسخ احتياطية تلقائية</li>
-            <li>• أداء عالي وموثوقية</li>
+          <ul className="list-disc ps-5 space-y-2">
+            <li>قاعدة بيانات مركزية آمنة</li>
+            <li>مزامنة البيانات بين جميع المستخدمين</li>
+            <li>نسخ احتياطية تلقائية</li>
+            <li>أداء عالي وموثوقية</li>
           </ul>
-          <ul className="space-y-2">
-            <li>• مصادقة متقدمة للمستخدمين</li>
-            <li>• أمان على مستوى الصفوف (RLS)</li>
-            <li>• إمكانية الوصول من أي جهاز</li>
-            <li>• دعم فني متخصص</li>
+          <ul className="list-disc ps-5 space-y-2">
+            <li>مصادقة متقدمة للمستخدمين</li>
+            <li>أمان على مستوى الصفوف (RLS)</li>
+            <li>إمكانية الوصول من أي جهاز</li>
+            <li>دعم فني متخصص</li>
           </ul>
         </div>
       </div>
@@ -288,12 +288,12 @@ export default function SupabaseMigration() {
           <TriangleAlert className="h-6 w-6 text-warning-strong flex-shrink-0" />
           <div>
             <h5 className="font-medium text-warning-strong mb-2">ملاحظات مهمة:</h5>
-            <ul className="text-sm text-warning-strong space-y-1">
-              <li>• تأكد من إنشاء نسخة احتياطية قبل بدء الترحيل</li>
-              <li>• عملية الترحيل قد تستغرق عدة دقائق حسب حجم البيانات</li>
-              <li>• بعد الترحيل، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</li>
-              <li>• يُنصح بعدم استخدام التطبيق أثناء عملية الترحيل</li>
-              <li>• في حالة فشل الترحيل، يمكنك استعادة البيانات من النسخة الاحتياطية</li>
+            <ul className="list-disc ps-5 text-sm text-warning-strong space-y-1">
+              <li>تأكد من إنشاء نسخة احتياطية قبل بدء الترحيل</li>
+              <li>عملية الترحيل قد تستغرق عدة دقائق حسب حجم البيانات</li>
+              <li>بعد الترحيل، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</li>
+              <li>يُنصح بعدم استخدام التطبيق أثناء عملية الترحيل</li>
+              <li>في حالة فشل الترحيل، يمكنك استعادة البيانات من النسخة الاحتياطية</li>
             </ul>
           </div>
         </div>

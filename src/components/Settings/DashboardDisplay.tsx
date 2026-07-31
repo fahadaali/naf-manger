@@ -169,11 +169,11 @@ export default function DashboardDisplay() {
           </div>
           <div>
             <h5 className="font-medium text-warning-strong mb-2">نصائح للاستخدام الأمثل:</h5>
-            <ul className="text-sm text-warning-strong space-y-1">
-              <li>• استخدم شاشات بدقة عالية للحصول على أفضل تجربة عرض</li>
-              <li>• تأكد من اتصال الشاشة بالإنترنت لتحديث البيانات</li>
-              <li>• يُنصح بتحديث الصفحة كل 24 ساعة للحصول على أحدث البيانات</li>
-              <li>• يمكن عرض لوحة التحكم على عدة شاشات في نفس الوقت</li>
+            <ul className="list-disc ps-5 text-sm text-warning-strong space-y-1">
+              <li>استخدم شاشات بدقة عالية للحصول على أفضل تجربة عرض</li>
+              <li>تأكد من اتصال الشاشة بالإنترنت لتحديث البيانات</li>
+              <li>يُنصح بتحديث الصفحة كل 24 ساعة للحصول على أحدث البيانات</li>
+              <li>يمكن عرض لوحة التحكم على عدة شاشات في نفس الوقت</li>
             </ul>
           </div>
         </div>
