@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { PhotoIcon, SwatchIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import {
+  SwatchIcon
+} from '@heroicons/react/24/outline';
+import { Building2, Image } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
 
@@ -148,7 +151,7 @@ export default function GeneralSettings() {
       {/* معلومات الشركة */}
       <div className="bg-muted rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <BuildingOfficeIcon className="h-6 w-6 text-muted-foreground" />
+          <Building2 className="h-6 w-6 text-muted-foreground" />
           <h4 className="font-medium text-foreground">معلومات الشركة</h4>
         </div>
         
@@ -184,7 +187,7 @@ export default function GeneralSettings() {
       {/* شعار الشركة */}
       <div className="bg-muted rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <PhotoIcon className="h-6 w-6 text-muted-foreground" />
+          <Image className="h-6 w-6 text-muted-foreground" />
           <h4 className="font-medium text-foreground">شعار الشركة</h4>
         </div>
         

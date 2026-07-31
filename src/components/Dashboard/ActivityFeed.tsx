@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClockIcon, UserIcon, DocumentTextIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { ClipboardList, FileText, User, Users } from 'lucide-react';
 import { ActivityLog } from '../../types';
 import { db } from '../../data/database';
 
@@ -34,16 +34,16 @@ export default function ActivityFeed() {
       case 'client_created':
       case 'client_updated':
       case 'client_deleted':
-        return UserGroupIcon;
+        return Users;
       case 'case_created':
       case 'case_updated':
       case 'case_deleted':
-        return DocumentTextIcon;
+        return FileText;
       case 'user_login':
       case 'user_created':
-        return UserIcon;
+        return User;
       default:
-        return ClockIcon;
+        return ClipboardList;
     }
   };
 
@@ -84,7 +84,7 @@ export default function ActivityFeed() {
   return (
     <div className="bg-card rounded-lg shadow-sm border border-border p-6">
       <div className="flex items-center gap-2 mb-4">
-        <ClockIcon className="h-6 w-6 text-muted-foreground" />
+        <ClipboardList className="h-6 w-6 text-muted-foreground" />
         <h3 className="text-lg font-semibold text-foreground">النشاط الأخير</h3>
       </div>
       

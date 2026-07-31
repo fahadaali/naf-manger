@@ -1,5 +1,8 @@
 import React from 'react';
-import { UserIcon, BuildingOfficeIcon, PhoneIcon, EnvelopeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import {
+  PhoneIcon
+} from '@heroicons/react/24/outline';
+import { Building2, Mail, Pencil, User } from 'lucide-react';
 import { VideoCameraIcon } from '@heroicons/react/24/outline';
 import { Client } from '../../types';
 import { format } from 'date-fns';
@@ -78,7 +81,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
               className="text-muted-foreground hover:text-foreground p-1"
               title="تحرير"
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -90,7 +93,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
           <span>{client.phone}</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <EnvelopeIcon className="h-4 w-4" />
+          <Mail className="h-4 w-4" />
           <span>{client.email}</span>
         </div>
         <p className="text-xs text-muted-foreground">

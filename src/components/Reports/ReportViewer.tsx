@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  XMarkIcon, 
-  PencilIcon, 
-  ShareIcon, 
-  DocumentArrowDownIcon,
-  ChartBarIcon,
-  TableCellsIcon
-} from '@heroicons/react/24/outline';
+import { ChartColumn, FileOutput, Pencil, Share2, Table2, X } from 'lucide-react';
 import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport } from '../../types';
 import { db } from '../../data/database';
@@ -99,7 +92,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
               onClick={onClose}
               className="p-2 hover:bg-muted rounded-full"
             >
-              <XMarkIcon className="h-6 w-6" />
+              <X className="h-6 w-6" />
             </button>
             <div>
               <h1 className="text-xl font-bold text-foreground">{report.name}</h1>
@@ -119,7 +112,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <TableCellsIcon className="h-4 w-4" />
+                <Table2 className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('chart')}
@@ -129,13 +122,13 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <ChartBarIcon className="h-4 w-4" />
+                <ChartColumn className="h-4 w-4" />
               </button>
             </div>
             
             <div className="relative group">
               <button className="flex items-center gap-2 px-4 py-2 text-muted-foreground border border-border rounded-lg hover:bg-muted">
-                <DocumentArrowDownIcon className="h-4 w-4" />
+                <FileOutput className="h-4 w-4" />
                 تصدير
               </button>
               <div className="absolute end-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
@@ -164,7 +157,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
               onClick={onEdit}
               className="flex items-center gap-2 px-4 py-2 text-primary border border-primary rounded-lg hover:bg-primary-soft"
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
               تحرير
             </button>
           </div>
@@ -240,7 +233,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                 />
               ) : (
                 <div className="text-center py-12">
-                  <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <ChartColumn className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">لا توجد بيانات كافية لعرض الرسم البياني</p>
                 </div>
               )}

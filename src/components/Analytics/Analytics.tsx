@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChartBarIcon, 
-  UserGroupIcon, 
-  DocumentTextIcon,
-  CalendarIcon,
-  FunnelIcon,
-  ArrowDownTrayIcon
-} from '@heroicons/react/24/outline';
+import { Calendar, ChartColumn, Download, FileText, Funnel, Users } from 'lucide-react';
 import { TrendingUp } from 'lucide-react';
 import { useChartPalette, softFill } from '../../lib/chart-tokens';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
@@ -358,7 +351,7 @@ export default function Analytics() {
               onClick={exportAnalytics}
               className="bg-card text-primary px-4 py-2 rounded-lg hover:bg-primary-soft flex items-center gap-2"
             >
-              <ArrowDownTrayIcon className="h-5 w-5" />
+              <Download className="h-5 w-5" />
               تصدير
             </button>
           </div>
@@ -370,7 +363,7 @@ export default function Analytics() {
         <div className="bg-card rounded-lg shadow-sm border border-border p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">
-              <UserGroupIcon className="h-6 w-6 text-primary" />
+              <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">العملاء الجدد</p>
@@ -394,7 +387,7 @@ export default function Analytics() {
         <div className="bg-card rounded-lg shadow-sm border border-border p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-success-soft rounded-lg">
-              <DocumentTextIcon className="h-6 w-6 text-success" />
+              <FileText className="h-6 w-6 text-success" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">القضايا الجديدة</p>
@@ -406,7 +399,7 @@ export default function Analytics() {
         <div className="bg-card rounded-lg shadow-sm border border-border p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-warning-soft rounded-lg">
-              <ChartBarIcon className="h-6 w-6 text-warning" />
+              <ChartColumn className="h-6 w-6 text-warning" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">معدل الربح</p>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Scale, EyeIcon, SlashIcon as EyeSlashIcon } from 'lucide-react';
+import { Eye, EyeOff, Scale } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 
@@ -108,9 +108,9 @@ export default function LoginPage() {
                   className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5" />
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
                   ) : (
-                    <EyeIcon className="h-5 w-5" />
+                    <Eye className="h-5 w-5" aria-hidden="true" />
                   )}
                 </button>
               </div>

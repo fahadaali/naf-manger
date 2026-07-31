@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { PhotoIcon, UserIcon } from '@heroicons/react/24/outline';
+import { Image, User } from 'lucide-react';
 
 interface ProfilePictureUploadProps {
   currentPicture?: string;
@@ -90,13 +90,13 @@ export default function ProfilePictureUpload({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <UserIcon className={`${iconSizes[size]} text-muted-foreground`} />
+              <User className={`${iconSizes[size]} text-muted-foreground`} />
             </div>
           )}
           
           {/* Overlay on hover */}
           <div className="absolute inset-0 bg-overlay opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <PhotoIcon className="h-6 w-6 text-surface-deep-foreground" />
+            <Image className="h-6 w-6 text-surface-deep-foreground" />
           </div>
         </div>
 

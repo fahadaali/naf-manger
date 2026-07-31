@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  XMarkIcon, 
-  VideoCameraIcon, 
-  CalendarIcon, 
-  ClockIcon,
-  UserGroupIcon,
-  PlusIcon,
-  TrashIcon,
-  PaperAirplaneIcon
-} from '@heroicons/react/24/outline';
+import { Calendar, ClipboardList, Plus, Send, Trash2, Users, Video, X } from 'lucide-react';
 import { Client, Prospect } from '../../types';
 
 interface ZoomMeetingModalProps {
@@ -204,7 +195,7 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">
-              <VideoCameraIcon className="h-6 w-6 text-primary" />
+              <Video className="h-6 w-6 text-primary" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">إنشاء اجتماع Zoom</h2>
@@ -217,7 +208,7 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-full"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
@@ -225,7 +216,7 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
           {/* معلومات الاجتماع الأساسية */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
+              <Calendar className="h-5 w-5" />
               معلومات الاجتماع
             </h3>
             
@@ -316,7 +307,7 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
           {/* المدعوين */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <UserGroupIcon className="h-5 w-5" />
+              <Users className="h-5 w-5" />
               المدعوين
             </h3>
 
@@ -335,7 +326,7 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
                 onClick={addInvitee}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
               >
-                <PlusIcon className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
                 إضافة
               </button>
             </div>
@@ -364,7 +355,7 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
                     className="text-destructive hover:text-destructive-strong p-1"
                     title="حذف"
                   >
-                    <TrashIcon className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ))}
@@ -453,7 +444,7 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
                 </>
               ) : (
                 <>
-                  <PaperAirplaneIcon className="h-4 w-4" />
+                  <Send className="h-4 w-4" />
                   إنشاء الاجتماع وإرسال الدعوات
                 </>
               )}

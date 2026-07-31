@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { Plus, Search } from 'lucide-react';
 import { Prospect } from '../../types';
 import ProspectCard from './ProspectCard';
 import ProspectModal from './ProspectModal';
@@ -176,7 +176,7 @@ export default function ProspectsView() {
             onClick={handleCreateProspect}
             className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
           >
-            <PlusIcon className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
             إضافة عميل محتمل
           </button>
         )}
@@ -186,7 +186,7 @@ export default function ProspectsView() {
       <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث عن عميل محتمل..."

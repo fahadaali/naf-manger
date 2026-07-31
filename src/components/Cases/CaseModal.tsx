@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { ExternalLink, X } from 'lucide-react';
 import { Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import { format } from 'date-fns';
 import { db } from '../../data/database';
@@ -182,7 +182,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               onClick={onClose}
               className="p-2 hover:bg-muted rounded-full"
             >
-              <XMarkIcon className="h-6 w-6" />
+              <X className="h-6 w-6" />
             </button>
           </div>
 
@@ -240,9 +240,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-primary hover:text-primary-strong font-medium"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                  </svg>
+                  <ExternalLink className="w-5 h-5" aria-hidden="true" />
                   فتح المشروع في Basecamp
                 </a>
               </div>
@@ -276,7 +274,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-full"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 

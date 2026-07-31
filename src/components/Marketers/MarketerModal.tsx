@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { XMarkIcon, UserIcon, ChartBarIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import {
+  CurrencyDollarIcon
+} from '@heroicons/react/24/outline';
+import { ChartColumn, User, X } from 'lucide-react';
 import { Marketer, Case, MarketerStats } from '../../types';
 import { format } from 'date-fns';
 import { db } from '../../data/database';
@@ -99,7 +102,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-info-soft rounded-lg">
-                <UserIcon className="h-6 w-6 text-info" />
+                <User className="h-6 w-6 text-info" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-foreground">{marketer.fullName}</h2>
@@ -110,7 +113,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               onClick={onClose}
               className="p-2 hover:bg-muted rounded-full"
             >
-              <XMarkIcon className="h-6 w-6" />
+              <X className="h-6 w-6" />
             </button>
           </div>
 
@@ -118,7 +121,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
             {/* Marketer Information */}
             <div className="bg-muted rounded-lg p-4">
               <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                <UserIcon className="h-5 w-5" />
+                <User className="h-5 w-5" />
                 المعلومات الأساسية
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -183,7 +186,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
             {/* Performance Dashboard */}
             <div className="bg-primary-soft rounded-lg p-4">
               <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                <ChartBarIcon className="h-5 w-5" />
+                <ChartColumn className="h-5 w-5" />
                 لوحة الأداء
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -303,7 +306,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-full"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 

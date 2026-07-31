@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  XMarkIcon, 
-  PlusIcon, 
-  TrashIcon,
-  ChartBarIcon,
-  TableCellsIcon,
-  EyeIcon,
-  Cog6ToothIcon
-} from '@heroicons/react/24/outline';
+import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, X } from 'lucide-react';
 import { CustomReport, ReportField, ReportFilter, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -155,11 +147,11 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
   };
 
   const steps = [
-    { id: 1, name: 'المعلومات الأساسية', icon: Cog6ToothIcon },
-    { id: 2, name: 'اختيار البيانات', icon: TableCellsIcon },
-    { id: 3, name: 'التصفية والتجميع', icon: PlusIcon },
-    { id: 4, name: 'العرض والتصور', icon: ChartBarIcon },
-    { id: 5, name: 'المعاينة والحفظ', icon: EyeIcon }
+    { id: 1, name: 'المعلومات الأساسية', icon: Settings },
+    { id: 2, name: 'اختيار البيانات', icon: Table2 },
+    { id: 3, name: 'التصفية والتجميع', icon: Plus },
+    { id: 4, name: 'العرض والتصور', icon: ChartColumn },
+    { id: 5, name: 'المعاينة والحفظ', icon: Eye }
   ];
 
   return (
@@ -172,7 +164,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
               onClick={onClose}
               className="p-2 hover:bg-muted rounded-full"
             >
-              <XMarkIcon className="h-6 w-6" />
+              <X className="h-6 w-6" />
             </button>
             <div>
               <h1 className="text-xl font-bold text-foreground">
@@ -337,7 +329,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                             onClick={() => handleFieldToggle(fieldId)}
                             className="text-primary hover:text-primary-strong"
                           >
-                            <XMarkIcon className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </button>
                         </div>
                       ) : null;
@@ -363,7 +355,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                     onClick={handleAddFilter}
                     className="flex items-center gap-2 px-3 py-2 text-primary border border-primary rounded-lg hover:bg-primary-soft"
                   >
-                    <PlusIcon className="h-4 w-4" />
+                    <Plus className="h-4 w-4" />
                     إضافة فلتر
                   </button>
                 </div>
@@ -416,7 +408,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                         onClick={() => handleRemoveFilter(filter.id)}
                         className="p-2 text-destructive hover:bg-destructive-soft rounded-lg"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
@@ -439,12 +431,12 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
-                    { type: 'table', name: 'جدول', icon: TableCellsIcon },
-                    { type: 'bar', name: 'أعمدة', icon: ChartBarIcon },
-                    { type: 'line', name: 'خطي', icon: ChartBarIcon },
-                    { type: 'pie', name: 'دائري', icon: ChartBarIcon },
-                    { type: 'doughnut', name: 'حلقي', icon: ChartBarIcon },
-                    { type: 'area', name: 'منطقة', icon: ChartBarIcon }
+                    { type: 'table', name: 'جدول', icon: Table2 },
+                    { type: 'bar', name: 'أعمدة', icon: ChartColumn },
+                    { type: 'line', name: 'خطي', icon: ChartColumn },
+                    { type: 'pie', name: 'دائري', icon: ChartColumn },
+                    { type: 'doughnut', name: 'حلقي', icon: ChartColumn },
+                    { type: 'area', name: 'منطقة', icon: ChartColumn }
                   ].map((viz) => (
                     <button
                       key={viz.type}

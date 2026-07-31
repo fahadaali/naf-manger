@@ -1,13 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  PaperAirplaneIcon, 
-  SparklesIcon,
-  ChatBubbleLeftRightIcon,
-  UserIcon,
-  ComputerDesktopIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon
+import {
+  ComputerDesktopIcon
 } from '@heroicons/react/24/outline';
+import { CircleCheck, MessageSquare, RefreshCw, Send, Sparkles, TriangleAlert, User } from 'lucide-react';
 import { db } from '../../data/database';
 import { geminiService } from '../../services/geminiService';
 
@@ -77,7 +72,7 @@ export default function AIAssistant() {
         const confirmationMessage: Message = {
           id: Date.now().toString(),
           type: 'assistant',
-          content: '✅ تم الاتصال بـ Gemini AI بنجاح! يمكنني الآن تقديم إجابات أكثر ذكاءً وتفصيلاً.',
+          content: 'تم الاتصال بـ Gemini AI بنجاح! يمكنني الآن تقديم إجابات أكثر ذكاءً وتفصيلاً.',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, confirmationMessage]);
@@ -85,7 +80,7 @@ export default function AIAssistant() {
         const errorMessage: Message = {
           id: Date.now().toString(),
           type: 'assistant',
-          content: '⚠️ لا يمكن الاتصال بـ Gemini AI حالياً. سأعمل في الوضع المحلي وأقدم إجابات بناءً على بيانات النظام.',
+          content: 'لا يمكن الاتصال بـ Gemini AI حالياً. سأعمل في الوضع المحلي وأقدم إجابات بناءً على بيانات النظام.',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, errorMessage]);
@@ -177,9 +172,9 @@ export default function AIAssistant() {
       case 'checking':
         return <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />;
       case 'connected':
-        return <CheckCircleIcon className="w-4 h-4 text-success" />;
+        return <CircleCheck className="w-4 h-4 text-success" />;
       case 'disconnected':
-        return <ExclamationTriangleIcon className="w-4 h-4 text-destructive" />;
+        return <TriangleAlert className="w-4 h-4 text-destructive" />;
     }
   };
 
@@ -199,7 +194,7 @@ export default function AIAssistant() {
       <div className="bg-surface-deep text-surface-deep-foreground rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <SparklesIcon className="h-8 w-8" />
+            <Sparkles className="h-8 w-8" />
             <div>
               <h1 className="text-2xl font-bold">المساعد الذكي القانوني</h1>
               <p className="text-surface-deep-muted">مدعوم بتقنية Gemini AI من Google</p>
@@ -250,11 +245,11 @@ export default function AIAssistant() {
                   message.isError ? 'bg-destructive' : 'bg-info'
                 } rounded-full p-2`}>
                   {message.type === 'user' ? (
-                    <UserIcon className="h-5 w-5 text-primary-foreground" />
+                    <User className="h-5 w-5 text-primary-foreground" />
                   ) : message.isError ? (
-                    <ExclamationTriangleIcon className="h-5 w-5 text-destructive-foreground" />
+                    <TriangleAlert className="h-5 w-5 text-destructive-foreground" />
                   ) : (
-                    <SparklesIcon className="h-5 w-5 text-info-foreground" />
+                    <Sparkles className="h-5 w-5 text-info-foreground" />
                   )}
                 </div>
                 <div className={`rounded-lg p-3 ${
@@ -277,7 +272,7 @@ export default function AIAssistant() {
             <div className="flex gap-3 justify-start">
               <div className="flex gap-3 max-w-3xl">
                 <div className="flex-shrink-0 bg-info rounded-full p-2">
-                  <SparklesIcon className="h-5 w-5 text-info-foreground" />
+                  <Sparkles className="h-5 w-5 text-info-foreground" />
                 </div>
                 <div className="bg-muted rounded-lg p-3">
                   <div className="flex items-center gap-2">
@@ -303,7 +298,7 @@ export default function AIAssistant() {
               disabled={!inputMessage.trim() || isTyping}
               className="flex-shrink-0 bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground p-2 rounded-lg transition-colors"
             >
-              <PaperAirplaneIcon className="h-5 w-5" />
+              <Send className="h-5 w-5" />
             </button>
             <textarea
               value={inputMessage}
@@ -320,9 +315,7 @@ export default function AIAssistant() {
               className="flex-shrink-0 text-muted-foreground hover:text-foreground p-2"
               title="فحص الاتصال"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+              <RefreshCw className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -330,7 +323,7 @@ export default function AIAssistant() {
 
       <div className="bg-primary-soft rounded-lg p-4">
         <div className="flex items-center gap-2 mb-2">
-          <ChatBubbleLeftRightIcon className="h-5 w-5 text-primary" />
+          <MessageSquare className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-primary-strong">ميزات المساعد الذكي:</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">
@@ -362,7 +355,7 @@ export default function AIAssistant() {
         {connectionStatus === 'connected' && (
           <div className="mt-3 p-3 bg-success-soft rounded-lg">
             <p className="text-success-strong text-sm">
-              <strong>✅ متصل بـ Gemini AI:</strong> المساعد جاهز لتقديم إجابات ذكية ومتقدمة بناءً على بيانات مكتبك وخبرة الذكاء الاصطناعي.
+              <strong>متصل بـ Gemini AI:</strong> المساعد جاهز لتقديم إجابات ذكية ومتقدمة بناءً على بيانات مكتبك وخبرة الذكاء الاصطناعي.
             </p>
           </div>
         )}

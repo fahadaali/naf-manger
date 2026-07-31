@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserIcon } from '@heroicons/react/24/outline';
+import { User } from 'lucide-react';
 
 interface ProfileAvatarProps {
   src?: string;

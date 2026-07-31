@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { Plus, Search, Users } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';
 import MarketerCard from './MarketerCard';
 import MarketerModal from './MarketerModal';
@@ -104,7 +104,7 @@ export default function MarketersView() {
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-card bg-opacity-20 rounded-full">
-              <UserGroupIcon className="h-8 w-8" />
+              <Users className="h-8 w-8" />
             </div>
             <div>
               <h1 className="text-2xl font-bold mb-2">إدارة المسوّقين</h1>
@@ -116,7 +116,7 @@ export default function MarketersView() {
               onClick={handleCreateMarketer}
               className="bg-card text-info px-4 py-2 rounded-lg hover:bg-info-soft flex items-center gap-2 font-medium shadow-lg"
             >
-              <PlusIcon className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               إضافة مسوّق جديد
             </button>
           )}
@@ -127,7 +127,7 @@ export default function MarketersView() {
       <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث عن مسوّق..."
@@ -202,7 +202,7 @@ export default function MarketersView() {
 
       {filteredMarketers.length === 0 && (
         <div className="text-center py-12">
-          <UserGroupIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">لا توجد مسوّقين مطابقين لمعايير البحث</p>
         </div>
       )}

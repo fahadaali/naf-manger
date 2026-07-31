@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  EnvelopeIcon, 
-  CheckCircleIcon, 
-  ExclamationTriangleIcon,
-  EyeIcon,
-  EyeSlashIcon
-} from '@heroicons/react/24/outline';
+import { CircleCheck, Eye, EyeOff, Mail, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
 
@@ -112,7 +106,7 @@ export default function EmailSettings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <EnvelopeIcon className="h-6 w-6 text-muted-foreground" />
+          <Mail className="h-6 w-6 text-muted-foreground" />
           <h3 className="text-lg font-semibold text-foreground">إعدادات البريد الإلكتروني</h3>
         </div>
         <button
@@ -129,8 +123,8 @@ export default function EmailSettings() {
             ? 'bg-success-soft text-success-strong' 
             : 'bg-destructive-soft text-destructive-strong'
         }`}>
-          {testResult === 'success' && <CheckCircleIcon className="h-5 w-5" />}
-          {testResult === 'error' && <ExclamationTriangleIcon className="h-5 w-5" />}
+          {testResult === 'success' && <CircleCheck className="h-5 w-5" />}
+          {testResult === 'error' && <TriangleAlert className="h-5 w-5" />}
           {saveMessage}
         </div>
       )}
@@ -216,9 +210,9 @@ export default function EmailSettings() {
                 className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5" />
+                  <EyeOff className="h-5 w-5" />
                 ) : (
-                  <EyeIcon className="h-5 w-5" />
+                  <Eye className="h-5 w-5" />
                 )}
               </button>
             </div>
@@ -300,7 +294,7 @@ export default function EmailSettings() {
             </>
           ) : (
             <>
-              <CheckCircleIcon className="h-4 w-4" />
+              <CircleCheck className="h-4 w-4" />
               إرسال بريد تجريبي
             </>
           )}
@@ -337,8 +331,8 @@ export default function EmailSettings() {
             : 'text-primary-strong'
         }`}>
           {settings?.host && settings?.user && settings?.password 
-            ? '✅ إعدادات البريد الإلكتروني مكتملة' 
-            : 'ℹ️ معلومات حول إعدادات البريد الإلكتروني'}
+            ? 'إعدادات البريد الإلكتروني مكتملة'
+            : 'معلومات حول إعدادات البريد الإلكتروني'}
         </h4>
         <div className={`text-sm space-y-2 ${
           settings?.host && settings?.user && settings?.password 
@@ -373,7 +367,7 @@ export default function EmailSettings() {
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">
             <div className="w-6 h-6 bg-warning-soft rounded-full flex items-center justify-center">
-              <span className="text-warning text-sm">⚠️</span>
+              <TriangleAlert className="size-4 text-warning-strong" aria-hidden="true" />
             </div>
           </div>
           <div>

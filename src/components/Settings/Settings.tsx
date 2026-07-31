@@ -1,19 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  UserIcon, 
-  CogIcon, 
-  ShieldCheckIcon, 
-  DocumentTextIcon,
-  BellIcon,
-  GlobeAltIcon,
-  UsersIcon,
-  DocumentArrowDownIcon,
-  DocumentArrowUpIcon,
+import {
   ComputerDesktopIcon,
-  EnvelopeIcon,
-  ChevronDownIcon,
-  CheckIcon
+  DocumentArrowUpIcon
 } from '@heroicons/react/24/outline';
+import { Bell, Check, ChevronDown, FileOutput, FileText, Globe, Mail, Settings, ShieldCheck, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
@@ -52,34 +42,34 @@ export default function Settings() {
     {
       id: 'personal',
       name: 'الإعدادات الشخصية',
-      icon: UserIcon,
+      icon: User,
       color: 'blue',
       tabs: [
-        { id: 'profile', label: 'الملف الشخصي', icon: UserIcon, description: 'تحديث معلوماتك الشخصية والصورة', permission: null },
-        { id: 'security', label: 'الأمان', icon: ShieldCheckIcon, description: 'تغيير كلمة المرور والمصادقة الثنائية', permission: null },
-        { id: 'notifications', label: 'الإشعارات', icon: BellIcon, description: 'إدارة تفضيلات الإشعارات والتنبيهات', permission: null }
+        { id: 'profile', label: 'الملف الشخصي', icon: User, description: 'تحديث معلوماتك الشخصية والصورة', permission: null },
+        { id: 'security', label: 'الأمان', icon: ShieldCheck, description: 'تغيير كلمة المرور والمصادقة الثنائية', permission: null },
+        { id: 'notifications', label: 'الإشعارات', icon: Bell, description: 'إدارة تفضيلات الإشعارات والتنبيهات', permission: null }
       ]
     },
     {
       id: 'system',
       name: 'إعدادات النظام',
-      icon: CogIcon,
+      icon: Settings,
       color: 'purple',
       tabs: [
-        { id: 'general', label: 'الإعدادات العامة', icon: GlobeAltIcon, description: 'معلومات الشركة والألوان والشعار', permission: 'settings.update' },
-        { id: 'system', label: 'تكوين النظام', icon: CogIcon, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
-        { id: 'email', label: 'البريد الإلكتروني', icon: EnvelopeIcon, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' },
-        { id: 'supabase', label: 'قاعدة البيانات المركزية', icon: DocumentTextIcon, description: 'إعداد وترحيل البيانات إلى Supabase', permission: 'settings.update' }
+        { id: 'general', label: 'الإعدادات العامة', icon: Globe, description: 'معلومات الشركة والألوان والشعار', permission: 'settings.update' },
+        { id: 'system', label: 'تكوين النظام', icon: Settings, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
+        { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' },
+        { id: 'supabase', label: 'قاعدة البيانات المركزية', icon: FileText, description: 'إعداد وترحيل البيانات إلى Supabase', permission: 'settings.update' }
       ]
     },
     {
       id: 'management',
       name: 'إدارة المستخدمين والبيانات',
-      icon: UsersIcon,
+      icon: Users,
       color: 'green',
       tabs: [
-        { id: 'users', label: 'إدارة المستخدمين', icon: UsersIcon, description: 'إضافة وتعديل المستخدمين والصلاحيات', permission: 'users.read' },
-        { id: 'export', label: 'تصدير البيانات', icon: DocumentArrowDownIcon, description: 'تصدير بيانات العملاء والقضايا', permission: 'settings.read' },
+        { id: 'users', label: 'إدارة المستخدمين', icon: Users, description: 'إضافة وتعديل المستخدمين والصلاحيات', permission: 'users.read' },
+        { id: 'export', label: 'تصدير البيانات', icon: FileOutput, description: 'تصدير بيانات العملاء والقضايا', permission: 'settings.read' },
         { id: 'import', label: 'استيراد البيانات', icon: DocumentArrowUpIcon, description: 'استيراد البيانات من ملفات Excel', permission: 'settings.update' }
       ]
     },
@@ -283,7 +273,7 @@ export default function Settings() {
               <div className={`max-w-2xl mx-auto p-4 rounded-xl flex items-center gap-3 ${
                 saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong border border-success/30' : 'bg-destructive-soft text-destructive-strong border border-destructive/30'
               }`}>
-                {saveMessage.includes('نجاح') && <CheckIcon className="h-5 w-5" />}
+                {saveMessage.includes('نجاح') && <Check className="h-5 w-5" />}
                 {saveMessage}
               </div>
             )}
@@ -314,7 +304,7 @@ export default function Settings() {
                     </>
                   ) : (
                     <>
-                      <CheckIcon className="h-4 w-4" />
+                      <Check className="h-4 w-4" />
                       حفظ التغييرات
                     </>
                   )}
@@ -352,7 +342,7 @@ export default function Settings() {
                 <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
                   <div className="text-center mb-6">
                     <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                      <UsersIcon className="h-8 w-8 text-primary-foreground" />
+                      <Users className="h-8 w-8 text-primary-foreground" />
                     </div>
                     <h4 className="text-xl font-bold text-primary-strong mb-2">استيراد العملاء</h4>
                     <p className="text-primary">رفع ملف Excel يحتوي على بيانات العملاء</p>
@@ -375,7 +365,7 @@ export default function Settings() {
                 <div className="bg-success-soft rounded-2xl p-8 border border-success/30">
                   <div className="text-center mb-6">
                     <div className="w-16 h-16 bg-success rounded-full flex items-center justify-center mx-auto mb-4">
-                      <DocumentTextIcon className="h-8 w-8 text-success-foreground" />
+                      <FileText className="h-8 w-8 text-success-foreground" />
                     </div>
                     <h4 className="text-xl font-bold text-success-strong mb-2">استيراد القضايا</h4>
                     <p className="text-success">رفع ملف Excel يحتوي على بيانات القضايا</p>
@@ -410,7 +400,7 @@ export default function Settings() {
             <div className="max-w-2xl mx-auto space-y-8">
               <div className="bg-muted rounded-2xl p-8 border border-border">
                 <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <ShieldCheckIcon className="h-6 w-6 text-primary" />
+                  <ShieldCheck className="h-6 w-6 text-primary" />
                   تغيير كلمة المرور
                 </h4>
                 <div className="space-y-4">
@@ -471,7 +461,7 @@ export default function Settings() {
               <div className={`max-w-2xl mx-auto p-4 rounded-xl flex items-center gap-3 ${
                 saveMessage.includes('نجاح') ? 'bg-success-soft text-success-strong border border-success/30' : 'bg-destructive-soft text-destructive-strong border border-destructive/30'
               }`}>
-                {saveMessage.includes('نجاح') && <CheckIcon className="h-5 w-5" />}
+                {saveMessage.includes('نجاح') && <Check className="h-5 w-5" />}
                 {saveMessage}
               </div>
             )}
@@ -490,7 +480,7 @@ export default function Settings() {
               {/* Email Notifications */}
               <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
                 <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <EnvelopeIcon className="h-6 w-6 text-primary" />
+                  <Mail className="h-6 w-6 text-primary" />
                   إشعارات البريد الإلكتروني
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -520,7 +510,7 @@ export default function Settings() {
               {/* System Notifications */}
               <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
                 <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <CogIcon className="h-6 w-6 text-info" />
+                  <Settings className="h-6 w-6 text-info" />
                   إشعارات النظام
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -548,7 +538,7 @@ export default function Settings() {
               {/* Notification Schedule */}
               <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
                 <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <BellIcon className="h-6 w-6 text-primary" />
+                  <Bell className="h-6 w-6 text-primary" />
                   جدولة التقارير
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -619,7 +609,7 @@ export default function Settings() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-              <CogIcon className="h-6 w-6 text-primary-foreground" />
+              <Settings className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
@@ -647,7 +637,7 @@ export default function Settings() {
                     <category.icon className="h-6 w-6" />
                     <h3 className="font-bold text-lg">{category.name}</h3>
                   </div>
-                  <ChevronDownIcon 
+                  <ChevronDown 
                     className={`h-5 w-5 transition-transform duration-300 ${
                       expandedCategory === category.id ? 'rotate-180' : ''
                     }`} 

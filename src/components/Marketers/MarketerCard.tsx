@@ -1,6 +1,9 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { UserIcon, PhoneIcon, EnvelopeIcon, PencilIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import {
+  PhoneIcon
+} from '@heroicons/react/24/outline';
+import { ChartColumn, Mail, Pencil, User } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
@@ -100,7 +103,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
               className="text-muted-foreground hover:text-foreground p-1"
               title="تحرير"
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -112,7 +115,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           <span>{marketer.phone}</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <EnvelopeIcon className="h-4 w-4" />
+          <Mail className="h-4 w-4" />
           <span>{marketer.email}</span>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -123,7 +126,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
       {/* Performance Stats */}
       <div className="bg-muted rounded-lg p-3 mb-4">
         <div className="flex items-center gap-2 mb-2">
-          <ChartBarIcon className="h-4 w-4 text-muted-foreground" />
+          <ChartColumn className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-foreground">الأداء</span>
         </div>
         <div className="grid grid-cols-2 gap-3 text-xs">

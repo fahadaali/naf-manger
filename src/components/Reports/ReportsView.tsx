@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  DocumentChartBarIcon, 
-  PlusIcon, 
-  FunnelIcon,
-  ChartBarIcon,
-  TableCellsIcon,
-  ShareIcon,
-  CalendarIcon,
-  EyeIcon,
-  PencilIcon,
-  TrashIcon
-} from '@heroicons/react/24/outline';
+import { Calendar, ChartColumn, Eye, Funnel, Pencil, Plus, Share2, Table2, Trash2 } from 'lucide-react';
 import { CustomReport } from '../../types';
 import ReportBuilder from './ReportBuilder';
 import ReportViewer from './ReportViewer';
@@ -95,11 +84,11 @@ export default function ReportsView() {
 
   const getReportIcon = (visualization: string) => {
     switch (visualization) {
-      case 'table': return TableCellsIcon;
+      case 'table': return Table2;
       case 'bar':
       case 'line':
-      case 'area': return ChartBarIcon;
-      default: return DocumentChartBarIcon;
+      case 'area': return ChartColumn;
+      default: return ChartColumn;
     }
   };
 
@@ -137,7 +126,7 @@ export default function ReportsView() {
               onClick={handleCreateReport}
               className="bg-card text-primary px-4 py-2 rounded-lg hover:bg-primary-soft flex items-center gap-2 font-medium"
             >
-              <PlusIcon className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               إنشاء تقرير جديد
             </button>
           )}
@@ -148,7 +137,7 @@ export default function ReportsView() {
       <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <FunnelIcon className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Funnel className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث في التقارير..."
@@ -175,10 +164,10 @@ export default function ReportsView() {
         <h3 className="text-lg font-semibold text-foreground mb-4">قوالب سريعة</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { name: 'تقرير الأداء الشهري', description: 'إحصائيات شاملة للشهر الحالي', icon: ChartBarIcon },
-            { name: 'تقرير القضايا حسب النوع', description: 'تحليل القضايا مجمعة حسب النوع', icon: DocumentChartBarIcon },
-            { name: 'تقرير العملاء المحتملين', description: 'حالة وتطور العملاء المحتملين', icon: TableCellsIcon },
-            { name: 'تقرير الإيرادات', description: 'تحليل الإيرادات والنمو المالي', icon: ChartBarIcon }
+            { name: 'تقرير الأداء الشهري', description: 'إحصائيات شاملة للشهر الحالي', icon: ChartColumn },
+            { name: 'تقرير القضايا حسب النوع', description: 'تحليل القضايا مجمعة حسب النوع', icon: ChartColumn },
+            { name: 'تقرير العملاء المحتملين', description: 'حالة وتطور العملاء المحتملين', icon: Table2 },
+            { name: 'تقرير الإيرادات', description: 'تحليل الإيرادات والنمو المالي', icon: ChartColumn }
           ].map((template, index) => (
             <button
               key={index}
@@ -226,7 +215,7 @@ export default function ReportsView() {
                           )}
                           {report.schedule?.enabled && (
                             <span className="bg-info-soft text-info-strong px-2 py-1 rounded-full flex items-center gap-1">
-                              <CalendarIcon className="h-3 w-3" />
+                              <Calendar className="h-3 w-3" />
                               مجدول
                             </span>
                           )}
@@ -240,7 +229,7 @@ export default function ReportsView() {
                         className="p-2 text-muted-foreground hover:text-primary hover:bg-primary-soft rounded-lg"
                         title="عرض التقرير"
                       >
-                        <EyeIcon className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                       </button>
                       {(report.createdBy === user?.id || hasPermission('analytics', 'read')) && (
                         <>
@@ -249,21 +238,21 @@ export default function ReportsView() {
                             className="p-2 text-muted-foreground hover:text-primary hover:bg-primary-soft rounded-lg"
                             title="تحرير التقرير"
                           >
-                            <PencilIcon className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => {/* Share report */}}
                             className="p-2 text-muted-foreground hover:text-success hover:bg-success-soft rounded-lg"
                             title="مشاركة التقرير"
                           >
-                            <ShareIcon className="h-4 w-4" />
+                            <Share2 className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteReport(report.id)}
                             className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive-soft rounded-lg"
                             title="حذف التقرير"
                           >
-                            <TrashIcon className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </>
                       )}
@@ -275,7 +264,7 @@ export default function ReportsView() {
           </div>
         ) : (
           <div className="p-12 text-center">
-            <DocumentChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <ChartColumn className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">لا توجد تقارير</h3>
             <p className="text-muted-foreground mb-4">ابدأ بإنشاء تقرير مخصص أو استخدم أحد القوالب السريعة</p>
             <button

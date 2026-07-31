@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  ComputerDesktopIcon, 
-  ClipboardDocumentIcon, 
-  CheckCircleIcon,
-  LinkIcon,
-  EyeIcon,
-  CogIcon
+import {
+  ComputerDesktopIcon
 } from '@heroicons/react/24/outline';
+import { CircleCheck, Copy, Eye, Lightbulb, Link2, Settings } from 'lucide-react';
 
 export default function DashboardDisplay() {
   const [copySuccess, setCopySuccess] = useState(false);
@@ -68,12 +64,12 @@ export default function DashboardDisplay() {
             >
               {copySuccess ? (
                 <>
-                  <CheckCircleIcon className="h-5 w-5" />
+                  <CircleCheck className="h-5 w-5" />
                   تم النسخ بنجاح!
                 </>
               ) : (
                 <>
-                  <ClipboardDocumentIcon className="h-5 w-5" />
+                  <Copy className="h-5 w-5" />
                   نسخ الرابط
                 </>
               )}
@@ -81,7 +77,7 @@ export default function DashboardDisplay() {
             
             <div className="text-center">
               <div className="flex items-center gap-2 text-surface-deep-muted text-sm">
-                <LinkIcon className="h-4 w-4" />
+                <Link2 className="h-4 w-4" />
                 <span className="font-mono bg-overlay px-2 py-1 rounded text-xs">
                   {window.location.origin}
                 </span>
@@ -94,7 +90,7 @@ export default function DashboardDisplay() {
       {/* تعليمات الاستخدام */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center gap-2 mb-4">
-          <CogIcon className="h-6 w-6 text-muted-foreground" />
+          <Settings className="h-6 w-6 text-muted-foreground" />
           <h4 className="text-lg font-semibold text-foreground">كيفية الاستخدام</h4>
         </div>
         
@@ -134,7 +130,7 @@ export default function DashboardDisplay() {
       {/* مميزات العرض */}
       <div className="bg-muted rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <EyeIcon className="h-6 w-6 text-muted-foreground" />
+          <Eye className="h-6 w-6 text-muted-foreground" />
           <h4 className="text-lg font-semibold text-foreground">مميزات العرض على الشاشات</h4>
         </div>
         
@@ -171,7 +167,7 @@ export default function DashboardDisplay() {
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">
             <div className="w-6 h-6 bg-warning-soft rounded-full flex items-center justify-center">
-              <span className="text-warning text-sm">💡</span>
+              <Lightbulb className="size-4 text-warning-strong" aria-hidden="true" />
             </div>
           </div>
           <div>

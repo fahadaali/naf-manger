@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CloudIcon, 
-  ArrowPathIcon, 
-  CheckCircleIcon, 
-  ExclamationTriangleIcon,
-  DocumentArrowDownIcon,
-  CogIcon,
-  ShieldCheckIcon
+import {
+  CloudIcon
 } from '@heroicons/react/24/outline';
+import { CircleCheck, FileOutput, RefreshCw, Settings, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 
@@ -103,9 +98,9 @@ export default function SupabaseMigration() {
       }`}>
         <div className="flex items-center gap-3">
           {isSupabaseConnected ? (
-            <CheckCircleIcon className="h-6 w-6 text-success" />
+            <CircleCheck className="h-6 w-6 text-success" />
           ) : (
-            <ExclamationTriangleIcon className="h-6 w-6 text-destructive" />
+            <TriangleAlert className="h-6 w-6 text-destructive" />
           )}
           <div>
             <h4 className={`font-medium ${
@@ -129,7 +124,7 @@ export default function SupabaseMigration() {
       {localDataStats && (
         <div className="bg-muted rounded-lg p-6">
           <h4 className="font-medium text-foreground mb-4 flex items-center gap-2">
-            <CogIcon className="h-5 w-5" />
+            <Settings className="h-5 w-5" />
             البيانات المحلية الحالية
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -165,8 +160,8 @@ export default function SupabaseMigration() {
           'bg-primary-soft border-primary/30'
         }`}>
           <div className="flex items-start gap-3">
-            {migrationStatus === 'success' && <CheckCircleIcon className="h-6 w-6 text-success flex-shrink-0" />}
-            {migrationStatus === 'error' && <ExclamationTriangleIcon className="h-6 w-6 text-destructive flex-shrink-0" />}
+            {migrationStatus === 'success' && <CircleCheck className="h-6 w-6 text-success flex-shrink-0" />}
+            {migrationStatus === 'error' && <TriangleAlert className="h-6 w-6 text-destructive flex-shrink-0" />}
             {migrationStatus === 'migrating' && (
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary flex-shrink-0"></div>
             )}
@@ -206,7 +201,7 @@ export default function SupabaseMigration() {
               <h5 className="font-medium text-foreground">توصيل Supabase</h5>
               <p className="text-sm text-muted-foreground">
                 {isSupabaseConnected 
-                  ? '✅ تم توصيل Supabase بنجاح'
+                  ? 'تم توصيل Supabase'
                   : 'اضغط على "Connect to Supabase" في أعلى الصفحة'
                 }
               </p>
@@ -223,7 +218,7 @@ export default function SupabaseMigration() {
               <h5 className="font-medium text-foreground">ترحيل البيانات</h5>
               <p className="text-sm text-muted-foreground">
                 {migrationStatus === 'success' 
-                  ? '✅ تم ترحيل جميع البيانات بنجاح'
+                  ? 'تم ترحيل جميع البيانات'
                   : 'نقل البيانات من التخزين المحلي إلى قاعدة بيانات Supabase'
                 }
               </p>
@@ -250,7 +245,7 @@ export default function SupabaseMigration() {
           onClick={exportBackup}
           className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80"
         >
-          <DocumentArrowDownIcon className="h-5 w-5" />
+          <FileOutput className="h-5 w-5" />
           تصدير نسخة احتياطية أولاً
         </button>
         
@@ -266,7 +261,7 @@ export default function SupabaseMigration() {
             </>
           ) : (
             <>
-              <ArrowPathIcon className="h-5 w-5" />
+              <RefreshCw className="h-5 w-5" />
               بدء ترحيل البيانات
             </>
           )}
@@ -276,7 +271,7 @@ export default function SupabaseMigration() {
       {/* Benefits */}
       <div className="bg-primary-soft rounded-lg p-6">
         <h4 className="font-medium text-primary-strong mb-4 flex items-center gap-2">
-          <ShieldCheckIcon className="h-5 w-5" />
+          <ShieldCheck className="h-5 w-5" />
           مزايا استخدام Supabase
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">
@@ -298,7 +293,7 @@ export default function SupabaseMigration() {
       {/* Important Notes */}
       <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <ExclamationTriangleIcon className="h-6 w-6 text-warning flex-shrink-0" />
+          <TriangleAlert className="h-6 w-6 text-warning flex-shrink-0" />
           <div>
             <h5 className="font-medium text-warning-strong mb-2">ملاحظات مهمة:</h5>
             <ul className="text-sm text-warning-strong space-y-1">

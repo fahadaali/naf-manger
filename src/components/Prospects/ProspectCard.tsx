@@ -1,5 +1,8 @@
 import React from 'react';
-import { UserIcon, BuildingOfficeIcon, PhoneIcon, EnvelopeIcon, ArrowRightIcon, PencilIcon } from '@heroicons/react/24/outline';
+import {
+  PhoneIcon
+} from '@heroicons/react/24/outline';
+import { ArrowRight, Building2, Mail, Pencil, User } from 'lucide-react';
 import { VideoCameraIcon } from '@heroicons/react/24/outline';
 import { Prospect } from '../../types';
 import { format } from 'date-fns';
@@ -77,7 +80,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
               className="text-muted-foreground hover:text-foreground p-1"
               title="تحرير"
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -89,7 +92,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
           <span>{prospect.phone}</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <EnvelopeIcon className="h-4 w-4" />
+          <Mail className="h-4 w-4" />
           <span>{prospect.email}</span>
         </div>
         {prospect.expectedValue && (
@@ -125,7 +128,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
               className="text-muted-foreground hover:text-foreground p-1"
               title="تحرير"
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -139,7 +142,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
                 : 'bg-primary hover:bg-primary/90 text-primary-foreground'
             }`}
           >
-            <ArrowRightIcon className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4" />
             تحويل إلى عميل
           </button>
         )}

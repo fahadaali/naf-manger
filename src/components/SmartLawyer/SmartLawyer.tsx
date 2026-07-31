@@ -1,14 +1,5 @@
 import React from 'react';
-import { 
-  ScaleIcon, 
-  DocumentTextIcon, 
-  MagnifyingGlassIcon, 
-  ShieldCheckIcon,
-  GlobeAltIcon,
-  ChatBubbleLeftRightIcon,
-  ArrowTopRightOnSquareIcon,
-  ClipboardDocumentIcon
-} from '@heroicons/react/24/outline';
+import { Copy, ExternalLink, FileText, Globe, MessageSquare, Scale, Search, ShieldCheck } from 'lucide-react';
 
 const SmartLawyer: React.FC = () => {
   const lawyerAIUrl = 'https://chatgpt.com/g/g-CnmXGoaZE-lawyerai';
@@ -43,57 +34,57 @@ const SmartLawyer: React.FC = () => {
     {
       title: 'استشارة عامة',
       description: 'احصل على استشارة قانونية عامة',
-      icon: ChatBubbleLeftRightIcon,
+      icon: MessageSquare,
       prompt: 'أحتاج إلى استشارة قانونية عامة حول موضوع معين'
     },
     {
       title: 'صياغة عقود',
       description: 'مساعدة في صياغة العقود والاتفاقيات',
-      icon: DocumentTextIcon,
+      icon: FileText,
       prompt: 'أحتاج مساعدة في صياغة عقد أو اتفاقية'
     },
     {
       title: 'تحليل قضايا',
       description: 'تحليل القضايا القانونية المعقدة',
-      icon: ScaleIcon,
+      icon: Scale,
       prompt: 'أحتاج تحليل قانوني لقضية معينة'
     },
     {
       title: 'بحث قانوني',
       description: 'البحث في القوانين والأنظمة',
-      icon: MagnifyingGlassIcon,
+      icon: Search,
       prompt: 'أحتاج بحث في القوانين والأنظمة المتعلقة بموضوع معين'
     }
   ];
 
   const features = [
     {
-      icon: ChatBubbleLeftRightIcon,
+      icon: MessageSquare,
       title: 'استشارات فورية',
       description: 'احصل على إجابات قانونية سريعة ودقيقة'
     },
     {
-      icon: DocumentTextIcon,
+      icon: FileText,
       title: 'صياغة الوثائق',
       description: 'مساعدة في صياغة العقود والمستندات القانونية'
     },
     {
-      icon: MagnifyingGlassIcon,
+      icon: Search,
       title: 'البحث القانوني',
       description: 'البحث في القوانين والسوابق القضائية'
     },
     {
-      icon: ScaleIcon,
+      icon: Scale,
       title: 'تحليل القضايا',
       description: 'تحليل معمق للقضايا والمسائل القانونية'
     },
     {
-      icon: ShieldCheckIcon,
+      icon: ShieldCheck,
       title: 'فحص الامتثال',
       description: 'التأكد من الامتثال للقوانين واللوائح'
     },
     {
-      icon: GlobeAltIcon,
+      icon: Globe,
       title: 'القوانين الدولية',
       description: 'معرفة بالقوانين المحلية والدولية'
     }
@@ -107,7 +98,7 @@ const SmartLawyer: React.FC = () => {
           <div className="text-center">
             <div className="flex justify-center mb-8">
               <div className="p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
-                <ScaleIcon className="h-16 w-16 text-surface-deep-foreground" />
+                <Scale className="h-16 w-16 text-surface-deep-foreground" />
               </div>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
@@ -121,15 +112,15 @@ const SmartLawyer: React.FC = () => {
                 onClick={() => handleOpenLawyerAI()}
                 className="inline-flex items-center px-8 py-4 bg-card text-primary font-semibold rounded-lg hover:bg-primary-soft transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
-                <ChatBubbleLeftRightIcon className="h-6 w-6 me-2" />
+                <MessageSquare className="h-6 w-6 me-2" />
                 بدء محادثة مع المحامي الذكي
-                <ArrowTopRightOnSquareIcon className="h-5 w-5 ms-2" />
+                <ExternalLink className="h-5 w-5 ms-2" />
               </button>
               <button
                 onClick={handleCopyLink}
                 className="inline-flex items-center px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                <ClipboardDocumentIcon className="h-6 w-6 me-2" />
+                <Copy className="h-6 w-6 me-2" />
                 نسخ الرابط
               </button>
             </div>
@@ -221,7 +212,7 @@ const SmartLawyer: React.FC = () => {
       <div className="bg-warning-soft border-e-4 border-warning p-6 mx-4 sm:mx-6 lg:mx-8 mb-8 rounded-s-lg">
         <div className="flex">
           <div className="flex-shrink-0">
-            <ShieldCheckIcon className="h-5 w-5 text-warning" />
+            <ShieldCheck className="h-5 w-5 text-warning" />
           </div>
           <div className="ms-3">
             <h3 className="text-sm font-medium text-warning-strong">تنبيه مهم</h3>

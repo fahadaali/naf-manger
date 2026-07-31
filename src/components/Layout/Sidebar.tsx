@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  HomeIcon, 
-  UserGroupIcon, 
-  DocumentTextIcon, 
-  ChartBarIcon,
-  CogIcon,
-  UserPlusIcon,
+import {
   ChatBubbleBottomCenterTextIcon,
-  DocumentChartBarIcon
+  UserPlusIcon
 } from '@heroicons/react/24/outline';
+import { ChartColumn, FileText, LayoutDashboard, Settings, Users, X } from 'lucide-react';
 import { Scale, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
@@ -22,15 +17,15 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: 'dashboard', label: 'لوحة التحكم', icon: HomeIcon, permission: null },
-  { id: 'clients', label: 'العملاء', icon: UserGroupIcon, permission: 'clients.read' },
+  { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, permission: null },
+  { id: 'clients', label: 'العملاء', icon: Users, permission: 'clients.read' },
   { id: 'prospects', label: 'العملاء المحتملين', icon: UserPlusIcon, permission: 'prospects.read' },
-  { id: 'cases', label: 'القضايا', icon: DocumentTextIcon, permission: 'cases.read' },
-  { id: 'marketers', label: 'المسوّقين', icon: UserGroupIcon, permission: null },
-  { id: 'analytics', label: 'التحليلات', icon: ChartBarIcon, permission: 'analytics.read' },
-  { id: 'reports', label: 'التقارير المخصصة', icon: DocumentChartBarIcon, permission: 'analytics.read' },
+  { id: 'cases', label: 'القضايا', icon: FileText, permission: 'cases.read' },
+  { id: 'marketers', label: 'المسوّقين', icon: Users, permission: null },
+  { id: 'analytics', label: 'التحليلات', icon: ChartColumn, permission: 'analytics.read' },
+  { id: 'reports', label: 'التقارير المخصصة', icon: ChartColumn, permission: 'analytics.read' },
   { id: 'smart-lawyer', label: 'المحامي الذكي', icon: ChatBubbleBottomCenterTextIcon, permission: null },
-  { id: 'settings', label: 'الإعدادات', icon: CogIcon, permission: 'settings.read' },
+  { id: 'settings', label: 'الإعدادات', icon: Settings, permission: 'settings.read' },
 ];
 
 export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: SidebarProps) {
@@ -81,9 +76,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
             onClick={onClose}
             className="text-sidebar-foreground/70 hover:text-sidebar-foreground p-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-6 h-6" aria-hidden="true" />
           </button>
         </div>
 

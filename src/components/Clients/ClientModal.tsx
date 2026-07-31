@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from 'lucide-react';
 import { Client, Case } from '../../types';
 import { format } from 'date-fns';
 import { mockCases } from '../../data/mockData';
@@ -117,7 +117,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               onClick={onClose}
               className="p-2 hover:bg-muted rounded-full"
             >
-              <XMarkIcon className="h-6 w-6" />
+              <X className="h-6 w-6" />
             </button>
           </div>
 
@@ -269,7 +269,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-full"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 

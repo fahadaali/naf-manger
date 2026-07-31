@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Plus, Trash2 } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
 
@@ -192,7 +192,7 @@ export default function SystemConfiguration() {
                 className="text-primary hover:text-primary-strong p-1"
                 title="إضافة عنصر جديد"
               >
-                <PlusIcon className="h-5 w-5" />
+                <Plus className="h-5 w-5" />
               </button>
             </div>
             
@@ -205,7 +205,7 @@ export default function SystemConfiguration() {
                     className="text-destructive hover:text-destructive-strong p-1"
                     title="حذف"
                   >
-                    <TrashIcon className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ))}

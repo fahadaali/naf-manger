@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BellIcon, UserCircleIcon, ArrowRightOnRectangleIcon, Bars3Icon } from '@heroicons/react/24/outline';
+import { Bell, LogOut, Menu, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import ProfileAvatar from '../Common/ProfileAvatar';
@@ -54,7 +54,7 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
           onClick={onMenuClick}
           className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
         >
-          <Bars3Icon className="h-6 w-6" />
+          <Menu className="h-6 w-6" />
         </button>
         
         <div>
@@ -66,7 +66,7 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
         
         <div className="flex items-center gap-4">
           <button className="p-2 hover:bg-muted rounded-full transition-colors hidden sm:block">
-            <BellIcon className="h-6 w-6 text-muted-foreground" />
+            <Bell className="h-6 w-6 text-muted-foreground" />
           </button>
           
           <div className="flex items-center gap-3">
@@ -84,7 +84,7 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
               className="p-1 sm:p-2 hover:bg-destructive-soft hover:text-destructive rounded-full transition-colors"
               title="تسجيل الخروج"
             >
-              <ArrowRightOnRectangleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>

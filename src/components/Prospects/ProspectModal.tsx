@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from 'lucide-react';
 import { Prospect } from '../../types';
 import { format } from 'date-fns';
 import { mockSystemSettings } from '../../data/mockData';
@@ -120,7 +120,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               onClick={onClose}
               className="p-2 hover:bg-muted rounded-full"
             >
-              <XMarkIcon className="h-6 w-6" />
+              <X className="h-6 w-6" />
             </button>
           </div>
 
@@ -239,7 +239,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-full"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 

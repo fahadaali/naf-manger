@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, PencilIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { User, UserPermissions } from '../../types';
 import { db } from '../../data/database';
 
@@ -194,7 +194,7 @@ export default function UserManagement() {
           onClick={() => setShowCreateModal(true)}
           className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
         >
-          <PlusIcon className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
           إضافة مستخدم جديد
         </button>
       </div>
@@ -255,7 +255,7 @@ export default function UserManagement() {
                       className="text-primary hover:text-primary-strong p-1"
                       title="تعديل الصلاحيات"
                     >
-                      <ShieldCheckIcon className="h-4 w-4" />
+                      <ShieldCheck className="h-4 w-4" />
                     </button>
                     {user.role !== 'admin' && (
                       <button
@@ -263,7 +263,7 @@ export default function UserManagement() {
                         className="text-destructive hover:text-destructive-strong p-1"
                         title="حذف"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     )}
                   </div>

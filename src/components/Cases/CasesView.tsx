@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ChevronDown, ExternalLink, Plus, Search } from 'lucide-react';
 import { Case } from '../../types';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
@@ -159,7 +159,7 @@ export default function CasesView() {
             onClick={handleCreateCase}
             className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2"
           >
-            <PlusIcon className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
             إضافة قضية جديدة
           </button>
         )}
@@ -169,7 +169,7 @@ export default function CasesView() {
       <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث في القضايا..."
@@ -312,9 +312,7 @@ export default function CasesView() {
                           className="inline-flex items-center gap-1 text-warning-foreground bg-warning hover:bg-warning/90 px-1 sm:px-2 py-1 rounded text-xs font-medium transition-colors"
                           title="فتح في Basecamp"
                         >
-                          <svg className="w-2 h-2 sm:w-3 sm:h-3" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                          </svg>
+                          <ExternalLink className="w-2 h-2 sm:w-3 sm:h-3" aria-hidden="true" />
                           <span className="hidden sm:inline">Basecamp</span>
                         </a>
                       )}
@@ -347,9 +345,7 @@ export default function CasesView() {
               </span>
             </div>
             <div className={`transform transition-transform ${showCompletedCases ? 'rotate-180' : ''}`}>
-              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
             </div>
           </button>
           
@@ -433,9 +429,7 @@ export default function CasesView() {
                               className="inline-flex items-center gap-1 text-warning-foreground bg-warning hover:bg-warning/90 px-2 py-1 rounded text-xs font-medium transition-colors"
                               title="فتح في Basecamp"
                             >
-                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                              </svg>
+                              <ExternalLink className="w-3 h-3" aria-hidden="true" />
                               Basecamp
                             </a>
                           )}

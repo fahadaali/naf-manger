@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { FileOutput } from 'lucide-react';
 import { db } from '../../data/database';
 
 export default function DataExport() {
@@ -575,7 +575,7 @@ export default function DataExport() {
           disabled={!Object.values(selectedData).some(Boolean) || isExporting}
           className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground px-6 py-3 rounded-lg flex items-center gap-2 font-medium"
         >
-          <DocumentArrowDownIcon className="h-5 w-5" />
+          <FileOutput className="h-5 w-5" />
           {isExporting ? 'جاري التصدير...' : 'تصدير البيانات'}
         </button>
       </div>
