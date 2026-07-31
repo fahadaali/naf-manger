@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CircleCheck, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function SystemConfiguration() {
   const [settings, setSettings] = useState<SystemSettings>({
@@ -155,7 +159,7 @@ export default function SystemConfiguration() {
 
     try {
       await db.updateSettings(settings);
-      setSaveMessage('تم حفظ الإعدادات بنجاح');
+      setSaveMessage('تم الحفظ');
       
       setTimeout(() => {
         setSaveMessage('');
@@ -170,73 +174,58 @@ export default function SystemConfiguration() {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-slate-900">إعدادات النظام</h3>
+      <h3 className="text-lg font-semibold text-foreground">إعدادات النظام</h3>
       
-      {saveMessage && (
-        <div className={`p-3 rounded-lg ${
-          saveMessage.includes('نجاح') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-        }`}>
-          {saveMessage}
-        </div>
-      )}
+      {saveMessage && (() => {
+        const tone = messageTone(saveMessage);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{saveMessage}</span>
+          </Alert>
+        );
+      })()}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Object.entries(settings)
           .filter(([category, items]) => Array.isArray(items))
           .map(([category, items]) => (
-          <div key={category} className="bg-slate-50 rounded-lg p-6">
+          <div key={category} className="bg-muted rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
-              <h4 className="font-medium text-slate-900">{getCategoryLabel(category)}</h4>
-              <button
-                onClick={() => setEditingCategory(category)}
-                className="text-blue-600 hover:text-blue-800 p-1"
-                title="إضافة عنصر جديد"
-              >
-                <PlusIcon className="h-5 w-5" />
-              </button>
+              <h4 className="font-medium text-foreground">{getCategoryLabel(category)}</h4>
+              <Button onClick={() => setEditingCategory(category)} className="text-primary hover:text-primary-strong" title="إضافة عنصر جديد" variant="ghost" size="icon-sm">
+                <Plus className="h-5 w-5" />
+              </Button>
             </div>
             
             <div className="space-y-2">
               {items.map((item, index) => (
-                <div key={index} className="flex justify-between items-center bg-white rounded p-3">
-                  <span className="text-sm text-slate-900">{getItemLabel(category, item)}</span>
-                  <button
-                    onClick={() => removeItem(category, index)}
-                    className="text-red-600 hover:text-red-800 p-1"
-                    title="حذف"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
+                <div key={index} className="flex justify-between items-center bg-card rounded p-3">
+                  <span className="text-sm text-foreground">{getItemLabel(category, item)}</span>
+                  <Button onClick={() => removeItem(category, index)} className="text-destructive hover:text-destructive-strong" title="حذف" variant="ghost" size="icon-sm">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
               
               {editingCategory === category && (
-                <div className="bg-white rounded p-3 border-2 border-blue-200">
+                <div className="bg-card rounded p-3 border-2 border-primary/30">
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       type="text"
                       value={newItem}
                       onChange={(e) => setNewItem(e.target.value)}
-                      placeholder="اسم العنصر الجديد"
-                      className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="اسم العنصر الجديد" className="flex-1 text-sm"
                       onKeyPress={(e) => e.key === 'Enter' && addItem(category)}
                       autoFocus
                     />
-                    <button
-                      onClick={() => addItem(category)}
-                      className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
-                    >
+                    <Button onClick={() => addItem(category)} size="sm">
                       إضافة
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingCategory(null);
-                        setNewItem('');
-                      }}
-                      className="bg-slate-300 text-slate-700 px-3 py-2 rounded text-sm hover:bg-slate-400"
-                    >
+                    </Button>
+                    <Button onClick={() => { setEditingCategory(null); setNewItem(''); }} variant="secondary" size="sm">
                       إلغاء
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -245,28 +234,24 @@ export default function SystemConfiguration() {
         ))}
       </div>
       
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">ملاحظة مهمة</h4>
-        <p className="text-sm text-blue-800">
+      <div className="bg-primary-soft rounded-lg p-4">
+        <h4 className="font-medium text-primary-strong mb-2">ملاحظة مهمة</h4>
+        <p className="text-sm text-primary-strong">
           تغيير هذه الإعدادات سيؤثر على جميع البيانات الموجودة في النظام. تأكد من صحة التغييرات قبل الحفظ.
         </p>
       </div>
       
       <div className="flex justify-end">
-        <button 
-          onClick={handleSaveSettings}
-          disabled={isSaving}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg flex items-center gap-2"
-        >
+        <Button onClick={handleSaveSettings} disabled={isSaving}>
           {isSaving ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              جاري الحفظ...
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
+              جارٍ الحفظ...
             </>
           ) : (
             'حفظ الإعدادات'
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

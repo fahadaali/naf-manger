@@ -1,9 +1,12 @@
 import React from 'react';
-import { UserIcon, BuildingOfficeIcon, PhoneIcon, EnvelopeIcon, PencilIcon } from '@heroicons/react/24/outline';
-import { VideoCameraIcon } from '@heroicons/react/24/outline';
+import { Archive, CircleCheck, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Client } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { formatPhone } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Card } from '@/registry/naf/ui/card';
 
 interface ClientCardProps {
   client: Client;
@@ -14,13 +17,15 @@ interface ClientCardProps {
 }
 
 export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeeting, canEdit }: ClientCardProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'current': return 'bg-green-100 text-green-800';
-      case 'former': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  /* الحالة أيقونةٌ ونصٌّ ولون معاً — §٦ تُلزم بالثلاثة، وكان اللون
+     والنصّ وحدهما. المقابلات مسجَّلة في naf-icons.md. */
+  const STATUS = {
+    current: { variant: 'success' as const, Icon: CircleCheck, label: 'حالي' },
+    former: { variant: 'default' as const, Icon: Archive, label: 'سابق' }
   };
+
+  const statusOf = (status: string) =>
+    STATUS[status as keyof typeof STATUS] ?? STATUS.former;
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -41,7 +46,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+    <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <ProfileAvatar 
@@ -50,71 +55,63 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
             size="lg" 
           />
           <div>
-            <button 
-              onClick={() => onViewDetails(client)}
-              className="text-lg font-semibold text-blue-600 hover:text-blue-800 hover:underline text-right"
-            >
+            <Button onClick={() => onViewDetails(client)} className="justify-start text-start" variant="link" size="lg">
               {client.fullName}
-            </button>
-            <p className="text-sm text-slate-500">{getTypeLabel(client.clientType)}</p>
+            </Button>
+            <p className="text-sm text-muted-foreground">{getTypeLabel(client.clientType)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
-            {getStatusLabel(client.status)}
-          </span>
+          {(() => {
+            const { variant, Icon, label } = statusOf(client.status);
+            return (
+              <Badge variant={variant}>
+                <Icon aria-hidden="true" />
+                {label}
+              </Badge>
+            );
+          })()}
           {onCreateMeeting && (
-            <button
-              onClick={() => onCreateMeeting(client)}
-              className="text-blue-600 hover:text-blue-800 p-1"
-              title="إنشاء اجتماع Zoom"
-            >
-              <VideoCameraIcon className="h-4 w-4" />
-            </button>
+            <Button onClick={() => onCreateMeeting(client)} className="text-primary hover:text-primary-strong" title="إنشاء اجتماع Zoom" variant="ghost" size="icon-sm">
+              <Video className="h-4 w-4" />
+            </Button>
           )}
           {canEdit && (
-            <button
-              onClick={() => onEdit(client)}
-              className="text-slate-600 hover:text-slate-800 p-1"
-              title="تحرير"
-            >
-              <PencilIcon className="h-4 w-4" />
-            </button>
+            <Button onClick={() => onEdit(client)} title="تعديل" variant="ghost" size="icon-sm">
+              <Pencil className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </div>
 
       <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <PhoneIcon className="h-4 w-4" />
-          <span>{client.phone}</span>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Phone className="h-4 w-4" />
+          <span><bdi>{formatPhone(client.phone)}</bdi></span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <EnvelopeIcon className="h-4 w-4" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Mail className="h-4 w-4" />
           <span>{client.email}</span>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           عميل منذ: {format(client.joinDate, 'dd/MM/yyyy')}
         </p>
       </div>
 
       {client.notes && (
-        <p className="text-sm text-slate-600 mb-4 line-clamp-2">{client.notes}</p>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{client.notes}</p>
       )}
 
       <div className="flex justify-between items-center">
-        <button
-          onClick={() => onViewDetails(client)}
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-        >
+        <Button onClick={() => onViewDetails(client)} variant="link" size="sm">
           عرض التفاصيل
-        </button>
+        </Button>
         {client.clientType === 'company' && client.commercialRegister && (
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             س.ت: {client.commercialRegister}
           </span>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

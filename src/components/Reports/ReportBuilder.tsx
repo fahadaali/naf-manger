@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  XMarkIcon, 
-  PlusIcon, 
-  TrashIcon,
-  ChartBarIcon,
-  TableCellsIcon,
-  EyeIcon,
-  Cog6ToothIcon
-} from '@heroicons/react/24/outline';
+import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, X } from 'lucide-react';
 import { CustomReport, ReportField, ReportFilter, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 
 interface ReportBuilderProps {
   report?: CustomReport | null;
@@ -155,61 +152,52 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
   };
 
   const steps = [
-    { id: 1, name: 'المعلومات الأساسية', icon: Cog6ToothIcon },
-    { id: 2, name: 'اختيار البيانات', icon: TableCellsIcon },
-    { id: 3, name: 'التصفية والتجميع', icon: PlusIcon },
-    { id: 4, name: 'العرض والتصور', icon: ChartBarIcon },
-    { id: 5, name: 'المعاينة والحفظ', icon: EyeIcon }
+    { id: 1, name: 'المعلومات الأساسية', icon: Settings },
+    { id: 2, name: 'اختيار البيانات', icon: Table2 },
+    { id: 3, name: 'التصفية والتجميع', icon: Plus },
+    { id: 4, name: 'العرض والتصور', icon: ChartColumn },
+    { id: 5, name: 'المعاينة والحفظ', icon: Eye }
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-muted">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
+      <div className="bg-card border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-full"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
+            <Button onClick={onClose} className="rounded-full" variant="ghost" size="icon-md">
+              <X className="h-6 w-6" />
+            </Button>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">
-                {report ? 'تحرير التقرير' : 'إنشاء تقرير جديد'}
+              <h1 className="text-xl font-bold text-foreground">
+                {report ? 'تعديل التقرير' : 'إنشاء تقرير جديد'}
               </h1>
-              <p className="text-sm text-slate-600">الخطوة {currentStep} من {steps.length}</p>
+              <p className="text-sm text-muted-foreground">الخطوة {currentStep} من {steps.length}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={generatePreview}
-              className="px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
-            >
+            <Button onClick={generatePreview} className="border-primary text-primary" variant="outline">
               معاينة
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            </Button>
+            <Button onClick={handleSave}>
               حفظ التقرير
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="flex">
         {/* Steps Sidebar */}
-        <div className="w-64 bg-white border-r border-slate-200 p-6">
+        <div className="w-64 bg-card border-e border-border p-6">
           <nav className="space-y-2">
             {steps.map((step) => (
               <button
                 key={step.id}
                 onClick={() => setCurrentStep(step.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-right transition-colors ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start transition-colors ${
                   currentStep === step.id
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-primary-soft text-primary border border-primary/30'
+                    : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
                 <step.icon className="h-5 w-5" />
@@ -223,49 +211,46 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
         <div className="flex-1 p-6">
           {currentStep === 1 && (
             <div className="max-w-2xl space-y-6">
-              <h2 className="text-lg font-semibold text-slate-900">المعلومات الأساسية</h2>
+              <h2 className="text-lg font-semibold text-foreground">المعلومات الأساسية</h2>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   اسم التقرير *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={reportData.name || ''}
                   onChange={(e) => setReportData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="مثال: تقرير الأداء الشهري"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   الوصف
                 </label>
-                <textarea
+                <Textarea
                   value={reportData.description || ''}
                   onChange={(e) => setReportData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="وصف مختصر للتقرير وهدفه..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   مصدر البيانات *
                 </label>
-                <select
+                <Select
                   value={reportData.dataSource || ''}
                   onChange={(e) => handleDataSourceChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="clients">العملاء</option>
                   <option value="prospects">العملاء المحتملين</option>
                   <option value="cases">القضايا</option>
                   <option value="users">المستخدمين</option>
                   <option value="activities">الأنشطة</option>
-                </select>
+                </Select>
               </div>
 
               <div className="flex items-center gap-6">
@@ -274,9 +259,9 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                     type="checkbox"
                     checked={reportData.isTemplate || false}
                     onChange={(e) => setReportData(prev => ({ ...prev, isTemplate: e.target.checked }))}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-border text-primary focus-visible:ring-ring"
                   />
-                  <span className="text-sm text-slate-700">حفظ كقالب</span>
+                  <span className="text-sm text-foreground">حفظ كقالب</span>
                 </label>
                 
                 <label className="flex items-center gap-2">
@@ -284,9 +269,9 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                     type="checkbox"
                     checked={reportData.isPublic || false}
                     onChange={(e) => setReportData(prev => ({ ...prev, isPublic: e.target.checked }))}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-border text-primary focus-visible:ring-ring"
                   />
-                  <span className="text-sm text-slate-700">تقرير عام (مرئي لجميع المستخدمين)</span>
+                  <span className="text-sm text-foreground">تقرير عام (مرئي لجميع المستخدمين)</span>
                 </label>
               </div>
             </div>
@@ -294,26 +279,26 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
 
           {currentStep === 2 && (
             <div className="max-w-4xl space-y-6">
-              <h2 className="text-lg font-semibold text-slate-900">اختيار الحقول</h2>
+              <h2 className="text-lg font-semibold text-foreground">اختيار الحقول</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium text-slate-900 mb-3">الحقول المتاحة</h3>
+                  <h3 className="font-medium text-foreground mb-3">الحقول المتاحة</h3>
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {availableFields.map((field) => (
                       <label
                         key={field.id}
-                        className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
+                        className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-muted cursor-pointer"
                       >
                         <input
                           type="checkbox"
                           checked={reportData.fields?.includes(field.id) || false}
                           onChange={() => handleFieldToggle(field.id)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-border text-primary focus-visible:ring-ring"
                         />
                         <div>
-                          <div className="font-medium text-slate-900">{field.name}</div>
-                          <div className="text-xs text-slate-500">
+                          <div className="font-medium text-foreground">{field.name}</div>
+                          <div className="text-xs text-muted-foreground">
                             {field.type} {field.aggregatable && '• قابل للتجميع'}
                           </div>
                         </div>
@@ -323,27 +308,24 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-slate-900 mb-3">الحقول المختارة</h3>
+                  <h3 className="font-medium text-foreground mb-3">الحقول المختارة</h3>
                   <div className="space-y-2">
                     {reportData.fields?.map((fieldId) => {
                       const field = availableFields.find(f => f.id === fieldId);
                       return field ? (
                         <div
                           key={fieldId}
-                          className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-primary-soft border border-primary/30 rounded-lg"
                         >
-                          <span className="font-medium text-blue-900">{field.name}</span>
-                          <button
-                            onClick={() => handleFieldToggle(fieldId)}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
+                          <span className="font-medium text-primary-strong">{field.name}</span>
+                          <Button onClick={() => handleFieldToggle(fieldId)} variant="link">
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       ) : null;
                     })}
                     {!reportData.fields?.length && (
-                      <p className="text-slate-500 text-center py-8">لم يتم اختيار أي حقول بعد</p>
+                      <p className="text-muted-foreground text-center py-8">لم يتم اختيار أي حقول بعد</p>
                     )}
                   </div>
                 </div>
@@ -353,76 +335,66 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
 
           {currentStep === 3 && (
             <div className="max-w-4xl space-y-6">
-              <h2 className="text-lg font-semibold text-slate-900">التصفية والتجميع</h2>
+              <h2 className="text-lg font-semibold text-foreground">التصفية والتجميع</h2>
               
               {/* Filters Section */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-slate-900">فلاتر البيانات</h3>
-                  <button
-                    onClick={handleAddFilter}
-                    className="flex items-center gap-2 px-3 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
-                  >
-                    <PlusIcon className="h-4 w-4" />
+                  <h3 className="font-medium text-foreground">فلاتر البيانات</h3>
+                  <Button onClick={handleAddFilter} className="border-primary text-primary" variant="outline" size="sm">
+                    <Plus className="h-4 w-4" />
                     إضافة فلتر
-                  </button>
+                  </Button>
                 </div>
                 
                 <div className="space-y-3">
                   {reportData.filters?.map((filter, index) => (
-                    <div key={filter.id} className="flex items-center gap-3 p-4 border border-slate-200 rounded-lg">
+                    <div key={filter.id} className="flex items-center gap-3 p-4 border border-border rounded-lg">
                       {index > 0 && (
-                        <select
+                        <Select
                           value={filter.logicalOperator || 'AND'}
-                          onChange={(e) => handleUpdateFilter(filter.id, { logicalOperator: e.target.value as 'AND' | 'OR' })}
-                          className="px-2 py-1 border border-slate-300 rounded text-sm"
+                          onChange={(e) => handleUpdateFilter(filter.id, { logicalOperator: e.target.value as 'AND' | 'OR' })} className="text-sm"
                         >
                           <option value="AND">و</option>
                           <option value="OR">أو</option>
-                        </select>
+                        </Select>
                       )}
                       
-                      <select
+                      <Select
                         value={filter.fieldId}
                         onChange={(e) => handleUpdateFilter(filter.id, { fieldId: e.target.value })}
-                        className="px-3 py-2 border border-slate-300 rounded-lg"
                       >
                         {availableFields.map(field => (
                           <option key={field.id} value={field.id}>{field.name}</option>
                         ))}
-                      </select>
+                      </Select>
                       
-                      <select
+                      <Select
                         value={filter.operator}
                         onChange={(e) => handleUpdateFilter(filter.id, { operator: e.target.value as any })}
-                        className="px-3 py-2 border border-slate-300 rounded-lg"
                       >
                         <option value="equals">يساوي</option>
                         <option value="not_equals">لا يساوي</option>
                         <option value="contains">يحتوي على</option>
                         <option value="greater_than">أكبر من</option>
                         <option value="less_than">أصغر من</option>
-                      </select>
+                      </Select>
                       
-                      <input
+                      <Input
                         type="text"
                         value={filter.value}
-                        onChange={(e) => handleUpdateFilter(filter.id, { value: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg"
+                        onChange={(e) => handleUpdateFilter(filter.id, { value: e.target.value })} className="flex-1"
                         placeholder="القيمة"
                       />
                       
-                      <button
-                        onClick={() => handleRemoveFilter(filter.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      <Button onClick={() => handleRemoveFilter(filter.id)} className="text-destructive" variant="ghost" size="icon-md">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                   
                   {!reportData.filters?.length && (
-                    <p className="text-slate-500 text-center py-8">لا توجد فلاتر مضافة</p>
+                    <p className="text-muted-foreground text-center py-8">لم تُضِف أي مرشّح بعد. أضف أول مرشّح.</p>
                   )}
                 </div>
               </div>
@@ -431,28 +403,28 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
 
           {currentStep === 4 && (
             <div className="max-w-4xl space-y-6">
-              <h2 className="text-lg font-semibold text-slate-900">نوع العرض والتصور</h2>
+              <h2 className="text-lg font-semibold text-foreground">نوع العرض والتصور</h2>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">
+                <label className="block text-sm font-medium text-foreground mb-3">
                   نوع التصور
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
-                    { type: 'table', name: 'جدول', icon: TableCellsIcon },
-                    { type: 'bar', name: 'أعمدة', icon: ChartBarIcon },
-                    { type: 'line', name: 'خطي', icon: ChartBarIcon },
-                    { type: 'pie', name: 'دائري', icon: ChartBarIcon },
-                    { type: 'doughnut', name: 'حلقي', icon: ChartBarIcon },
-                    { type: 'area', name: 'منطقة', icon: ChartBarIcon }
+                    { type: 'table', name: 'جدول', icon: Table2 },
+                    { type: 'bar', name: 'أعمدة', icon: ChartColumn },
+                    { type: 'line', name: 'خطي', icon: ChartColumn },
+                    { type: 'pie', name: 'دائري', icon: ChartColumn },
+                    { type: 'doughnut', name: 'حلقي', icon: ChartColumn },
+                    { type: 'area', name: 'منطقة', icon: ChartColumn }
                   ].map((viz) => (
                     <button
                       key={viz.type}
                       onClick={() => handleVisualizationChange({ type: viz.type as any })}
                       className={`p-4 border rounded-lg text-center transition-colors ${
                         reportData.visualization?.type === viz.type
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-primary bg-primary-soft text-primary'
+                          : 'border-border hover:border-ring'
                       }`}
                     >
                       <viz.icon className="h-8 w-8 mx-auto mb-2" />
@@ -466,46 +438,46 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
 
           {currentStep === 5 && (
             <div className="max-w-4xl space-y-6">
-              <h2 className="text-lg font-semibold text-slate-900">المعاينة والحفظ</h2>
+              <h2 className="text-lg font-semibold text-foreground">المعاينة والحفظ</h2>
               
-              <div className="bg-white border border-slate-200 rounded-lg p-6">
-                <h3 className="font-medium text-slate-900 mb-4">معاينة التقرير</h3>
+              <div className="bg-card border border-border rounded-lg p-6">
+                <h3 className="font-medium text-foreground mb-4">معاينة التقرير</h3>
                 
                 {previewData.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-200">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
                           {Object.keys(previewData[0]).map(key => (
-                            <th key={key} className="text-right py-2 px-4 font-medium text-slate-900">
+                            <TableHead key={key} className="text-foreground">
                               {key}
-                            </th>
+                            </TableHead>
                           ))}
-                        </tr>
-                      </thead>
-                      <tbody>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {previewData.map((row, index) => (
-                          <tr key={index} className="border-b border-slate-100">
+                          <TableRow key={index}>
                             {Object.values(row).map((value, cellIndex) => (
-                              <td key={cellIndex} className="py-2 px-4 text-slate-700">
+                              <TableCell key={cellIndex} className="text-foreground">
                                 {String(value)}
-                              </td>
+                              </TableCell>
                             ))}
-                          </tr>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-slate-500">اضغط على "معاينة" لعرض البيانات</p>
+                    <p className="text-muted-foreground">اضغط على "معاينة" لعرض البيانات</p>
                   </div>
                 )}
               </div>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">ملخص التقرير</h4>
-                <div className="text-sm text-blue-800 space-y-1">
+              <div className="bg-primary-soft border border-primary/30 rounded-lg p-4">
+                <h4 className="font-medium text-primary-strong mb-2">ملخص التقرير</h4>
+                <div className="text-sm text-primary-strong space-y-1">
                   <p>• الاسم: {reportData.name}</p>
                   <p>• مصدر البيانات: {reportData.dataSource}</p>
                   <p>• عدد الحقول: {reportData.fields?.length || 0}</p>
@@ -517,22 +489,14 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
           )}
 
           {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-slate-200">
-            <button
-              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-              disabled={currentStep === 1}
-              className="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+          <div className="flex justify-between mt-8 pt-6 border-t border-border">
+            <Button onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1} variant="outline">
               السابق
-            </button>
+            </Button>
             
-            <button
-              onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
-              disabled={currentStep === steps.length}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))} disabled={currentStep === steps.length}>
               التالي
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -1,46 +1,23 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ============================================================
+   نقطة الدخول الوحيدة للأنماط في naf-manger.
 
-:root {
-  --color-primary: #1e40af;
-  --color-secondary: #3b82f6;
-  --color-accent: #f59e0b;
-}
+   لا يُعرَّف هنا رمز ولا لون ولا مقاس. الملفّ يستورد السجلّ ولا يزيد
+   عليه — وكل ما كان هنا من رموز محلّية (‎--color-primary‎ وأخواتها
+   وأصنافها التسعة) سقط مع الربط: كان مصدر حقيقة ثانياً داخل المستودع،
+   وكان يعيد تعريف ‎.bg-primary‎ و‎.text-primary‎ فوق أصناف Tailwind نفسها.
 
-/* تطبيق الألوان المخصصة */
-.bg-primary {
-  background-color: var(--color-primary);
-}
+   والترتيب مقصود:
+   ١. الثيم أولاً — يستورد Tailwind ويعرّف الرموز وسلّم المقاسات
+      وارتفاعات الأسطر والوضعين، فما بعده يقرأ منه.
+   ٢. الخطّ بعده — يسجّل IBM Plex Sans Arabic بأوزانه الأربعة.
+   ٣. العملة أخيراً — تحتاج ‎--font-sans‎ من الثيم لترتيب قائمة الخطوط.
+   ============================================================ */
 
-.bg-secondary {
-  background-color: var(--color-secondary);
-}
+@import "./registry/naf/naf-theme.css";
+@import "./registry/naf/font/naf-font.css";
+@import "./registry/naf/currency/naf-currency.css";
 
-.bg-accent {
-  background-color: var(--color-accent);
-}
-
-.text-primary {
-  color: var(--color-primary);
-}
-
-.text-secondary {
-  color: var(--color-secondary);
-}
-
-.text-accent {
-  color: var(--color-accent);
-}
-
-.border-primary {
-  border-color: var(--color-primary);
-}
-
-.border-secondary {
-  border-color: var(--color-secondary);
-}
-
-.border-accent {
-  border-color: var(--color-accent);
-}
+/* مسارات المسح لـ Tailwind v4 — الاكتشاف التلقائي ينطلق من مجلّد ملفّ
+   الأنماط، وترويسة هذه المنصة خارج ‎src‎ فتُصرَّح صراحةً. */
+@source "../index.html";
+@source "./";

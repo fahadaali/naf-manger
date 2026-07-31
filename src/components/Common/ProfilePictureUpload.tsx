@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { PhotoIcon, UserIcon } from '@heroicons/react/24/outline';
+import { Image, User } from 'lucide-react';
+import { Input } from '@/registry/naf/ui/input';
 
 interface ProfilePictureUploadProps {
   currentPicture?: string;
@@ -79,7 +80,7 @@ export default function ProfilePictureUpload({
     <div className={`flex flex-col items-center gap-3 ${className}`}>
       <div className="relative group">
         <div 
-          className={`${sizeClasses[size]} rounded-full border-2 border-slate-300 overflow-hidden bg-slate-100 cursor-pointer hover:border-blue-400 transition-colors`}
+          className={`${sizeClasses[size]} rounded-full border-2 border-border overflow-hidden bg-muted cursor-pointer hover:border-ring transition-colors`}
           onClick={handleClick}
         >
           {currentPicture ? (
@@ -90,31 +91,30 @@ export default function ProfilePictureUpload({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <UserIcon className={`${iconSizes[size]} text-slate-400`} />
+              <User className={`${iconSizes[size]} text-muted-foreground`} />
             </div>
           )}
           
           {/* Overlay on hover */}
-          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <PhotoIcon className="h-6 w-6 text-white" />
+          <div className="absolute inset-0 bg-overlay opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <Image className="h-6 w-6 text-surface-deep-foreground" />
           </div>
         </div>
 
         {/* Loading indicator */}
         {isUploading && (
-          <div className="absolute inset-0 bg-white bg-opacity-75 rounded-full flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <div className="absolute inset-0 bg-card bg-opacity-75 rounded-full flex items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
         )}
       </div>
 
       {/* File input */}
-      <input
+      <Input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
+        onChange={handleFileSelect} className="hidden"
       />
 
       {/* Action buttons */}
@@ -122,7 +122,7 @@ export default function ProfilePictureUpload({
         <button
           onClick={handleClick}
           disabled={isUploading}
-          className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-slate-300 transition-colors"
+          className="text-xs px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted transition-colors"
         >
           {currentPicture ? 'تغيير الصورة' : 'إضافة صورة'}
         </button>
@@ -131,7 +131,7 @@ export default function ProfilePictureUpload({
           <button
             onClick={handleRemovePicture}
             disabled={isUploading}
-            className="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-slate-300 transition-colors"
+            className="text-xs px-3 py-1 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 disabled:bg-muted transition-colors"
           >
             حذف الصورة
           </button>
@@ -140,11 +140,11 @@ export default function ProfilePictureUpload({
 
       {/* Error message */}
       {error && (
-        <p className="text-red-600 text-xs text-center">{error}</p>
+        <p className="text-destructive text-xs text-center">{error}</p>
       )}
 
       {/* Help text */}
-      <p className="text-xs text-slate-500 text-center">
+      <p className="text-xs text-muted-foreground text-center">
         PNG, JPG أو GIF (أقل من 2MB)
       </p>
     </div>

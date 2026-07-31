@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Scale, EyeIcon, SlashIcon as EyeSlashIcon } from 'lucide-react';
+import { Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { NafLogo } from '@/registry/naf/brand/naf-logo';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
@@ -49,8 +53,8 @@ export default function LoginPage() {
 
   return (
     <div className="p-0" dir="rtl">
-      <div className="bg-white w-full overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white text-center">
+      <div className="bg-card w-full overflow-hidden">
+        <div className="bg-surface-deep text-surface-deep-foreground p-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             {settings?.companyLogo ? (
               <img 
@@ -59,76 +63,67 @@ export default function LoginPage() {
                 className="h-12 w-12 object-contain"
               />
             ) : (
-              <Scale className="h-12 w-12 text-amber-300" />
+              <NafLogo variant="mark" className="h-12" />
             )}
             <div>
               <h1 className="text-3xl font-bold">{settings?.companyName || 'NAF Law'}</h1>
-              <p className="text-blue-100">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
+              <p className="text-surface-deep-muted">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
             </div>
           </div>
         </div>
 
         <div className="p-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">تسجيل الدخول</h2>
-            <p className="text-slate-600">أدخل بيانات الدخول للوصول إلى النظام</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">تسجيل الدخول</h2>
+            <p className="text-muted-foreground">أدخل بيانات الدخول للوصول إلى النظام</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 البريد الإلكتروني
               </label>
-              <input
+              <Input
                 type="email"
                 required
                 value={credentials.email}
                 onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="admin@naflaw.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 كلمة المرور
               </label>
               <div className="relative">
-                <input
+                <Input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={credentials.password}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pr-12"
+                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))} className="pe-12"
                   placeholder="••••••••"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
+                <Button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute end-3 top-1/2 -translate-y-1/2" variant="ghost" size="icon-sm">
                   {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5" />
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
                   ) : (
-                    <EyeIcon className="h-5 w-5" />
+                    <Eye className="h-5 w-5" aria-hidden="true" />
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-red-600 text-sm text-center">{error}</p>
-              </div>
+              <Alert variant="destructive">
+                <TriangleAlert aria-hidden="true" />
+                <span className="text-sm">{error}</span>
+              </Alert>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-            >
+            <Button type="submit" disabled={loading} className="w-full" size="lg">
               {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
-            </button>
+            </Button>
           </form>
 
         </div>

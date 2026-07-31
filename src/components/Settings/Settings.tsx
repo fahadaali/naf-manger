@@ -1,19 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  UserIcon, 
-  CogIcon, 
-  ShieldCheckIcon, 
-  DocumentTextIcon,
-  BellIcon,
-  GlobeAltIcon,
-  UsersIcon,
-  DocumentArrowDownIcon,
-  DocumentArrowUpIcon,
-  ComputerDesktopIcon,
-  EnvelopeIcon,
-  ChevronDownIcon,
-  CheckIcon
-} from '@heroicons/react/24/outline';
+import { Bell, Check, ChevronDown, CircleCheck, FileOutput, FileText, Globe, Import, Mail, Settings, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
@@ -23,6 +9,11 @@ import GeneralSettings from './GeneralSettings';
 import DashboardDisplay from './DashboardDisplay';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import SupabaseMigration from './SupabaseMigration';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -52,44 +43,44 @@ export default function Settings() {
     {
       id: 'personal',
       name: 'الإعدادات الشخصية',
-      icon: UserIcon,
+      icon: User,
       color: 'blue',
       tabs: [
-        { id: 'profile', label: 'الملف الشخصي', icon: UserIcon, description: 'تحديث معلوماتك الشخصية والصورة', permission: null },
-        { id: 'security', label: 'الأمان', icon: ShieldCheckIcon, description: 'تغيير كلمة المرور والمصادقة الثنائية', permission: null },
-        { id: 'notifications', label: 'الإشعارات', icon: BellIcon, description: 'إدارة تفضيلات الإشعارات والتنبيهات', permission: null }
+        { id: 'profile', label: 'الملف الشخصي', icon: User, description: 'تحديث معلوماتك الشخصية والصورة', permission: null },
+        { id: 'security', label: 'الأمان', icon: ShieldCheck, description: 'تغيير كلمة المرور والمصادقة الثنائية', permission: null },
+        { id: 'notifications', label: 'الإشعارات', icon: Bell, description: 'إدارة تفضيلات الإشعارات والتنبيهات', permission: null }
       ]
     },
     {
       id: 'system',
       name: 'إعدادات النظام',
-      icon: CogIcon,
+      icon: Settings,
       color: 'purple',
       tabs: [
-        { id: 'general', label: 'الإعدادات العامة', icon: GlobeAltIcon, description: 'معلومات الشركة والألوان والشعار', permission: 'settings.update' },
-        { id: 'system', label: 'تكوين النظام', icon: CogIcon, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
-        { id: 'email', label: 'البريد الإلكتروني', icon: EnvelopeIcon, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' },
-        { id: 'supabase', label: 'قاعدة البيانات المركزية', icon: DocumentTextIcon, description: 'إعداد وترحيل البيانات إلى Supabase', permission: 'settings.update' }
+        { id: 'general', label: 'الإعدادات العامة', icon: Globe, description: 'معلومات الشركة والألوان والشعار', permission: 'settings.update' },
+        { id: 'system', label: 'تكوين النظام', icon: Settings, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
+        { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' },
+        { id: 'supabase', label: 'قاعدة البيانات المركزية', icon: FileText, description: 'إعداد وترحيل البيانات إلى Supabase', permission: 'settings.update' }
       ]
     },
     {
       id: 'management',
       name: 'إدارة المستخدمين والبيانات',
-      icon: UsersIcon,
+      icon: Users,
       color: 'green',
       tabs: [
-        { id: 'users', label: 'إدارة المستخدمين', icon: UsersIcon, description: 'إضافة وتعديل المستخدمين والصلاحيات', permission: 'users.read' },
-        { id: 'export', label: 'تصدير البيانات', icon: DocumentArrowDownIcon, description: 'تصدير بيانات العملاء والقضايا', permission: 'settings.read' },
-        { id: 'import', label: 'استيراد البيانات', icon: DocumentArrowUpIcon, description: 'استيراد البيانات من ملفات Excel', permission: 'settings.update' }
+        { id: 'users', label: 'إدارة المستخدمين', icon: Users, description: 'إضافة وتعديل المستخدمين والصلاحيات', permission: 'users.read' },
+        { id: 'export', label: 'تصدير البيانات', icon: FileOutput, description: 'تصدير بيانات العملاء والقضايا', permission: 'settings.read' },
+        { id: 'import', label: 'استيراد البيانات', icon: Import, description: 'استيراد البيانات من ملفات Excel', permission: 'settings.update' }
       ]
     },
     {
       id: 'display',
       name: 'العرض والمراقبة',
-      icon: ComputerDesktopIcon,
+      icon: Tv,
       color: 'amber',
       tabs: [
-        { id: 'dashboard-display', label: 'عرض لوحة التحكم', icon: ComputerDesktopIcon, description: 'إعداد عرض البيانات على الشاشات', permission: 'admin.only' }
+        { id: 'dashboard-display', label: 'عرض لوحة التحكم', icon: Tv, description: 'إعداد عرض البيانات على الشاشات', permission: 'admin.only' }
       ]
     }
   ];
@@ -108,31 +99,41 @@ export default function Settings() {
 
   const visibleCategories = getVisibleCategories();
 
-  const getColorClasses = (color: string, variant: 'bg' | 'text' | 'border' | 'hover') => {
+  /* لكل رمز مقدّمتُه المسجَّلة، ولذلك أُضيف variant الرابع `fg`: الأبيض
+     الحرفيّ الذي كان مكتوباً هنا لا ينقلب في الوضع الداكن، ورموز
+     ‎--*-foreground‎ تنقلب مع خلفياتها بتعريف واحد. */
+  const getColorClasses = (
+    color: string,
+    variant: 'bg' | 'fg' | 'text' | 'border' | 'hover'
+  ) => {
     const colors = {
       blue: {
-        bg: 'bg-blue-500',
-        text: 'text-blue-600',
-        border: 'border-blue-200',
-        hover: 'hover:bg-blue-50'
+        bg: 'bg-primary',
+        fg: 'text-primary-foreground',
+        text: 'text-primary',
+        border: 'border-primary/30',
+        hover: 'hover:bg-primary-soft'
       },
       purple: {
-        bg: 'bg-purple-500',
-        text: 'text-purple-600',
-        border: 'border-purple-200',
-        hover: 'hover:bg-purple-50'
+        bg: 'bg-info',
+        fg: 'text-info-foreground',
+        text: 'text-info',
+        border: 'border-info/30',
+        hover: 'hover:bg-info-soft'
       },
       green: {
-        bg: 'bg-green-500',
-        text: 'text-green-600',
-        border: 'border-green-200',
-        hover: 'hover:bg-green-50'
+        bg: 'bg-success',
+        fg: 'text-success-foreground',
+        text: 'text-success',
+        border: 'border-success/30',
+        hover: 'hover:bg-success-soft'
       },
       amber: {
-        bg: 'bg-amber-500',
-        text: 'text-amber-600',
-        border: 'border-amber-200',
-        hover: 'hover:bg-amber-50'
+        bg: 'bg-warning',
+        fg: 'text-warning-foreground',
+        text: 'text-warning',
+        border: 'border-warning/30',
+        hover: 'hover:bg-warning-soft'
       }
     };
     return colors[color as keyof typeof colors]?.[variant] || colors.blue[variant];
@@ -169,7 +170,7 @@ export default function Settings() {
         profilePicture: profileData.profilePicture || undefined
       });
       
-      setSaveMessage('تم حفظ التغييرات بنجاح');
+      setSaveMessage('تم الحفظ');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
       setSaveMessage('حدث خطأ أثناء حفظ التغييرات');
@@ -195,7 +196,7 @@ export default function Settings() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setSaveMessage('تم تغيير كلمة المرور بنجاح');
+      setSaveMessage('تم تغيير كلمة المرور');
       setSecurityData({
         currentPassword: '',
         newPassword: '',
@@ -216,8 +217,8 @@ export default function Settings() {
         return (
           <div className="space-y-8">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">الملف الشخصي</h3>
-              <p className="text-slate-600">إدارة معلوماتك الشخصية وصورتك الشخصية</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">الملف الشخصي</h3>
+              <p className="text-muted-foreground">إدارة معلوماتك الشخصية وصورتك الشخصية</p>
             </div>
             
             <div className="flex justify-center">
@@ -231,84 +232,69 @@ export default function Settings() {
             <div className="max-w-2xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">الاسم الكامل</label>
-                  <input
+                  <label className="block text-sm font-semibold text-foreground">الاسم الكامل</label>
+                  <Input
                     type="text"
                     value={profileData.name}
                     onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">البريد الإلكتروني</label>
-                  <input
+                  <label className="block text-sm font-semibold text-foreground">البريد الإلكتروني</label>
+                  <Input
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">رقم الجوال</label>
-                  <input
+                  <label className="block text-sm font-semibold text-foreground">رقم الجوال</label>
+                  <Input
                     type="tel"
                     value={profileData.phone}
                     onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">المسمى الوظيفي</label>
-                  <input
+                  <label className="block text-sm font-semibold text-foreground">المسمى الوظيفي</label>
+                  <Input
                     type="text"
                     value={profileData.jobTitle}
-                    disabled
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-slate-50 text-slate-500"
+                    disabled className="bg-muted text-muted-foreground"
                   />
                 </div>
               </div>
             </div>
             
-            {saveMessage && (
-              <div className={`max-w-2xl mx-auto p-4 rounded-xl flex items-center gap-3 ${
-                saveMessage.includes('نجاح') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
-              }`}>
-                {saveMessage.includes('نجاح') && <CheckIcon className="h-5 w-5" />}
-                {saveMessage}
-              </div>
-            )}
+            {saveMessage && (() => {
+              const tone = messageTone(saveMessage);
+              const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+              return (
+                <Alert variant={tone} className="max-w-2xl mx-auto">
+                  <Icon aria-hidden="true" />
+                  <span>{saveMessage}</span>
+                </Alert>
+              );
+            })()}
 
-            <div className="max-w-2xl mx-auto border-t border-slate-200 pt-6">
+            <div className="max-w-2xl mx-auto border-t border-border pt-6">
               <div className="flex justify-end gap-4">
-                <button 
-                  onClick={() => setProfileData({
-                    name: user?.name || '',
-                    email: user?.email || '',
-                    phone: '+966501234567',
-                    jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري',
-                    profilePicture: user?.profilePicture || ''
-                  })}
-                  className="px-6 py-3 text-slate-600 hover:text-slate-800 font-medium transition-colors"
-                >
+                <Button onClick={() => setProfileData({ name: user?.name || '', email: user?.email || '', phone: '+966501234567', jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري', profilePicture: user?.profilePicture || '' })} variant="ghost" size="lg">
                   إلغاء
-                </button>
-                <button 
-                  onClick={handleProfileSave}
-                  disabled={isSaving}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-medium transition-colors flex items-center gap-2"
-                >
+                </Button>
+                <Button onClick={handleProfileSave} disabled={isSaving} size="lg">
                   {isSaving ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      جاري الحفظ...
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
+                      جارٍ الحفظ...
                     </>
                   ) : (
                     <>
-                      <CheckIcon className="h-4 w-4" />
+                      <Check className="h-4 w-4" />
                       حفظ التغييرات
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -333,55 +319,53 @@ export default function Settings() {
         return (
           <div className="space-y-8">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">استيراد البيانات</h3>
-              <p className="text-slate-600">رفع ملفات Excel لاستيراد بيانات العملاء والقضايا</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">استيراد البيانات</h3>
+              <p className="text-muted-foreground">رفع ملفات Excel لاستيراد بيانات العملاء والقضايا</p>
             </div>
             
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-8 border border-blue-200">
+                <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
                   <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <UsersIcon className="h-8 w-8 text-white" />
+                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="h-8 w-8 text-primary-foreground" />
                     </div>
-                    <h4 className="text-xl font-bold text-blue-900 mb-2">استيراد العملاء</h4>
-                    <p className="text-blue-700">رفع ملف Excel يحتوي على بيانات العملاء</p>
+                    <h4 className="text-xl font-bold text-primary-strong mb-2">استيراد العملاء</h4>
+                    <p className="text-primary">رفع ملف Excel يحتوي على بيانات العملاء</p>
                   </div>
                   <div className="space-y-4">
-                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" size="lg">
                       تنزيل نموذج Excel
-                    </button>
-                    <input
+                    </Button>
+                    <Input
                       type="file"
-                      accept=".xlsx,.xls"
-                      className="w-full px-4 py-3 border border-blue-300 rounded-xl bg-white"
+                      accept=".xlsx,.xls" className="border-primary/30"
                     />
-                    <button className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" variant="success" size="lg">
                       رفع الملف
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 border border-green-200">
+                <div className="bg-success-soft rounded-2xl p-8 border border-success/30">
                   <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <DocumentTextIcon className="h-8 w-8 text-white" />
+                    <div className="w-16 h-16 bg-success rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="h-8 w-8 text-success-foreground" />
                     </div>
-                    <h4 className="text-xl font-bold text-green-900 mb-2">استيراد القضايا</h4>
-                    <p className="text-green-700">رفع ملف Excel يحتوي على بيانات القضايا</p>
+                    <h4 className="text-xl font-bold text-success-strong mb-2">استيراد القضايا</h4>
+                    <p className="text-success">رفع ملف Excel يحتوي على بيانات القضايا</p>
                   </div>
                   <div className="space-y-4">
-                    <button className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" variant="success" size="lg">
                       تنزيل نموذج Excel
-                    </button>
-                    <input
+                    </Button>
+                    <Input
                       type="file"
-                      accept=".xlsx,.xls"
-                      className="w-full px-4 py-3 border border-green-300 rounded-xl bg-white"
+                      accept=".xlsx,.xls" className="border-success/30"
                     />
-                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+                    <Button className="w-full" size="lg">
                       رفع الملف
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -393,78 +377,73 @@ export default function Settings() {
         return (
           <div className="space-y-8">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">إعدادات الأمان</h3>
-              <p className="text-slate-600">إدارة كلمة المرور والمصادقة الثنائية</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">إعدادات الأمان</h3>
+              <p className="text-muted-foreground">إدارة كلمة المرور والمصادقة الثنائية</p>
             </div>
             
             <div className="max-w-2xl mx-auto space-y-8">
-              <div className="bg-slate-50 rounded-2xl p-8 border border-slate-200">
-                <h4 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
-                  <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
+              <div className="bg-muted rounded-2xl p-8 border border-border">
+                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
+                  <ShieldCheck className="h-6 w-6 text-primary" />
                   تغيير كلمة المرور
                 </h4>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">كلمة المرور الحالية</label>
-                    <input
+                    <label className="block text-sm font-semibold text-foreground mb-2">كلمة المرور الحالية</label>
+                    <Input
                       type="password"
                       value={securityData.currentPassword}
                       onChange={(e) => setSecurityData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="أدخل كلمة المرور الحالية"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">كلمة المرور الجديدة</label>
-                    <input
+                    <label className="block text-sm font-semibold text-foreground mb-2">كلمة المرور الجديدة</label>
+                    <Input
                       type="password"
                       value={securityData.newPassword}
                       onChange={(e) => setSecurityData(prev => ({ ...prev, newPassword: e.target.value }))}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="أدخل كلمة المرور الجديدة"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">تأكيد كلمة المرور الجديدة</label>
-                    <input
+                    <label className="block text-sm font-semibold text-foreground mb-2">تأكيد كلمة المرور الجديدة</label>
+                    <Input
                       type="password"
                       value={securityData.confirmPassword}
                       onChange={(e) => setSecurityData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="أعد إدخال كلمة المرور الجديدة"
                     />
                   </div>
-                  <button
-                    onClick={handleSecuritySave}
-                    disabled={isSaving || !securityData.currentPassword || !securityData.newPassword}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-medium transition-colors"
-                  >
-                    {isSaving ? 'جاري الحفظ...' : 'تغيير كلمة المرور'}
-                  </button>
+                  <Button onClick={handleSecuritySave} disabled={isSaving || !securityData.currentPassword || !securityData.newPassword} className="w-full" size="lg">
+                    {isSaving ? 'جارٍ الحفظ...' : 'تغيير كلمة المرور'}
+                  </Button>
                 </div>
               </div>
               
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 border border-purple-200">
+              <div className="bg-info-soft rounded-2xl p-8 border border-info/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-lg font-bold text-slate-900 mb-2">المصادقة الثنائية</h4>
-                    <p className="text-slate-600">تفعيل المصادقة الثنائية لحماية إضافية لحسابك</p>
+                    <h4 className="text-lg font-bold text-foreground mb-2">المصادقة الثنائية</h4>
+                    <p className="text-muted-foreground">تفعيل المصادقة الثنائية لحماية إضافية لحسابك</p>
                   </div>
-                  <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+                  <Button className="bg-info hover:bg-info/90 text-info-foreground" size="lg">
                     تفعيل
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
             
-            {saveMessage && (
-              <div className={`max-w-2xl mx-auto p-4 rounded-xl flex items-center gap-3 ${
-                saveMessage.includes('نجاح') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
-              }`}>
-                {saveMessage.includes('نجاح') && <CheckIcon className="h-5 w-5" />}
-                {saveMessage}
-              </div>
-            )}
+            {saveMessage && (() => {
+              const tone = messageTone(saveMessage);
+              const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+              return (
+                <Alert variant={tone} className="max-w-2xl mx-auto">
+                  <Icon aria-hidden="true" />
+                  <span>{saveMessage}</span>
+                </Alert>
+              );
+            })()}
           </div>
         );
       
@@ -472,15 +451,15 @@ export default function Settings() {
         return (
           <div className="space-y-8">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">إعدادات الإشعارات</h3>
-              <p className="text-slate-600">تخصيص تفضيلات الإشعارات والتنبيهات</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">إعدادات الإشعارات</h3>
+              <p className="text-muted-foreground">تخصيص تفضيلات الإشعارات والتنبيهات</p>
             </div>
             
             <div className="max-w-4xl mx-auto space-y-8">
               {/* Email Notifications */}
-              <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
-                <h4 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
-                  <EnvelopeIcon className="h-6 w-6 text-blue-600" />
+              <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
+                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
+                  <Mail className="h-6 w-6 text-primary" />
                   إشعارات البريد الإلكتروني
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -492,15 +471,15 @@ export default function Settings() {
                     { key: 'followUps', label: 'مواعيد المتابعة', desc: 'تذكير بمواعيد متابعة العملاء المحتملين' },
                     { key: 'payments', label: 'المدفوعات', desc: 'إشعار عند استلام مدفوعات جديدة' }
                   ].map((item) => (
-                    <div key={item.key} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                    <div key={item.key} className="flex items-center justify-between p-4 bg-muted rounded-xl">
                       <div>
-                        <label className="text-sm font-semibold text-slate-900">{item.label}</label>
-                        <p className="text-xs text-slate-600">{item.desc}</p>
+                        <label className="text-sm font-semibold text-foreground">{item.label}</label>
+                        <p className="text-xs text-muted-foreground">{item.desc}</p>
                       </div>
                       <input
                         type="checkbox"
                         defaultChecked
-                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="w-5 h-5 rounded border-border text-primary focus-visible:ring-ring"
                       />
                     </div>
                   ))}
@@ -508,9 +487,9 @@ export default function Settings() {
               </div>
               
               {/* System Notifications */}
-              <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
-                <h4 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
-                  <CogIcon className="h-6 w-6 text-purple-600" />
+              <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
+                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
+                  <Settings className="h-6 w-6 text-info" />
                   إشعارات النظام
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -520,15 +499,15 @@ export default function Settings() {
                     { key: 'updates', label: 'تحديثات النظام', desc: 'إشعار عند توفر تحديثات جديدة' },
                     { key: 'errors', label: 'أخطاء النظام', desc: 'تنبيه عند حدوث أخطاء في النظام' }
                   ].map((item) => (
-                    <div key={item.key} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                    <div key={item.key} className="flex items-center justify-between p-4 bg-muted rounded-xl">
                       <div>
-                        <label className="text-sm font-semibold text-slate-900">{item.label}</label>
-                        <p className="text-xs text-slate-600">{item.desc}</p>
+                        <label className="text-sm font-semibold text-foreground">{item.label}</label>
+                        <p className="text-xs text-muted-foreground">{item.desc}</p>
                       </div>
                       <input
                         type="checkbox"
                         defaultChecked={item.key !== 'userLogin'}
-                        className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                        className="w-5 h-5 rounded border-border text-info focus-visible:ring-ring"
                       />
                     </div>
                   ))}
@@ -536,57 +515,57 @@ export default function Settings() {
               </div>
               
               {/* Notification Schedule */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 border border-blue-200">
-                <h4 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
-                  <BellIcon className="h-6 w-6 text-blue-600" />
+              <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
+                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
+                  <Bell className="h-6 w-6 text-primary" />
                   جدولة التقارير
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700">تقرير يومي</label>
-                    <select className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white">
+                    <label className="block text-sm font-semibold text-foreground">تقرير يومي</label>
+                    <Select>
                       <option value="disabled">معطل</option>
                       <option value="8am" selected>8:00 صباحاً</option>
                       <option value="9am">9:00 صباحاً</option>
                       <option value="10am">10:00 صباحاً</option>
-                    </select>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700">تقرير أسبوعي</label>
-                    <select className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white">
+                    <label className="block text-sm font-semibold text-foreground">تقرير أسبوعي</label>
+                    <Select>
                       <option value="disabled">معطل</option>
                       <option value="sunday" selected>الأحد</option>
                       <option value="monday">الاثنين</option>
                       <option value="saturday">السبت</option>
-                    </select>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700">تقرير شهري</label>
-                    <select className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white">
+                    <label className="block text-sm font-semibold text-foreground">تقرير شهري</label>
+                    <Select>
                       <option value="disabled">معطل</option>
                       <option value="1st" selected>أول الشهر</option>
                       <option value="15th">منتصف الشهر</option>
                       <option value="last">آخر الشهر</option>
-                    </select>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700">طريقة الإرسال</label>
-                    <select className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white">
+                    <label className="block text-sm font-semibold text-foreground">طريقة الإرسال</label>
+                    <Select>
                       <option value="email" selected>البريد الإلكتروني</option>
                       <option value="sms">رسائل نصية</option>
                       <option value="both">كلاهما</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
               </div>
               
               <div className="flex justify-center">
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-medium transition-colors">
+                <Button  size="lg">
                   حفظ إعدادات الإشعارات
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -603,17 +582,17 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
+      <div className="bg-card border-b border-border sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-              <CogIcon className="h-6 w-6 text-white" />
+            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
+              <Settings className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">الإعدادات</h1>
-              <p className="text-slate-600">إدارة إعدادات النظام والملف الشخصي</p>
+              <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
+              <p className="text-muted-foreground">إدارة إعدادات النظام والملف الشخصي</p>
             </div>
           </div>
         </div>
@@ -624,22 +603,20 @@ export default function Settings() {
           {/* Categories with Inline Content */}
           <div className="space-y-4">
             {visibleCategories.map((category) => (
-              <div key={category.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div key={category.id} className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
                 {/* Category Header */}
                 <button
                   onClick={() => handleCategoryToggle(category.id)}
-                  className={`w-full p-6 bg-gradient-to-r ${
-                    category.color === 'blue' ? 'from-blue-500 to-blue-600' :
-                    category.color === 'purple' ? 'from-purple-500 to-purple-600' :
-                    category.color === 'green' ? 'from-green-500 to-green-600' :
-                    'from-amber-500 to-amber-600'
-                  } text-white flex items-center justify-between hover:opacity-90 transition-opacity`}
+                  className={`w-full p-6 ${getColorClasses(category.color, 'bg')} ${getColorClasses(
+                    category.color,
+                    'fg'
+                  )} flex items-center justify-between hover:opacity-90 transition-opacity`}
                 >
                   <div className="flex items-center gap-3">
                     <category.icon className="h-6 w-6" />
                     <h3 className="font-bold text-lg">{category.name}</h3>
                   </div>
-                  <ChevronDownIcon 
+                  <ChevronDown 
                     className={`h-5 w-5 transition-transform duration-300 ${
                       expandedCategory === category.id ? 'rotate-180' : ''
                     }`} 
@@ -650,26 +627,37 @@ export default function Settings() {
                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
                   expandedCategory === category.id ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                 }`}>
-                  <div className="p-4 space-y-2 border-b border-slate-200">
+                  <div className="p-4 space-y-2 border-b border-border">
                     {category.tabs.map((tab) => (
                       <button
                         key={tab.id}
                         onClick={() => handleTabClick(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right transition-all duration-200 ${
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-start transition-all duration-200 ${
                           activeTab === tab.id
-                            ? `${getColorClasses(category.color, 'bg')} text-white shadow-lg transform scale-[1.02]`
-                            : `text-slate-700 ${getColorClasses(category.color, 'hover')} hover:transform hover:scale-[1.01]`
+                            ? `${getColorClasses(category.color, 'bg')} ${getColorClasses(
+                                category.color,
+                                'fg'
+                              )} shadow-lg`
+                            : `text-foreground ${getColorClasses(category.color, 'hover')}`
                         }`}
                       >
                         <tab.icon className={`h-5 w-5 ${
-                          activeTab === tab.id ? 'text-white' : getColorClasses(category.color, 'text')
+                          activeTab === tab.id
+                            ? getColorClasses(category.color, 'fg')
+                            : getColorClasses(category.color, 'text')
                         }`} />
-                        <div className="flex-1 text-right">
-                          <div className={`font-medium ${activeTab === tab.id ? 'text-white' : 'text-slate-900'}`}>
+                        <div className="flex-1 text-start">
+                          <div className={`font-medium ${
+                              activeTab === tab.id
+                                ? getColorClasses(category.color, 'fg')
+                                : 'text-foreground'
+                            }`}>
                             {tab.label}
                           </div>
                           <div className={`text-xs ${
-                            activeTab === tab.id ? 'text-white/80' : 'text-slate-500'
+                            activeTab === tab.id
+                              ? `${getColorClasses(category.color, 'fg')}/80`
+                              : 'text-muted-foreground'
                           }`}>
                             {tab.description}
                           </div>
@@ -682,7 +670,7 @@ export default function Settings() {
                 {/* Content Area - Shows directly under the expanded category */}
                 {expandedCategory === category.id && activeTab && category.tabs.some(tab => tab.id === activeTab) && (
                   <div className="transition-all duration-300 ease-in-out">
-                    <div className="p-8 bg-slate-50">
+                    <div className="p-8 bg-muted">
                       {renderTabContent()}
                     </div>
                   </div>

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings, Marketer, CommissionPayment, MarketerStats } from '../types';
+import { formatDate } from '@/registry/naf/lib/format';
 
 // تحويل البيانات من تنسيق قاعدة البيانات إلى تنسيق التطبيق
 const transformClient = (dbClient: any): Client => ({
@@ -418,7 +419,7 @@ export class SupabaseDatabase {
         joinDate: new Date(),
         clientType: prospect.clientType,
         status: 'current',
-        notes: prospect.notes + (prospect.notes ? '\n\n' : '') + `تم التحويل من عميل محتمل في ${new Date().toLocaleDateString('ar-SA')}`,
+        notes: prospect.notes + (prospect.notes ? '\n\n' : '') + `تم التحويل من عميل محتمل في ${formatDate(new Date())}`,
         attachments: prospect.attachments,
         commercialRegister: prospect.commercialRegister,
         legalRepresentative: prospect.legalRepresentative
@@ -1099,9 +1100,13 @@ export class SupabaseDatabase {
         feeTypes: [],
         companyName: 'NAF Law',
         companyDescription: 'نظام إدارة المكتب القانوني',
-        primaryColor: '#1e40af',
-        secondaryColor: '#3b82f6',
-        accentColor: '#f59e0b'
+        /* الحقول الثلاثة تبقى في النوع لأن العمود ما يزال في القاعدة،
+           وقيمها الفارغة مقصودة: لم تعد تُقرأ من الواجهة ولا تُحقن على
+           الجذر — لوحة الهوية من naf-theme.css وحده. وكتابة رمز سداسي
+           هنا يعيد المصدر الثاني من بابه الخلفيّ. */
+        primaryColor: '',
+        secondaryColor: '',
+        accentColor: ''
       };
 
       data?.forEach(setting => {
@@ -1171,9 +1176,13 @@ export class SupabaseDatabase {
         feeTypes: ['advance_only', 'deferred_only', 'advance_and_deferred'],
         companyName: 'NAF Law',
         companyDescription: 'نظام إدارة المكتب القانوني',
-        primaryColor: '#1e40af',
-        secondaryColor: '#3b82f6',
-        accentColor: '#f59e0b'
+        /* الحقول الثلاثة تبقى في النوع لأن العمود ما يزال في القاعدة،
+           وقيمها الفارغة مقصودة: لم تعد تُقرأ من الواجهة ولا تُحقن على
+           الجذر — لوحة الهوية من naf-theme.css وحده. وكتابة رمز سداسي
+           هنا يعيد المصدر الثاني من بابه الخلفيّ. */
+        primaryColor: '',
+        secondaryColor: '',
+        accentColor: ''
       };
     }
   }
@@ -1268,7 +1277,7 @@ export class SupabaseDatabase {
         }
         
         if (user) {
-          // تحديث آخر تسجيل دخول
+          // تحديث آخر نشاط
           await this.updateUser(user.id, { lastLogin: new Date() });
           
           // إضافة نشاط تسجيل الدخول
@@ -1310,7 +1319,7 @@ export class SupabaseDatabase {
           }
           
           if (user) {
-            // تحديث آخر تسجيل دخول
+            // تحديث آخر نشاط
             await this.updateUser(user.id, { lastLogin: new Date() });
             
             // إضافة نشاط تسجيل الدخول

@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChartBarIcon, 
-  UserGroupIcon, 
-  DocumentTextIcon,
-  CalendarIcon,
-  FunnelIcon,
-  ArrowDownTrayIcon
-} from '@heroicons/react/24/outline';
-import { TrendingUp } from 'lucide-react';
+import { ChartColumn, Download, FileText, TrendingUp, Users } from 'lucide-react';
+import { useChartPalette, softFill } from '../../lib/chart-tokens';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import { Client, Prospect, Case, ActivityLog } from '../../types';
 import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { db } from '../../data/database';
+import { Money } from '@/registry/naf/currency/money';
+import { Select } from '@/registry/naf/ui/select';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
 export default function Analytics() {
+  // لوحة الرسوم تُقرأ من الرموز وتُعاد قراءتها عند تبديل المظهر
+  const palette = useChartPalette();
+
   const [clients, setClients] = useState<Client[]>([]);
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
@@ -136,7 +136,7 @@ export default function Analytics() {
       labels: ['أفراد', 'شركات', 'جمعيات', 'جهات حكومية'],
       datasets: [{
         data: [distribution.individual, distribution.company, distribution.association, distribution.government],
-        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+        backgroundColor: palette.slice(0, 4),
         borderWidth: 0
       }]
     };
@@ -155,7 +155,7 @@ export default function Analytics() {
       labels: ['منظورة', 'قيد المعالجة', 'مكتملة', 'مؤجلة'],
       datasets: [{
         data: [distribution.pending, distribution['in-progress'], distribution.completed, distribution.postponed],
-        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+        backgroundColor: palette.slice(0, 4),
         borderWidth: 0
       }]
     };
@@ -173,7 +173,7 @@ export default function Analytics() {
       labels: Object.keys(statusCounts),
       datasets: [{
         data: Object.values(statusCounts),
-        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+        backgroundColor: palette,
         borderWidth: 0
       }]
     };
@@ -188,22 +188,22 @@ export default function Analytics() {
         {
           label: 'العملاء الجدد',
           data: monthlyData.map(m => m.clients),
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderColor: palette[0],
+          backgroundColor: softFill(palette[0]),
           tension: 0.4
         },
         {
           label: 'القضايا الجديدة',
           data: monthlyData.map(m => m.cases),
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderColor: palette[1],
+          backgroundColor: softFill(palette[1]),
           tension: 0.4
         },
         {
           label: 'العملاء المحتملين',
           data: monthlyData.map(m => m.prospects),
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderColor: palette[2],
+          backgroundColor: softFill(palette[2]),
           tension: 0.4
         }
       ]
@@ -223,7 +223,7 @@ export default function Analytics() {
       datasets: [{
         label: 'عدد القضايا',
         data: Object.values(typeCounts),
-        backgroundColor: '#3b82f6',
+        backgroundColor: palette[1],
         borderRadius: 4
       }]
     };
@@ -239,7 +239,7 @@ export default function Analytics() {
       labels: ['رابحة', 'خاسرة', 'تسوية'],
       datasets: [{
         data: [wonCases.length, lostCases.length, settledCases.length],
-        backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+        backgroundColor: palette.slice(0, 3),
         borderWidth: 0
       }]
     };
@@ -257,7 +257,7 @@ export default function Analytics() {
       datasets: [{
         label: 'عدد العملاء',
         data: [totalProspects, interestedProspects, contactedProspects, waitingProspects, convertedClients],
-        backgroundColor: '#3b82f6',
+        backgroundColor: palette[1],
         borderRadius: 4
       }]
     };
@@ -321,8 +321,8 @@ export default function Analytics() {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">جاري تحميل البيانات التحليلية...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جارٍ تحميل البيانات التحليلية...</p>
         </div>
       </div>
     );
@@ -333,87 +333,83 @@ export default function Analytics() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-surface-deep text-surface-deep-foreground rounded-lg p-6">
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold mb-2">التحليلات والإحصائيات</h1>
-            <p className="text-blue-100">تحليل شامل لأداء المكتب وإحصائيات مفصلة</p>
+            <p className="text-surface-deep-muted">تحليل شامل لأداء المكتب وإحصائيات مفصلة</p>
           </div>
           <div className="flex items-center gap-3">
-            <select
+            <Select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="bg-white text-slate-900 px-4 py-2 rounded-lg border-0 focus:ring-2 focus:ring-blue-300"
+              onChange={(e) => setDateRange(e.target.value)} className="border-0"
             >
               <option value="7">آخر 7 أيام</option>
               <option value="30">آخر 30 يوم</option>
               <option value="90">آخر 3 أشهر</option>
               <option value="365">آخر سنة</option>
-            </select>
-            <button
-              onClick={exportAnalytics}
-              className="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 flex items-center gap-2"
-            >
-              <ArrowDownTrayIcon className="h-5 w-5" />
+            </Select>
+            <Button onClick={exportAnalytics} className="text-primary" variant="outline">
+              <Download className="h-5 w-5" />
               تصدير
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <UserGroupIcon className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-primary-soft rounded-lg">
+              <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-slate-600">العملاء الجدد</p>
-              <p className="text-2xl font-bold text-slate-900">{kpis.totalClients}</p>
+              <p className="text-sm text-muted-foreground">العملاء الجدد</p>
+              <p className="text-2xl font-bold text-foreground">{kpis.totalClients}</p>
             </div>
           </div>
-        </div>
+        </Card>
         
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-info-soft rounded-lg">
+              <TrendingUp className="h-6 w-6 text-info" />
             </div>
             <div>
-              <p className="text-sm text-slate-600">العملاء المحتملين</p>
-              <p className="text-2xl font-bold text-slate-900">{kpis.totalProspects}</p>
+              <p className="text-sm text-muted-foreground">العملاء المحتملين</p>
+              <p className="text-2xl font-bold text-foreground">{kpis.totalProspects}</p>
             </div>
           </div>
-        </div>
+        </Card>
         
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DocumentTextIcon className="h-6 w-6 text-green-600" />
+            <div className="p-2 bg-success-soft rounded-lg">
+              <FileText className="h-6 w-6 text-success" />
             </div>
             <div>
-              <p className="text-sm text-slate-600">القضايا الجديدة</p>
-              <p className="text-2xl font-bold text-slate-900">{kpis.totalCases}</p>
+              <p className="text-sm text-muted-foreground">القضايا الجديدة</p>
+              <p className="text-2xl font-bold text-foreground">{kpis.totalCases}</p>
             </div>
           </div>
-        </div>
+        </Card>
         
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+        <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <ChartBarIcon className="h-6 w-6 text-amber-600" />
+            <div className="p-2 bg-warning-soft rounded-lg">
+              <ChartColumn className="h-6 w-6 text-warning" />
             </div>
             <div>
-              <p className="text-sm text-slate-600">معدل الربح</p>
-              <p className="text-2xl font-bold text-slate-900">{kpis.winRate}%</p>
+              <p className="text-sm text-muted-foreground">معدل الربح</p>
+              <p className="text-2xl font-bold text-foreground">{kpis.winRate}%</p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Metric Selector */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <Card className="p-4">
         <div className="flex flex-wrap gap-2">
           {[
             { id: 'overview', label: 'نظرة عامة' },
@@ -427,202 +423,202 @@ export default function Analytics() {
               onClick={() => setSelectedMetric(metric.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedMetric === metric.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-foreground hover:bg-muted'
               }`}
             >
               {metric.label}
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Charts based on selected metric */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {selectedMetric === 'overview' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">توزيع العملاء حسب النوع</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">توزيع العملاء حسب النوع</h3>
               <div className="h-64">
                 <Doughnut data={getClientTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">حالة القضايا</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">حالة القضايا</h3>
               <div className="h-64">
                 <Doughnut data={getCaseStatusDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'clients' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">توزيع العملاء حسب النوع</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">توزيع العملاء حسب النوع</h3>
               <div className="h-64">
                 <Bar data={getClientTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">إحصائيات العملاء</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">إحصائيات العملاء</h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded">
-                  <span className="text-slate-700">إجمالي العملاء</span>
-                  <span className="font-bold text-slate-900">{clients.length}</span>
+                <div className="flex justify-between items-center p-3 bg-muted rounded">
+                  <span className="text-foreground">إجمالي العملاء</span>
+                  <span className="font-bold text-foreground">{clients.length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded">
-                  <span className="text-slate-700">العملاء الحاليين</span>
-                  <span className="font-bold text-green-600">{clients.filter(c => c.status === 'current').length}</span>
+                <div className="flex justify-between items-center p-3 bg-muted rounded">
+                  <span className="text-foreground">العملاء الحاليين</span>
+                  <span className="font-bold text-success">{clients.filter(c => c.status === 'current').length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded">
-                  <span className="text-slate-700">متوسط القضايا لكل عميل</span>
-                  <span className="font-bold text-blue-600">{kpis.avgCasesPerClient}</span>
+                <div className="flex justify-between items-center p-3 bg-muted rounded">
+                  <span className="text-foreground">متوسط القضايا لكل عميل</span>
+                  <span className="font-bold text-primary">{kpis.avgCasesPerClient}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded">
-                  <span className="text-slate-700">معدل التحويل</span>
-                  <span className="font-bold text-purple-600">{kpis.conversionRate}%</span>
+                <div className="flex justify-between items-center p-3 bg-muted rounded">
+                  <span className="text-foreground">معدل التحويل</span>
+                  <span className="font-bold text-info">{kpis.conversionRate}%</span>
                 </div>
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'cases' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">أنواع القضايا</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">أنواع القضايا</h3>
               <div className="h-64">
                 <Bar data={getCaseTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">معدل النجاح</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">معدل النجاح</h3>
               <div className="h-64">
                 <Doughnut data={getWinRateAnalysis()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'prospects' && (
           <>
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">حالة العملاء المحتملين</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">حالة العملاء المحتملين</h3>
               <div className="h-64">
                 <Doughnut data={getProspectStatusDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
             
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">قمع التحويل</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">قمع التحويل</h3>
               <div className="h-64">
                 <Bar data={getConversionFunnel()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </>
         )}
 
         {selectedMetric === 'trends' && (
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">الاتجاهات الشهرية</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">الاتجاهات الشهرية</h3>
               <div className="h-80">
                 <Line data={getMonthlyTrendsChart()} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
-            </div>
+            </Card>
           </div>
         )}
       </div>
 
       {/* Detailed Analytics Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">تحليل مفصل</h3>
+      <Card>
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">تحليل مفصل</h3>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-3">
-              <h4 className="font-medium text-slate-900">أداء العملاء</h4>
+              <h4 className="font-medium text-foreground">أداء العملاء</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">نمو العملاء (شهرياً)</span>
-                  <span className="font-medium text-green-600">+{Math.round(kpis.totalClients / 6)}%</span>
+                  <span className="text-muted-foreground">نمو العملاء (شهرياً)</span>
+                  <span className="font-medium text-success">+{Math.round(kpis.totalClients / 6)}%</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">معدل الاحتفاظ</span>
-                  <span className="font-medium text-blue-600">
+                  <span className="text-muted-foreground">معدل الاحتفاظ</span>
+                  <span className="font-medium text-primary">
                     {Math.round((clients.filter(c => c.status === 'current').length / clients.length) * 100)}%
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">متوسط القضايا لكل عميل</span>
-                  <span className="font-medium text-purple-600">{kpis.avgCasesPerClient}</span>
+                  <span className="text-muted-foreground">متوسط القضايا لكل عميل</span>
+                  <span className="font-medium text-info">{kpis.avgCasesPerClient}</span>
                 </div>
               </div>
             </div>
             
             <div className="space-y-3">
-              <h4 className="font-medium text-slate-900">أداء القضايا</h4>
+              <h4 className="font-medium text-foreground">أداء القضايا</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">معدل الإنجاز</span>
-                  <span className="font-medium text-green-600">
+                  <span className="text-muted-foreground">معدل الإنجاز</span>
+                  <span className="font-medium text-success">
                     {cases.length > 0 ? Math.round((kpis.completedCases / cases.length) * 100) : 0}%
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">القضايا النشطة</span>
-                  <span className="font-medium text-blue-600">{kpis.activeCases}</span>
+                  <span className="text-muted-foreground">القضايا النشطة</span>
+                  <span className="font-medium text-primary">{kpis.activeCases}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">معدل النجاح</span>
-                  <span className="font-medium text-amber-600">{kpis.winRate}%</span>
+                  <span className="text-muted-foreground">معدل النجاح</span>
+                  <span className="font-medium text-warning">{kpis.winRate}%</span>
                 </div>
               </div>
             </div>
             
             <div className="space-y-3">
-              <h4 className="font-medium text-slate-900">التحويل والنمو</h4>
+              <h4 className="font-medium text-foreground">التحويل والنمو</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">معدل التحويل</span>
-                  <span className="font-medium text-purple-600">{kpis.conversionRate}%</span>
+                  <span className="text-muted-foreground">معدل التحويل</span>
+                  <span className="font-medium text-info">{kpis.conversionRate}%</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">العملاء المحتملين النشطين</span>
-                  <span className="font-medium text-blue-600">
+                  <span className="text-muted-foreground">العملاء المحتملين النشطين</span>
+                  <span className="font-medium text-primary">
                     {prospects.filter(p => p.prospectStatus !== 'غير مناسب' && p.prospectStatus !== 'تم الرفض').length}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">القيمة المتوقعة الإجمالية</span>
-                  <span className="font-medium text-green-600">
-                    {prospects.reduce((sum, p) => sum + (p.expectedValue || 0), 0).toLocaleString()} ر.س
+                  <span className="text-muted-foreground">القيمة المتوقعة الإجمالية</span>
+                  <span className="font-medium text-success">
+                    <Money value={prospects.reduce((sum, p) => sum + (p.expectedValue || 0), 0)} />
                   </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Activity Timeline */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">الأنشطة الحديثة</h3>
+      <Card>
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">الأنشطة الحديثة</h3>
         </div>
         <div className="p-6">
           <div className="space-y-4">
             {getFilteredData().activities.slice(0, 10).map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+              <div key={activity.id} className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+                <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">{activity.description}</p>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                  <p className="text-sm font-medium text-foreground">{activity.description}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                     <span>{activity.userName}</span>
                     <span>•</span>
                     <span>{format(activity.timestamp, 'dd/MM/yyyy HH:mm')}</span>
@@ -632,7 +628,7 @@ export default function Analytics() {
             ))}
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

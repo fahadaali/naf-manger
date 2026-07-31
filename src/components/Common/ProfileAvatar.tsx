@@ -1,5 +1,4 @@
 import React from 'react';
-import { UserIcon } from '@heroicons/react/24/outline';
 
 interface ProfileAvatarProps {
   src?: string;
@@ -54,7 +53,7 @@ export default function ProfileAvatar({
   if (showName) {
     return (
       <div className={`flex items-center gap-3 ${className}`}>
-        <div className={`${sizeClasses[size]} rounded-full overflow-hidden bg-slate-200 flex items-center justify-center flex-shrink-0`}>
+        <div className={`${sizeClasses[size]} rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0`}>
           {src ? (
             <img
               src={src}
@@ -62,19 +61,19 @@ export default function ProfileAvatar({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className={`${textSizes[size]} font-medium text-slate-600`}>
+            <span className={`${textSizes[size]} font-medium text-muted-foreground`}>
               {initials}
             </span>
           )}
         </div>
-        <span className="text-slate-900 font-medium truncate">{name}</span>
+        <span className="text-foreground font-medium truncate">{name}</span>
       </div>
     );
   }
 
   return (
     <div 
-      className={`${sizeClasses[size]} rounded-full overflow-hidden bg-slate-200 flex items-center justify-center ${className}`}
+      className={`${sizeClasses[size]} rounded-full overflow-hidden bg-muted flex items-center justify-center ${className}`}
       title={name}
     >
       {src ? (
@@ -84,7 +83,7 @@ export default function ProfileAvatar({
           className="w-full h-full object-cover"
         />
       ) : (
-        <span className={`${textSizes[size]} font-medium text-slate-600`}>
+        <span className={`${textSizes[size]} font-medium text-muted-foreground`}>
           {initials}
         </span>
       )}

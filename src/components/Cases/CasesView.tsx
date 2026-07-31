@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Case } from '../../types';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import { db } from '../../data/database';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function CasesView() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -114,15 +120,18 @@ export default function CasesView() {
     setIsEditing(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in-progress': return 'bg-blue-100 text-blue-800';
-      case 'pending': return 'bg-amber-100 text-amber-800';
-      case 'postponed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  /* LoaderCircle لما هو بيد المكتب، و Clock لانتظار موعدٍ عند
+     المحكمة — الفرق مَن يملك الخطوة التالية. مسجَّل في naf-icons.md. */
+  const STATUS = {
+    completed: { variant: 'success' as const, Icon: CircleCheck },
+    'in-progress': { variant: 'primary' as const, Icon: LoaderCircle },
+    pending: { variant: 'warning' as const, Icon: Clock },
+    postponed: { variant: 'destructive' as const, Icon: CalendarX }
   };
+
+  const statusOf = (status: string) =>
+    STATUS[status as keyof typeof STATUS] ??
+    { variant: 'default' as const, Icon: CircleHelp };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -151,157 +160,157 @@ export default function CasesView() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">إدارة القضايا</h1>
-          <p className="text-slate-600">إدارة القضايا والأعمال القانونية</p>
+          <h1 className="text-2xl font-bold text-foreground">إدارة القضايا</h1>
+          <p className="text-muted-foreground">إدارة القضايا والأعمال القانونية</p>
         </div>
         {hasPermission('cases', 'create') && (
-          <button 
-            onClick={handleCreateCase}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-            <PlusIcon className="h-5 w-5" />
+          <Button onClick={handleCreateCase}>
+            <Plus className="h-5 w-5" />
             إضافة قضية جديدة
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <Card className="p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <input
+            <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
               type="text"
               placeholder="البحث في القضايا..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <select
+            <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">كل الحالات</option>
               <option value="pending">منظورة</option>
               <option value="in-progress">قيد المعالجة</option>
               <option value="completed">مكتملة</option>
               <option value="postponed">مؤجلة</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">كل الأنواع</option>
               <option value="قضية تجارية">تجارية</option>
               <option value="قضية عمالية">عمالية</option>
               <option value="قضية مدنية">مدنية</option>
               <option value="قضية جزائية">جزائية</option>
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">إجمالي القضايا</p>
-          <p className="text-xl sm:text-2xl font-bold text-slate-900">{cases.length}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">قيد المعالجة</p>
-          <p className="text-xl sm:text-2xl font-bold text-blue-600">
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">إجمالي القضايا</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{cases.length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">قيد المعالجة</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">
             {activeCases.filter(c => c.status === 'in-progress').length}
           </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">المكتملة</p>
-          <p className="text-xl sm:text-2xl font-bold text-green-600">
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">المكتملة</p>
+          <p className="text-xl sm:text-2xl font-bold text-success">
             {completedCases.length}
           </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">معدل الربح</p>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600">{winRate}%</p>
-        </div>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">معدل الربح</p>
+          <p className="text-xl sm:text-2xl font-bold text-warning">{winRate}%</p>
+        </Card>
       </div>
 
       {/* Active Cases Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">القضايا النشطة</h3>
+      <Card className="overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">القضايا النشطة</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="sm:px-6 tracking-wider">
                   رقم القضية
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider hidden sm:table-cell">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider hidden sm:table-cell">
                   النوع
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider">
                   العميل
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider hidden md:table-cell">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider hidden md:table-cell">
                   الملخص
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider">
                   الحالة
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider hidden lg:table-cell">
                   تاريخ الإنشاء
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="sm:px-6 tracking-wider">
                   إجراءات
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredActiveCases.map((case_) => (
-                <tr key={case_.id} className="hover:bg-slate-50">
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                <TableRow key={case_.id}>
+                  <TableCell className="sm:px-6">
                     <button 
                       onClick={() => handleViewCase(case_)}
-                      className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="text-xs sm:text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                     >
-                      {case_.caseNumber}
+                      <bdi>{case_.caseNumber}</bdi>
                     </button>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
-                    <div className="text-xs sm:text-sm text-slate-900">{case_.caseType}</div>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                    <div className="text-xs sm:text-sm text-slate-900 truncate max-w-32">{case_.clientName}</div>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 hidden md:table-cell">
-                    <div className="text-xs sm:text-sm text-slate-900 line-clamp-2">{case_.summary}</div>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.status)}`}>
-                      {getStatusLabel(case_.status)}
-                    </span>
+                  </TableCell>
+                  <TableCell className="sm:px-6 hidden sm:table-cell">
+                    <div className="text-xs sm:text-sm text-foreground">{case_.caseType}</div>
+                  </TableCell>
+                  <TableCell className="sm:px-6">
+                    <div className="text-xs sm:text-sm text-foreground truncate max-w-32">{case_.clientName}</div>
+                  </TableCell>
+                  <TableCell className="sm:px-6 hidden md:table-cell">
+                    <div className="text-xs sm:text-sm text-foreground line-clamp-2">{case_.summary}</div>
+                  </TableCell>
+                  <TableCell className="sm:px-6">
+                    {(() => {
+                      const { variant, Icon } = statusOf(case_.status);
+                      return (
+                        <Badge variant={variant}>
+                          <Icon aria-hidden="true" />
+                          {getStatusLabel(case_.status)}
+                        </Badge>
+                      );
+                    })()}
                     {case_.outcome && (
-                      <div className="text-xs text-slate-500 mt-1 hidden sm:block">
+                      <div className="text-xs text-muted-foreground mt-1 hidden sm:block">
                         {getOutcomeLabel(case_.outcome)}
                       </div>
                     )}
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-slate-500 hidden lg:table-cell">
+                  </TableCell>
+                  <TableCell className="sm:px-6 sm:text-sm hidden lg:table-cell">
                     {format(case_.createdDate, 'dd/MM/yyyy')}
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
+                  </TableCell>
+                  <TableCell className="sm:px-6 sm:text-sm">
                     <div className="flex gap-2">
                       {hasPermission('cases', 'update') && (
                         <button 
                           onClick={() => handleEditCase(case_)}
-                          className="text-blue-600 hover:text-blue-900 text-xs sm:text-sm"
+                          className="text-primary hover:text-primary-strong text-xs sm:text-sm"
                         >
-                          تحرير
+                          تعديل
                         </button>
                       )}
                       {case_.basecampUrl && (
@@ -309,151 +318,148 @@ export default function CasesView() {
                           href={case_.basecampUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-white bg-yellow-500 hover:bg-yellow-600 px-1 sm:px-2 py-1 rounded text-xs font-medium transition-colors"
+                          className="inline-flex items-center gap-1 text-warning-foreground bg-warning hover:bg-warning/90 px-1 sm:px-2 py-1 rounded text-xs font-medium transition-colors"
                           title="فتح في Basecamp"
                         >
-                          <svg className="w-2 h-2 sm:w-3 sm:h-3" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                          </svg>
+                          <ExternalLink className="w-2 h-2 sm:w-3 sm:h-3" aria-hidden="true" />
                           <span className="hidden sm:inline">Basecamp</span>
                         </a>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      </Card>
 
       {filteredActiveCases.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-slate-500">لا توجد قضايا نشطة مطابقة لمعايير البحث</p>
+          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
         </div>
       )}
 
       {/* Completed Cases Section */}
       {completedCases.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        <Card className="overflow-hidden">
           <button
             onClick={() => setShowCompletedCases(!showCompletedCases)}
-            className="w-full px-6 py-4 border-b border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            className="w-full px-6 py-4 border-b border-border flex items-center justify-between hover:bg-muted transition-colors"
           >
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-slate-900">منتهية</h3>
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                {completedCases.length}
-              </span>
+              <h3 className="text-lg font-semibold text-foreground">منتهية</h3>
+              <Badge variant="success">
+                <bdi>{formatNumber(completedCases.length)}</bdi>
+              </Badge>
             </div>
             <div className={`transform transition-transform ${showCompletedCases ? 'rotate-180' : ''}`}>
-              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
             </div>
           </button>
           
           {showCompletedCases && (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="tracking-wider">
                       رقم القضية
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       النوع
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       العميل
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       الملخص
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       النتيجة
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       تاريخ الإنجاز
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="tracking-wider">
                       إجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filteredCompletedCases.map((case_) => (
-                    <tr key={case_.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <TableRow key={case_.id}>
+                      <TableCell>
                         <button 
                           onClick={() => handleViewCase(case_)}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                          className="text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                         >
-                          {case_.caseNumber}
+                          <bdi>{case_.caseNumber}</bdi>
                         </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">{case_.caseType}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">{case_.clientName}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-slate-900 line-clamp-2">{case_.summary}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {case_.outcome && (
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            case_.outcome === 'won' ? 'bg-green-100 text-green-800' :
-                            case_.outcome === 'lost' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {getOutcomeLabel(case_.outcome)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-foreground">{case_.caseType}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-foreground">{case_.clientName}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-foreground line-clamp-2">{case_.summary}</div>
+                      </TableCell>
+                      <TableCell>
+                        {case_.outcome && (() => {
+                          const map = {
+                            won: { variant: 'success' as const, Icon: CircleCheck },
+                            lost: { variant: 'destructive' as const, Icon: CircleX },
+                            settled: { variant: 'warning' as const, Icon: Handshake }
+                          };
+                          const { variant, Icon } =
+                            map[case_.outcome as keyof typeof map] ?? map.settled;
+                          return (
+                            <Badge variant={variant}>
+                              <Icon aria-hidden="true" />
+                              {getOutcomeLabel(case_.outcome)}
+                            </Badge>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
                         {format(case_.updatedDate, 'dd/MM/yyyy')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex gap-2">
                           {hasPermission('cases', 'update') && (
-                            <button 
-                              onClick={() => handleEditCase(case_)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              تحرير
-                            </button>
+                            <Button onClick={() => handleEditCase(case_)} variant="link">
+                              تعديل
+                            </Button>
                           )}
                           {case_.basecampUrl && (
                             <a
                               href={case_.basecampUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-white bg-yellow-500 hover:bg-yellow-600 px-2 py-1 rounded text-xs font-medium transition-colors"
+                              className="inline-flex items-center gap-1 text-warning-foreground bg-warning hover:bg-warning/90 px-2 py-1 rounded text-xs font-medium transition-colors"
                               title="فتح في Basecamp"
                             >
-                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                              </svg>
+                              <ExternalLink className="w-3 h-3" aria-hidden="true" />
                               Basecamp
                             </a>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
           
           {showCompletedCases && filteredCompletedCases.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-slate-500">لا توجد قضايا مكتملة مطابقة لمعايير البحث</p>
+              <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Case Modal */}

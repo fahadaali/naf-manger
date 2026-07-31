@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Prospect } from '../../types';
 import { format } from 'date-fns';
 import { mockSystemSettings } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { Money } from '@/registry/naf/currency/money';
+import { formatPhone } from '@/registry/naf/lib/format';
+import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
 
 interface ProspectModalProps {
   prospect?: Prospect;
@@ -112,29 +118,23 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
   if (!isEditing && prospect) {
     // View mode
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-full sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-full sm:max-w-4xl max-h-full overflow-y-auto p-0">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900">تفاصيل العميل المحتمل</h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-full"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
+            <DialogTitle className="text-lg sm:text-xl font-bold">تفاصيل العميل المحتمل</DialogTitle>
           </div>
 
           <div className="p-6 space-y-6">
             {/* Basic Information */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">المعلومات الأساسية</h3>
+            <div className="bg-muted rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">المعلومات الأساسية</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">الاسم الكامل</label>
-                  <p className="text-slate-900">{prospect.fullName}</p>
+                  <label className="block text-sm font-medium text-foreground">الاسم الكامل</label>
+                  <p className="text-foreground">{prospect.fullName}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">الصورة الشخصية</label>
+                  <label className="block text-sm font-medium text-foreground">الصورة الشخصية</label>
                   <div className="mt-2">
                     <ProfileAvatar 
                       src={prospect.profilePicture} 
@@ -144,52 +144,52 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">رقم الهوية</label>
-                  <p className="text-slate-900">{prospect.idNumber}</p>
+                  <label className="block text-sm font-medium text-foreground">رقم الهوية</label>
+                  <p className="text-foreground">{prospect.idNumber}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">رقم الجوال</label>
-                  <p className="text-slate-900">{prospect.phone}</p>
+                  <label className="block text-sm font-medium text-foreground">رقم الجوال</label>
+                  <p className="text-foreground"><bdi>{formatPhone(prospect.phone)}</bdi></p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">البريد الإلكتروني</label>
-                  <p className="text-slate-900">{prospect.email}</p>
+                  <label className="block text-sm font-medium text-foreground">البريد الإلكتروني</label>
+                  <p className="text-foreground">{prospect.email}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">تاريخ الإضافة</label>
-                  <p className="text-slate-900">{format(prospect.joinDate, 'dd/MM/yyyy')}</p>
+                  <label className="block text-sm font-medium text-foreground">تاريخ الإضافة</label>
+                  <p className="text-foreground">{format(prospect.joinDate, 'dd/MM/yyyy')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">نوع العميل</label>
-                  <p className="text-slate-900">{prospect.clientType}</p>
+                  <label className="block text-sm font-medium text-foreground">نوع العميل</label>
+                  <p className="text-foreground">{prospect.clientType}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">الحالة</label>
-                  <p className="text-slate-900">{prospect.prospectStatus}</p>
+                  <label className="block text-sm font-medium text-foreground">الحالة</label>
+                  <p className="text-foreground">{prospect.prospectStatus}</p>
                 </div>
                 {prospect.source && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">مصدر العميل</label>
-                    <p className="text-slate-900">{prospect.source}</p>
+                    <label className="block text-sm font-medium text-foreground">مصدر العميل</label>
+                    <p className="text-foreground">{prospect.source}</p>
                   </div>
                 )}
               </div>
 
               {prospect.clientType === 'company' && prospect.legalRepresentative && (
                 <div className="mt-4 pt-4 border-t">
-                  <h4 className="font-medium text-slate-900 mb-2">الممثل القانوني</h4>
+                  <h4 className="font-medium text-foreground mb-2">الممثل القانوني</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">الاسم</label>
-                      <p className="text-slate-900">{prospect.legalRepresentative.name}</p>
+                      <label className="block text-sm font-medium text-foreground">الاسم</label>
+                      <p className="text-foreground">{prospect.legalRepresentative.name}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">رقم الهوية</label>
-                      <p className="text-slate-900">{prospect.legalRepresentative.idNumber}</p>
+                      <label className="block text-sm font-medium text-foreground">رقم الهوية</label>
+                      <p className="text-foreground">{prospect.legalRepresentative.idNumber}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">وسيلة التواصل</label>
-                      <p className="text-slate-900">{prospect.legalRepresentative.contact}</p>
+                      <label className="block text-sm font-medium text-foreground">وسيلة التواصل</label>
+                      <p className="text-foreground">{prospect.legalRepresentative.contact}</p>
                     </div>
                   </div>
                 </div>
@@ -197,50 +197,44 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
 
               {prospect.notes && (
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-slate-700">الملاحظات</label>
-                  <p className="text-slate-900">{prospect.notes}</p>
+                  <label className="block text-sm font-medium text-foreground">الملاحظات</label>
+                  <p className="text-foreground">{prospect.notes}</p>
                 </div>
               )}
             </div>
 
             {/* Prospect Specific Information */}
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">معلومات العميل المحتمل</h3>
+            <div className="bg-primary-soft rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">معلومات العميل المحتمل</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {prospect.expectedValue && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">القيمة المتوقعة</label>
-                    <p className="text-slate-900">{prospect.expectedValue.toLocaleString()} ريال</p>
+                    <label className="block text-sm font-medium text-foreground">القيمة المتوقعة</label>
+                    <p className="text-foreground"><Money value={prospect.expectedValue} /></p>
                   </div>
                 )}
                 {prospect.followUpDate && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">موعد المتابعة</label>
-                    <p className="text-slate-900">{format(prospect.followUpDate, 'dd/MM/yyyy')}</p>
+                    <label className="block text-sm font-medium text-foreground">موعد المتابعة</label>
+                    <p className="text-foreground">{format(prospect.followUpDate, 'dd/MM/yyyy')}</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   // Edit/Create mode
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-full sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-full overflow-y-auto p-0">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+          <DialogTitle className="text-lg sm:text-xl font-bold">
             {prospect ? 'تعديل العميل المحتمل' : 'إضافة عميل محتمل جديد'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
+          </DialogTitle>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -255,201 +249,178 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 الاسم الكامل *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.fullName ? 'border-red-300' : 'border-slate-300'
-                }`}
-              />
+               aria-invalid={!!errors.fullName} />
               {errors.fullName && (
-                <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>
+                <p className="text-destructive text-sm mt-1">{errors.fullName}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الهوية *
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.idNumber ? 'border-red-300' : 'border-slate-300'
-                }`}
-              />
+               aria-invalid={!!errors.idNumber} />
               {errors.idNumber && (
-                <p className="text-red-600 text-sm mt-1">{errors.idNumber}</p>
+                <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 رقم الجوال *
               </label>
-              <input
+              <Input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.phone ? 'border-red-300' : 'border-slate-300'
-                }`}
-              />
+               aria-invalid={!!errors.phone} />
               {errors.phone && (
-                <p className="text-red-600 text-sm mt-1">{errors.phone}</p>
+                <p className="text-destructive text-sm mt-1">{errors.phone}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 البريد الإلكتروني *
               </label>
-              <input
+              <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.email ? 'border-red-300' : 'border-slate-300'
-                }`}
-              />
+               aria-invalid={!!errors.email} />
               {errors.email && (
-                <p className="text-red-600 text-sm mt-1">{errors.email}</p>
+                <p className="text-destructive text-sm mt-1">{errors.email}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 نوع العميل
               </label>
-              <select
+              <Select
                 value={formData.clientType}
                 onChange={(e) => handleInputChange('clientType', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="individual">فرد</option>
                 <option value="company">شركة</option>
                 <option value="association">جمعية</option>
                 <option value="government">جهة حكومية</option>
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 حالة العميل المحتمل
               </label>
-              <select
+              <Select
                 value={formData.prospectStatus}
                 onChange={(e) => handleInputChange('prospectStatus', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 {mockSystemSettings.prospectStatuses.map(status => (
                   <option key={status} value={status}>{status}</option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 مصدر العميل
               </label>
-              <select
+              <Select
                 value={formData.source}
                 onChange={(e) => handleInputChange('source', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">اختر المصدر</option>
                 {mockSystemSettings.prospectSources.map(source => (
                   <option key={source} value={source}>{source}</option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                القيمة المتوقعة (ريال)
+              <label className="block text-sm font-medium text-foreground mb-2">
+                القيمة المتوقعة بالريال
               </label>
-              <input
+              <Input
                 type="number"
                 value={formData.expectedValue}
                 onChange={(e) => handleInputChange('expectedValue', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="0"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 موعد المتابعة
               </label>
-              <input
+              <Input
                 type="date"
                 value={formData.followUpDate}
                 onChange={(e) => handleInputChange('followUpDate', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
           {formData.clientType === 'company' && (
-            <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-slate-900">معلومات الشركة</h4>
+            <div className="space-y-4 p-4 bg-primary-soft rounded-lg">
+              <h4 className="font-medium text-foreground">معلومات الشركة</h4>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   السجل التجاري *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formData.commercialRegister}
                   onChange={(e) => handleInputChange('commercialRegister', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    errors.commercialRegister ? 'border-red-300' : 'border-slate-300'
-                  }`}
-                />
+                 aria-invalid={!!errors.commercialRegister} />
                 {errors.commercialRegister && (
-                  <p className="text-red-600 text-sm mt-1">{errors.commercialRegister}</p>
+                  <p className="text-destructive text-sm mt-1">{errors.commercialRegister}</p>
                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     اسم الممثل القانوني
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeName}
                     onChange={(e) => handleInputChange('legalRepresentativeName', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     رقم هوية الممثل القانوني
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeId}
                     onChange={(e) => handleInputChange('legalRepresentativeId', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     وسيلة التواصل
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.legalRepresentativeContact}
                     onChange={(e) => handleInputChange('legalRepresentativeContact', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -457,35 +428,27 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               الملاحظات
             </label>
-            <textarea
+            <Textarea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               placeholder="ملاحظات إضافية..."
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800"
-            >
+            <Button type="button" onClick={onClose} variant="ghost">
               إلغاء
-            </button>
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
-            >
+            </Button>
+            <Button type="submit">
               {prospect ? 'حفظ التغييرات' : 'إضافة العميل المحتمل'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+      </Dialog>
   );
 }

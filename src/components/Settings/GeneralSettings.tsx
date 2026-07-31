@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { PhotoIcon, SwatchIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { Building2, CircleCheck, Image, Palette, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { messageTone } from '../../lib/status-message';
+import { Alert } from '@/registry/naf/ui/alert';
 
 export default function GeneralSettings() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -61,23 +65,20 @@ export default function GeneralSettings() {
     reader.readAsDataURL(file);
   };
 
-  const handleColorChange = (colorType: 'primaryColor' | 'secondaryColor' | 'accentColor', color: string) => {
-    handleInputChange(colorType, color);
-    
-    // تطبيق اللون فوراً على الصفحة للمعاينة
-    const root = document.documentElement;
-    switch (colorType) {
-      case 'primaryColor':
-        root.style.setProperty('--color-primary', color);
-        break;
-      case 'secondaryColor':
-        root.style.setProperty('--color-secondary', color);
-        break;
-      case 'accentColor':
-        root.style.setProperty('--color-accent', color);
-        break;
-    }
-  };
+  /* ═══ لماذا زال منتقي الألوان من هذه الشاشة ═══
+   *
+   * كانت هنا ثلاثة حقول لون يحرّرها أي مستخدم، تُخزَّن في قاعدة البيانات
+   * وتُحقن على عنصر الجذر وقت التشغيل. وهي أعمق ما كان في الانحراف: شاشةٌ
+   * تسمح بتغيير هوية المنصة تعني أن السجلّ لا يحكم شيئاً، وأن كل نسخةٍ من
+   * naf-manger قد تختلف عن أختها وعن المنصات الأربع الباقية.
+   *
+   * واللون قرارٌ يُسجَّل في naf-ui مرّةً ثم يُستهلك في الخمس — لا يُنتقى
+   * في شاشة إعدادات. والقاعدة الحاكمة: «السجلّ يسبق المنصة».
+   *
+   * حقول primaryColor و secondaryColor و accentColor تبقى في القاعدة
+   * وفي النوع — إسقاطها ترحيلُ مخطَّط يخصّ قراراً آخر — لكنها لم تعد
+   * تُقرأ ولا تُكتب من الواجهة، ولم يعد شيء يُحقن على الجذر.
+   */
 
   const handleSave = async () => {
     if (!settings) return;
@@ -87,11 +88,8 @@ export default function GeneralSettings() {
 
     try {
       await db.updateSettings(settings);
-      
-      // تطبيق الألوان على النظام
-      applyThemeColors(settings);
-      
-      setSaveMessage('تم حفظ الإعدادات بنجاح');
+
+      setSaveMessage('تم الحفظ');
       
       // إعادة تحميل الصفحة لتطبيق التغييرات على جميع المكونات
       setTimeout(() => {
@@ -109,35 +107,24 @@ export default function GeneralSettings() {
     }
   };
 
-  const applyThemeColors = (settings: SystemSettings) => {
-    const root = document.documentElement;
-    root.style.setProperty('--color-primary', settings.primaryColor);
-    root.style.setProperty('--color-secondary', settings.secondaryColor);
-    root.style.setProperty('--color-accent', settings.accentColor);
-  };
-
   const resetToDefaults = () => {
     if (window.confirm('هل أنت متأكد من إعادة تعيين الإعدادات إلى القيم الافتراضية؟')) {
       const defaultSettings = {
         ...settings!,
         companyName: 'NAF Law',
         companyDescription: 'نظام إدارة المكتب القانوني',
-        companyLogo: undefined,
-        primaryColor: '#1e40af',
-        secondaryColor: '#3b82f6',
-        accentColor: '#f59e0b'
+        companyLogo: undefined
       };
-      
+
       setSettings(defaultSettings);
       setLogoPreview(null);
-      applyThemeColors(defaultSettings);
     }
   };
 
   if (!settings) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -145,53 +132,51 @@ export default function GeneralSettings() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-slate-900">الإعدادات العامة</h3>
-        <button
-          onClick={resetToDefaults}
-          className="text-slate-600 hover:text-slate-800 text-sm"
-        >
+        <h3 className="text-lg font-semibold text-foreground">الإعدادات العامة</h3>
+        <Button onClick={resetToDefaults} variant="ghost" size="sm">
           إعادة تعيين للافتراضي
-        </button>
+        </Button>
       </div>
 
-      {saveMessage && (
-        <div className={`p-3 rounded-lg ${
-          saveMessage.includes('نجاح') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-        }`}>
-          {saveMessage}
-        </div>
-      )}
+      {saveMessage && (() => {
+        const tone = messageTone(saveMessage);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{saveMessage}</span>
+          </Alert>
+        );
+      })()}
 
       {/* معلومات الشركة */}
-      <div className="bg-slate-50 rounded-lg p-6">
+      <div className="bg-muted rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <BuildingOfficeIcon className="h-6 w-6 text-slate-600" />
-          <h4 className="font-medium text-slate-900">معلومات الشركة</h4>
+          <Building2 className="h-6 w-6 text-muted-foreground" />
+          <h4 className="font-medium text-foreground">معلومات الشركة</h4>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               اسم الشركة
             </label>
-            <input
+            <Input
               type="text"
               value={settings.companyName}
               onChange={(e) => handleInputChange('companyName', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="اسم الشركة"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               وصف الشركة
             </label>
-            <input
+            <Input
               type="text"
               value={settings.companyDescription}
               onChange={(e) => handleInputChange('companyDescription', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="وصف مختصر للشركة"
             />
           </div>
@@ -199,34 +184,33 @@ export default function GeneralSettings() {
       </div>
 
       {/* شعار الشركة */}
-      <div className="bg-slate-50 rounded-lg p-6">
+      <div className="bg-muted rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <PhotoIcon className="h-6 w-6 text-slate-600" />
-          <h4 className="font-medium text-slate-900">شعار الشركة</h4>
+          <Image className="h-6 w-6 text-muted-foreground" />
+          <h4 className="font-medium text-foreground">شعار الشركة</h4>
         </div>
         
         <div className="flex items-start gap-6">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               رفع شعار جديد
             </label>
-            <input
+            <Input
               type="file"
               accept="image/*"
               onChange={handleLogoUpload}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               يُفضل استخدام صور بصيغة PNG أو SVG، الحد الأقصى 2MB
             </p>
           </div>
           
           {logoPreview && (
             <div className="flex-shrink-0">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 معاينة الشعار
               </label>
-              <div className="w-20 h-20 border border-slate-300 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+              <div className="w-20 h-20 border border-border rounded-lg overflow-hidden bg-card flex items-center justify-center">
                 <img
                   src={logoPreview}
                   alt="شعار الشركة"
@@ -238,129 +222,54 @@ export default function GeneralSettings() {
         </div>
       </div>
 
-      {/* ألوان النظام */}
-      <div className="bg-slate-50 rounded-lg p-6">
+      {/* لوحة الهوية — تُعرَض ولا تُحرَّر */}
+      <div className="bg-muted rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <SwatchIcon className="h-6 w-6 text-slate-600" />
-          <h4 className="font-medium text-slate-900">ألوان النظام</h4>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              اللون الأساسي
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={settings.primaryColor}
-                onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-                className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.primaryColor}
-                onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                placeholder="#1e40af"
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-1">يُستخدم للأزرار الرئيسية والروابط</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              اللون الثانوي
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={settings.secondaryColor}
-                onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-                className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.secondaryColor}
-                onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                placeholder="#3b82f6"
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-1">يُستخدم للعناصر الثانوية</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              لون التمييز
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={settings.accentColor}
-                onChange={(e) => handleColorChange('accentColor', e.target.value)}
-                className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.accentColor}
-                onChange={(e) => handleColorChange('accentColor', e.target.value)}
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                placeholder="#f59e0b"
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-1">يُستخدم للتنبيهات والتمييز</p>
-          </div>
+          <Palette className="h-6 w-6 text-muted-foreground" />
+          <h4 className="font-medium text-foreground">لوحة الهوية</h4>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h5 className="font-medium text-blue-900 mb-2">معاينة الألوان</h5>
-          <div className="flex gap-3">
-            <div 
-              className="w-16 h-16 rounded-lg flex items-center justify-center text-white text-xs font-medium"
-              style={{ backgroundColor: settings.primaryColor }}
+        <p className="text-sm text-muted-foreground mb-4">
+          الألوان تأتي من سجلّ التصميم الموحّد ولا تُحرَّر هنا. تغييرها قرار
+          يُسجَّل مرّة واحدة في <bdi>naf-ui</bdi> فتتبعه منصات ناف الخمس معاً.
+        </p>
+
+        <div className="flex flex-wrap gap-3">
+          {[
+            { cls: 'bg-primary text-primary-foreground', label: 'أساسي' },
+            { cls: 'bg-secondary text-secondary-foreground', label: 'ثانوي' },
+            { cls: 'bg-accent text-accent-foreground', label: 'تمييز' },
+            { cls: 'bg-success text-success-foreground', label: 'نجاح' },
+            { cls: 'bg-warning text-warning-foreground', label: 'تحذير' },
+            { cls: 'bg-destructive text-destructive-foreground', label: 'خطأ' },
+            { cls: 'bg-info text-info-foreground', label: 'معلومة' }
+          ].map((swatch) => (
+            <div
+              key={swatch.label}
+              className={`w-16 h-16 rounded-lg flex items-center justify-center text-xs font-medium ${swatch.cls}`}
             >
-              أساسي
+              {swatch.label}
             </div>
-            <div 
-              className="w-16 h-16 rounded-lg flex items-center justify-center text-white text-xs font-medium"
-              style={{ backgroundColor: settings.secondaryColor }}
-            >
-              ثانوي
-            </div>
-            <div 
-              className="w-16 h-16 rounded-lg flex items-center justify-center text-white text-xs font-medium"
-              style={{ backgroundColor: settings.accentColor }}
-            >
-              تمييز
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* معاينة التغييرات */}
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">ملاحظة</h4>
-        <p className="text-sm text-blue-800">
-          سيتم تطبيق التغييرات على جميع أجزاء النظام بعد الحفظ. يمكنك معاينة الألوان فوراً عند تغييرها.
+      <div className="bg-primary-soft rounded-lg p-4">
+        <h4 className="font-medium text-primary-strong mb-2">ملاحظة</h4>
+        <p className="text-sm text-primary-strong">
+          تُطبَّق التغييرات على النظام بعد الحفظ.
         </p>
       </div>
 
       {/* أزرار الحفظ */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <button
-          onClick={() => loadSettings()}
-          className="px-4 py-2 text-slate-600 hover:text-slate-800"
-        >
+        <Button onClick={() => loadSettings()} variant="ghost">
           إلغاء التغييرات
-        </button>
-        <button 
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg"
-        >
-          {isSaving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
-        </button>
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
+        </Button>
       </div>
     </div>
   );

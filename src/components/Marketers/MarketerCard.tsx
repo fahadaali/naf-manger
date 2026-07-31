@@ -1,10 +1,15 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { UserIcon, PhoneIcon, EnvelopeIcon, PencilIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { Archive, ChartColumn, CircleCheck, CircleSlash, Mail, Pencil, Phone } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { db } from '../../data/database';
+import { Money } from '@/registry/naf/currency/money';
+import { formatPhone } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Card } from '@/registry/naf/ui/card';
 
 interface MarketerCardProps {
   marketer: Marketer;
@@ -54,14 +59,14 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
     loadStats();
   }, [marketer.id]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'نشط': return 'bg-green-100 text-green-800';
-      case 'موقوف': return 'bg-yellow-100 text-yellow-800';
-      case 'سابق': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const STATUS = {
+    'نشط': { variant: 'success' as const, Icon: CircleCheck },
+    'موقوف': { variant: 'warning' as const, Icon: CircleSlash },
+    'سابق': { variant: 'default' as const, Icon: Archive }
   };
+
+  const statusOf = (status: string) =>
+    STATUS[status as keyof typeof STATUS] ?? STATUS['سابق'];
 
   const getStatusLabel = (status: string) => {
     return status;
@@ -72,7 +77,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+    <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <ProfileAvatar 
@@ -83,84 +88,86 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           <div>
             <button 
               onClick={() => onViewDetails(marketer)}
-              className="text-lg font-semibold text-purple-600 hover:text-purple-800 hover:underline text-right"
+              className="text-lg font-semibold text-info hover:text-info-strong hover:underline text-start"
             >
               {marketer.fullName}
             </button>
-            <p className="text-sm text-slate-500">{getTypeLabel(marketer.relationshipType)}</p>
+            <p className="text-sm text-muted-foreground">{getTypeLabel(marketer.relationshipType)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(marketer.status)}`}>
-            {getStatusLabel(marketer.status)}
-          </span>
+          {(() => {
+            const { variant, Icon } = statusOf(marketer.status);
+            return (
+              <Badge variant={variant}>
+                <Icon aria-hidden="true" />
+                {getStatusLabel(marketer.status)}
+              </Badge>
+            );
+          })()}
           {canEdit && (
-            <button
-              onClick={() => onEdit(marketer)}
-              className="text-slate-600 hover:text-slate-800 p-1"
-              title="تحرير"
-            >
-              <PencilIcon className="h-4 w-4" />
-            </button>
+            <Button onClick={() => onEdit(marketer)} title="تعديل" variant="ghost" size="icon-sm">
+              <Pencil className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </div>
 
       <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <PhoneIcon className="h-4 w-4" />
-          <span>{marketer.phone}</span>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Phone className="h-4 w-4" />
+          <span><bdi>{formatPhone(marketer.phone)}</bdi></span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <EnvelopeIcon className="h-4 w-4" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Mail className="h-4 w-4" />
           <span>{marketer.email}</span>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           بدء التعاون: {format(marketer.startDate, 'dd/MM/yyyy')}
         </p>
       </div>
 
       {/* Performance Stats */}
-      <div className="bg-slate-50 rounded-lg p-3 mb-4">
+      <div className="bg-muted rounded-lg p-3 mb-4">
         <div className="flex items-center gap-2 mb-2">
-          <ChartBarIcon className="h-4 w-4 text-slate-600" />
-          <span className="text-sm font-medium text-slate-700">الأداء</span>
+          <ChartColumn className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">الأداء</span>
         </div>
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div>
-            <p className="text-slate-500">القضايا</p>
-            <p className="font-semibold text-slate-900">{stats.totalCases}</p>
+            <p className="text-muted-foreground">القضايا</p>
+            <p className="font-semibold text-foreground">{stats.totalCases}</p>
           </div>
           <div>
-            <p className="text-slate-500">المكتملة</p>
-            <p className="font-semibold text-green-600">{stats.completedCases}</p>
+            <p className="text-muted-foreground">المكتملة</p>
+            <p className="font-semibold text-success">{stats.completedCases}</p>
           </div>
           <div>
-            <p className="text-slate-500">الإيرادات</p>
-            <p className="font-semibold text-blue-600">{stats.totalRevenue.toLocaleString()} ر.س</p>
+            <p className="text-muted-foreground">الإيرادات</p>
+            <p className="font-semibold text-primary"><Money value={stats.totalRevenue} /></p>
           </div>
           <div>
-            <p className="text-slate-500">العمولة المتبقية</p>
-            <p className="font-semibold text-amber-600">{stats.remainingCommission.toLocaleString()} ر.س</p>
+            <p className="text-muted-foreground">العمولة المتبقية</p>
+            <p className="font-semibold text-warning"><Money value={stats.remainingCommission} /></p>
           </div>
         </div>
       </div>
 
       {marketer.notes && (
-        <p className="text-sm text-slate-600 mb-4 line-clamp-2">{marketer.notes}</p>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{marketer.notes}</p>
       )}
 
       <div className="flex justify-between items-center">
         <button
           onClick={() => onViewDetails(marketer)}
-          className="text-purple-600 hover:text-purple-800 text-sm font-medium hover:underline"
+          className="text-info hover:text-info-strong text-sm font-medium hover:underline"
         >
           عرض التفاصيل
         </button>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-muted-foreground">
           معدل النجاح: {stats.conversionRate}%
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

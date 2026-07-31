@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { Plus, Search } from 'lucide-react';
 import { Prospect } from '../../types';
 import ProspectCard from './ProspectCard';
 import ProspectModal from './ProspectModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
 
 export default function ProspectsView() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -112,7 +116,7 @@ export default function ProspectsView() {
           } as any);
 
             loadProspects(); // إعادة تحميل القائمة
-            alert(`تم تحويل "${prospect.fullName}" إلى عميل فعلي بنجاح!`);
+            alert(`تم تحويل "${prospect.fullName}" إلى عميل`);
         } catch (error) {
           console.error('Error converting prospect:', error);
           alert('حدث خطأ أثناء تحويل العميل المحتمل');
@@ -168,81 +172,75 @@ export default function ProspectsView() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">إدارة العملاء المحتملين</h1>
-          <p className="text-slate-600">إدارة العملاء المحتملين وتحويلهم إلى عملاء فعليين</p>
+          <h1 className="text-2xl font-bold text-foreground">إدارة العملاء المحتملين</h1>
+          <p className="text-muted-foreground">إدارة العملاء المحتملين وتحويلهم إلى عملاء فعليين</p>
         </div>
         {hasPermission('prospects', 'create') && (
-          <button 
-            onClick={handleCreateProspect}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-            <PlusIcon className="h-5 w-5" />
+          <Button onClick={handleCreateProspect}>
+            <Plus className="h-5 w-5" />
             إضافة عميل محتمل
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <Card className="p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <input
+            <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
               type="text"
               placeholder="البحث عن عميل محتمل..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <select
+            <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">كل الأنواع</option>
               <option value="individual">أفراد</option>
               <option value="company">شركات</option>
               <option value="association">جمعيات</option>
               <option value="government">جهات حكومية</option>
-            </select>
-            <select
+            </Select>
+            <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">كل الحالات</option>
               {uniqueStatuses.map(status => (
                 <option key={status} value={status}>{status}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">إجمالي العملاء المحتملين</p>
-          <p className="text-xl sm:text-2xl font-bold text-slate-900">{prospects.length}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">مهتمين</p>
-          <p className="text-xl sm:text-2xl font-bold text-blue-600">
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">إجمالي العملاء المحتملين</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{prospects.length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">مهتمين</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">
             {prospects.filter(p => p.prospectStatus === 'مهتم').length}
           </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">بانتظار توقيع</p>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600">
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">بانتظار توقيع</p>
+          <p className="text-xl sm:text-2xl font-bold text-warning">
             {prospects.filter(p => p.prospectStatus === 'بانتظار توقيع').length}
           </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <p className="text-xs sm:text-sm text-slate-600">معدل التحويل</p>
-          <p className="text-xl sm:text-2xl font-bold text-green-600">{conversionRate}%</p>
-        </div>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">معدل التحويل</p>
+          <p className="text-xl sm:text-2xl font-bold text-success">{conversionRate}%</p>
+        </Card>
       </div>
 
       {/* Prospects Grid */}
@@ -263,7 +261,7 @@ export default function ProspectsView() {
 
       {filteredProspects.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-slate-500">لا توجد عملاء محتملين مطابقين لمعايير البحث</p>
+          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
         </div>
       )}
 

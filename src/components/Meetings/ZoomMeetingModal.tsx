@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  XMarkIcon, 
-  VideoCameraIcon, 
-  CalendarIcon, 
-  ClockIcon,
-  UserGroupIcon,
-  PlusIcon,
-  TrashIcon,
-  PaperAirplaneIcon
-} from '@heroicons/react/24/outline';
+import { Calendar, Plus, Send, Trash2, User, Users, Video } from 'lucide-react';
 import { Client, Prospect } from '../../types';
+import { formatDateTime, isolate } from '@/registry/naf/lib/format';
+import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { Select } from '@/registry/naf/ui/select';
+import { Input } from '@/registry/naf/ui/input';
+import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
 
 interface ZoomMeetingModalProps {
   client?: Client | Prospect;
@@ -128,7 +126,11 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
 
       onMeetingCreated?.(meetingDetails);
       
-      alert(`تم إنشاء الاجتماع بنجاح!\nرقم الاجتماع: ${meetingId}\nتم إرسال الدعوات إلى ${invitees.length} مدعو`);
+      alert(
+        `تم إنشاء الاجتماع\n` +
+          `رقم الاجتماع: ${isolate(meetingId)}\n` +
+          `تم إرسال الدعوات إلى ${isolate(invitees.length)} مدعو`
+      );
       onClose();
 
     } catch (error) {
@@ -156,36 +158,41 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
     await new Promise(resolve => setTimeout(resolve, 1000));
   };
 
+  /* ═══ نصّ الدعوة — مرآةُ القالب المُرسَل ═══
+   *
+   * القالب الحقيقي في `server/naf-email.js`، وهذا نصُّه العاديّ لمن
+   * ينسخه بيده ما دام الإرسال معطَّلاً. والقاعدة تشترط أن تُطابق
+   * المعاينةُ ما يصل المستلم: معاينةٌ تعرض غير ما يُرسَل تُري المُرسِلَ
+   * شيئاً لا يراه أحد سواه.
+   *
+   * فالحقول هنا وترتيبها وصيغة تاريخها نسخةٌ من ذلك القالب. وأي تعديل
+   * في أحدهما يلزم الآخر.
+   *
+   * وقد سقطت الإيموجي التي كانت هنا: القالب المُرسَل لا يحملها، وبقاؤها
+   * في المعاينة وحدها هو الافتراق بعينه.
+   */
   const generateEmailContent = (meetingDetails: any) => {
     const meetingDate = new Date(meetingDetails.startTime);
-    const formattedDate = meetingDate.toLocaleDateString('ar-SA');
-    const formattedTime = meetingDate.toLocaleTimeString('ar-SA', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
 
-    return `
-موضوع: دعوة اجتماع - ${meetingDetails.title}
-
-عزيزي/عزيزتي،
-
-أنت مدعو للانضمام إلى اجتماع Zoom:
-
-📅 التاريخ: ${formattedDate}
-🕐 الوقت: ${formattedTime}
-⏱️ المدة: ${meetingDetails.duration} دقيقة
-
-🔗 رابط الانضمام:
-${meetingDetails.joinUrl}
-
-${meetingDetails.password ? `🔐 كلمة المرور: ${meetingDetails.password}` : ''}
-
-${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agenda}` : ''}
-
-نتطلع لرؤيتك في الاجتماع.
-
-مع تحيات فريق NAF Law
-    `;
+    return [
+      `موضوع: دعوة اجتماع - ${meetingDetails.title}`,
+      '',
+      'تفاصيل الاجتماع',
+      `التاريخ والوقت: ${isolate(formatDateTime(meetingDate))}`,
+      `المدة: ${isolate(meetingDetails.duration)} دقيقة`,
+      `رقم الاجتماع: ${isolate(meetingDetails.id)}`,
+      meetingDetails.password
+        ? `كلمة المرور: ${isolate(meetingDetails.password)}`
+        : '',
+      '',
+      'رابط الدخول:',
+      meetingDetails.joinUrl,
+      meetingDetails.agenda ? `\nجدول الأعمال:\n${meetingDetails.agenda}` : '',
+      '',
+      'مع تحيات فريق ناف'
+    ]
+      .filter(Boolean)
+      .join('\n');
   };
 
   const saveMeetingToStorage = (meetingDetails: any) => {
@@ -199,115 +206,98 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="max-w-2xl max-h-full overflow-y-auto p-0">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <VideoCameraIcon className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-primary-soft rounded-lg">
+              <Video className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">إنشاء اجتماع Zoom</h2>
+              <DialogTitle className="text-xl font-bold">إنشاء اجتماع Zoom</DialogTitle>
               {client && (
-                <p className="text-sm text-slate-600">مع العميل: {client.fullName}</p>
+                <p className="text-sm text-muted-foreground">مع العميل: {client.fullName}</p>
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
         </div>
 
         <div className="p-6 space-y-6">
           {/* معلومات الاجتماع الأساسية */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
               معلومات الاجتماع
             </h3>
             
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 عنوان الاجتماع *
               </label>
-              <input
+              <Input
                 type="text"
                 value={meetingData.title}
                 onChange={(e) => setMeetingData(prev => ({ ...prev, title: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.title ? 'border-red-300' : 'border-slate-300'
-                }`}
                 placeholder="مثال: مناقشة القضية التجارية"
-              />
+               aria-invalid={!!errors.title} />
               {errors.title && (
-                <p className="text-red-600 text-sm mt-1">{errors.title}</p>
+                <p className="text-destructive text-sm mt-1">{errors.title}</p>
               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   التاريخ *
                 </label>
-                <input
+                <Input
                   type="date"
                   value={meetingData.date}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, date: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    errors.date ? 'border-red-300' : 'border-slate-300'
-                  }`}
-                />
+                 aria-invalid={!!errors.date} />
                 {errors.date && (
-                  <p className="text-red-600 text-sm mt-1">{errors.date}</p>
+                  <p className="text-destructive text-sm mt-1">{errors.date}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   الوقت *
                 </label>
-                <input
+                <Input
                   type="time"
                   value={meetingData.time}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, time: e.target.value }))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    errors.time ? 'border-red-300' : 'border-slate-300'
-                  }`}
-                />
+                 aria-invalid={!!errors.time} />
                 {errors.time && (
-                  <p className="text-red-600 text-sm mt-1">{errors.time}</p>
+                  <p className="text-destructive text-sm mt-1">{errors.time}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   المدة (دقيقة)
                 </label>
-                <select
+                <Select
                   value={meetingData.duration}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value={30}>30 دقيقة</option>
                   <option value={60}>60 دقيقة</option>
                   <option value={90}>90 دقيقة</option>
                   <option value={120}>120 دقيقة</option>
-                </select>
+                </Select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 جدول الأعمال
               </label>
-              <textarea
+              <Textarea
                 value={meetingData.agenda}
                 onChange={(e) => setMeetingData(prev => ({ ...prev, agenda: e.target.value }))}
                 rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="اكتب جدول أعمال الاجتماع..."
               />
             </div>
@@ -315,80 +305,70 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
 
           {/* المدعوين */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-              <UserGroupIcon className="h-5 w-5" />
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Users className="h-5 w-5" />
               المدعوين
             </h3>
 
             <div className="flex gap-2">
-              <input
+              <Input
                 type="email"
                 value={newInviteeEmail}
                 onChange={(e) => setNewInviteeEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addInvitee()}
-                className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                  errors.newEmail ? 'border-red-300' : 'border-slate-300'
-                }`}
+                onKeyPress={(e) => e.key === 'Enter' && addInvitee()} className="flex-1"
                 placeholder="أدخل البريد الإلكتروني"
-              />
-              <button
-                onClick={addInvitee}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-              >
-                <PlusIcon className="h-4 w-4" />
+               aria-invalid={!!errors.newEmail} />
+              <Button onClick={addInvitee}>
+                <Plus className="h-4 w-4" />
                 إضافة
-              </button>
+              </Button>
             </div>
             {errors.newEmail && (
-              <p className="text-red-600 text-sm">{errors.newEmail}</p>
+              <p className="text-destructive text-sm">{errors.newEmail}</p>
             )}
 
             <div className="space-y-2">
               {invitees.map((email, index) => (
-                <div key={index} className="flex items-center justify-between bg-slate-50 rounded-lg p-3">
+                <div key={index} className="flex items-center justify-between bg-muted rounded-lg p-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 text-sm font-medium">
+                    <div className="w-8 h-8 bg-primary-soft rounded-full flex items-center justify-center">
+                      <span className="text-primary text-sm font-medium">
                         {email.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <span className="text-slate-900">{email}</span>
+                    <span className="text-foreground">{email}</span>
                     {client && email === client.email && (
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                      <Badge variant="success">
+                        <User aria-hidden="true" />
                         العميل
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <button
-                    onClick={() => removeInvitee(email)}
-                    className="text-red-600 hover:text-red-800 p-1"
-                    title="حذف"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
+                  <Button onClick={() => removeInvitee(email)} className="text-destructive hover:text-destructive-strong" title="حذف" variant="ghost" size="icon-sm">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
             {errors.invitees && (
-              <p className="text-red-600 text-sm">{errors.invitees}</p>
+              <p className="text-destructive text-sm">{errors.invitees}</p>
             )}
           </div>
 
           {/* إعدادات الأمان */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900">إعدادات الأمان</h3>
+            <h3 className="text-lg font-semibold text-foreground">إعدادات الأمان</h3>
             
             <div className="flex items-center gap-3">
-              <input
+              <Input
                 type="text"
                 value={meetingData.password}
-                onChange={(e) => setMeetingData(prev => ({ ...prev, password: e.target.value }))}
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => setMeetingData(prev => ({ ...prev, password: e.target.value }))} className="flex-1"
                 placeholder="كلمة مرور الاجتماع (اختيارية)"
               />
               <button
                 onClick={generateMeetingPassword}
-                className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm"
+                className="bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg text-sm"
               >
                 توليد تلقائي
               </button>
@@ -400,9 +380,9 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
                   type="checkbox"
                   checked={meetingData.waitingRoom}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, waitingRoom: e.target.checked }))}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-border text-primary focus-visible:ring-ring"
                 />
-                <span className="text-sm text-slate-700">تفعيل غرفة الانتظار</span>
+                <span className="text-sm text-foreground">تفعيل غرفة الانتظار</span>
               </label>
 
               <label className="flex items-center gap-2">
@@ -410,17 +390,17 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
                   type="checkbox"
                   checked={meetingData.recordMeeting}
                   onChange={(e) => setMeetingData(prev => ({ ...prev, recordMeeting: e.target.checked }))}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-border text-primary focus-visible:ring-ring"
                 />
-                <span className="text-sm text-slate-700">تسجيل الاجتماع تلقائياً</span>
+                <span className="text-sm text-foreground">تسجيل الاجتماع تلقائياً</span>
               </label>
             </div>
           </div>
 
           {/* معاينة الاجتماع */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-3">معاينة الاجتماع</h4>
-            <div className="space-y-2 text-sm text-blue-800">
+          <div className="bg-primary-soft rounded-lg p-4">
+            <h4 className="font-medium text-primary-strong mb-3">معاينة الاجتماع</h4>
+            <div className="space-y-2 text-sm text-primary-strong">
               <p><strong>العنوان:</strong> {meetingData.title}</p>
               <p><strong>التاريخ والوقت:</strong> {meetingData.date} في {meetingData.time}</p>
               <p><strong>المدة:</strong> {meetingData.duration} دقيقة</p>
@@ -432,35 +412,27 @@ ${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agend
           </div>
         </div>
 
-        <div className="border-t border-slate-200 px-6 py-4">
+        <div className="border-t border-border px-6 py-4">
           <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800"
-              disabled={isCreating}
-            >
+            <Button onClick={onClose} disabled={isCreating} variant="ghost">
               إلغاء
-            </button>
-            <button
-              onClick={createZoomMeeting}
-              disabled={isCreating}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg flex items-center gap-2"
-            >
+            </Button>
+            <Button onClick={createZoomMeeting} disabled={isCreating}>
               {isCreating ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  جاري الإنشاء...
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
+                  جارٍ الإنشاء...
                 </>
               ) : (
                 <>
-                  <PaperAirplaneIcon className="h-4 w-4" />
+                  <Send className="h-4 w-4" />
                   إنشاء الاجتماع وإرسال الدعوات
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+      </Dialog>
   );
 }

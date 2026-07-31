@@ -36,21 +36,21 @@ export default function Denied() {
   return (
     <main
       dir="rtl"
-      className="min-h-screen bg-slate-100 flex items-center justify-center p-4"
+      className="min-h-screen bg-muted flex items-center justify-center p-4"
     >
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+      <div className="w-full max-w-md bg-card rounded-2xl shadow-lg p-6 sm:p-8">
         <div className="flex items-start gap-3">
           {showIcon && (
-            <CircleSlash aria-hidden="true" className="h-5 w-5 shrink-0 mt-1 text-slate-500" />
+            <CircleSlash aria-hidden="true" className="h-5 w-5 shrink-0 mt-1 text-muted-foreground" />
           )}
-          <p className="text-slate-700 leading-relaxed">{message}</p>
+          <p className="text-foreground leading-relaxed">{message}</p>
         </div>
 
         {/* الوجهة جذرُ المنصة: الوسيط يقود منه إلى المركز، فلا نطاق مكتوب
             هنا ولا في أي ملف كود — نقلُ المركز تعديلُ `wrangler.toml` وحده. */}
         <a
           href="/"
-          className="mt-6 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {/* بلا قلب: الخريطة تختار الاسم بمظهره في RTL — «رجوع → ArrowRight» —
               وهذه الصفحة RTL، فرسمُها الطبيعي هو الصحيح. والقلب يلزم في LTR. */}
