@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { mockCases } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 
 interface ClientModalProps {
   client?: Client;
@@ -146,7 +147,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">رقم الجوال</label>
-                  <p className="text-foreground">{client.phone}</p>
+                  <p className="text-foreground"><bdi>{formatPhone(client.phone)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">البريد الإلكتروني</label>
@@ -222,7 +223,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                     <div key={case_.id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h4 className="font-medium text-foreground">{case_.caseNumber}</h4>
+                          <h4 className="font-medium text-foreground"><bdi>{case_.caseNumber}</bdi></h4>
                           <p className="text-sm text-muted-foreground">{case_.caseType}</p>
                         </div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${

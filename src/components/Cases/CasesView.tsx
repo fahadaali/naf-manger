@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import { db } from '../../data/database';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 
 export default function CasesView() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -238,25 +239,25 @@ export default function CasesView() {
           <table className="w-full">
             <thead className="bg-muted">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                   رقم القضية
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell tabular-nums">
                   النوع
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                   العميل
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell tabular-nums">
                   الملخص
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                   الحالة
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell tabular-nums">
                   تاريخ الإنشاء
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                   إجراءات
                 </th>
               </tr>
@@ -264,24 +265,24 @@ export default function CasesView() {
             <tbody className="divide-y divide-border">
               {filteredActiveCases.map((case_) => (
                 <tr key={case_.id} className="hover:bg-muted">
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap tabular-nums">
                     <button 
                       onClick={() => handleViewCase(case_)}
                       className="text-xs sm:text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                     >
-                      {case_.caseNumber}
+                      <bdi>{case_.caseNumber}</bdi>
                     </button>
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell tabular-nums">
                     <div className="text-xs sm:text-sm text-foreground">{case_.caseType}</div>
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap tabular-nums">
                     <div className="text-xs sm:text-sm text-foreground truncate max-w-32">{case_.clientName}</div>
                   </td>
-                  <td className="px-3 sm:px-6 py-4 hidden md:table-cell">
+                  <td className="px-3 sm:px-6 py-4 hidden md:table-cell tabular-nums">
                     <div className="text-xs sm:text-sm text-foreground line-clamp-2">{case_.summary}</div>
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap tabular-nums">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(case_.status)}`}>
                       {getStatusLabel(case_.status)}
                     </span>
@@ -291,10 +292,10 @@ export default function CasesView() {
                       </div>
                     )}
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-muted-foreground hidden lg:table-cell">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-muted-foreground hidden lg:table-cell tabular-nums">
                     {format(case_.createdDate, 'dd/MM/yyyy')}
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium tabular-nums">
                     <div className="flex gap-2">
                       {hasPermission('cases', 'update') && (
                         <button 
@@ -354,25 +355,25 @@ export default function CasesView() {
               <table className="w-full">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                       رقم القضية
                     </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                       النوع
                     </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                       العميل
                     </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                       الملخص
                     </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                       النتيجة
                     </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                       تاريخ الإنجاز
                     </th>
-                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider tabular-nums">
                       إجراءات
                     </th>
                   </tr>
@@ -380,24 +381,24 @@ export default function CasesView() {
                 <tbody className="divide-y divide-border">
                   {filteredCompletedCases.map((case_) => (
                     <tr key={case_.id} className="hover:bg-muted">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
                         <button 
                           onClick={() => handleViewCase(case_)}
                           className="text-sm font-medium text-primary hover:text-primary-strong hover:underline"
                         >
-                          {case_.caseNumber}
+                          <bdi>{case_.caseNumber}</bdi>
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
                         <div className="text-sm text-foreground">{case_.caseType}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
                         <div className="text-sm text-foreground">{case_.clientName}</div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 tabular-nums">
                         <div className="text-sm text-foreground line-clamp-2">{case_.summary}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap tabular-nums">
                         {case_.outcome && (
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             case_.outcome === 'won' ? 'bg-success-soft text-success-strong' :
@@ -408,10 +409,10 @@ export default function CasesView() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
                         {format(case_.updatedDate, 'dd/MM/yyyy')}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium tabular-nums">
                         <div className="flex gap-2">
                           {hasPermission('cases', 'update') && (
                             <button 

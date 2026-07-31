@@ -5,6 +5,7 @@ import ReportBuilder from './ReportBuilder';
 import ReportViewer from './ReportViewer';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
 
 export default function ReportsView() {
   const [reports, setReports] = useState<CustomReport[]>([]);
@@ -206,7 +207,7 @@ export default function ReportsView() {
                         )}
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>مصدر البيانات: {report.dataSource}</span>
-                          <span>آخر تعديل: {report.lastModified.toLocaleDateString('ar-SA')}</span>
+                          <span>آخر تعديل: <bdi>{formatDate(report.lastModified)}</bdi></span>
                           {report.isTemplate && (
                             <span className="bg-success-soft text-success-strong px-2 py-1 rounded-full">قالب</span>
                           )}

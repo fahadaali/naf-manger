@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import { mockSystemSettings } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { Money } from '@/registry/naf/currency/money';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 
 interface ProspectModalProps {
   prospect?: Prospect;
@@ -149,7 +151,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">رقم الجوال</label>
-                  <p className="text-foreground">{prospect.phone}</p>
+                  <p className="text-foreground"><bdi>{formatPhone(prospect.phone)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">البريد الإلكتروني</label>
@@ -210,7 +212,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 {prospect.expectedValue && (
                   <div>
                     <label className="block text-sm font-medium text-foreground">القيمة المتوقعة</label>
-                    <p className="text-foreground">{prospect.expectedValue.toLocaleString()} ريال</p>
+                    <p className="text-foreground"><Money value={prospect.expectedValue} /></p>
                   </div>
                 )}
                 {prospect.followUpDate && (
@@ -371,7 +373,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                القيمة المتوقعة (ريال)
+                القيمة المتوقعة بالريال
               </label>
               <input
                 type="number"

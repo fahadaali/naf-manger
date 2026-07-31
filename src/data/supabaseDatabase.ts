@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings, Marketer, CommissionPayment, MarketerStats } from '../types';
+import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
 
 // تحويل البيانات من تنسيق قاعدة البيانات إلى تنسيق التطبيق
 const transformClient = (dbClient: any): Client => ({
@@ -418,7 +419,7 @@ export class SupabaseDatabase {
         joinDate: new Date(),
         clientType: prospect.clientType,
         status: 'current',
-        notes: prospect.notes + (prospect.notes ? '\n\n' : '') + `تم التحويل من عميل محتمل في ${new Date().toLocaleDateString('ar-SA')}`,
+        notes: prospect.notes + (prospect.notes ? '\n\n' : '') + `تم التحويل من عميل محتمل في ${formatDate(new Date())}`,
         attachments: prospect.attachments,
         commercialRegister: prospect.commercialRegister,
         legalRepresentative: prospect.legalRepresentative

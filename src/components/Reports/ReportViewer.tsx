@@ -4,6 +4,7 @@ import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport } from '../../types';
 import { db } from '../../data/database';
 import ChartCard from '../Dashboard/ChartCard';
+import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
 
 interface ReportViewerProps {
   report: CustomReport;
@@ -180,7 +181,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             <div>
               <span className="text-muted-foreground">آخر تحديث:</span>
               <span className="font-medium text-foreground ms-2">
-                {report.lastModified.toLocaleDateString('ar-SA')}
+                <bdi>{formatDate(report.lastModified)}</bdi>
               </span>
             </div>
             <div>

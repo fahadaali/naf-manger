@@ -7,6 +7,7 @@ import { VideoCameraIcon } from '@heroicons/react/24/outline';
 import { Client } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 
 interface ClientCardProps {
   client: Client;
@@ -90,7 +91,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <PhoneIcon className="h-4 w-4" />
-          <span>{client.phone}</span>
+          <span><bdi>{formatPhone(client.phone)}</bdi></span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Mail className="h-4 w-4" />

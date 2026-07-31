@@ -3,6 +3,8 @@ import { ExternalLink, X } from 'lucide-react';
 import { Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import { format } from 'date-fns';
 import { db } from '../../data/database';
+import { Money } from '@/registry/naf/currency/money';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 
 interface CaseModalProps {
   case?: Case;
@@ -193,7 +195,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground">رقم القضية</label>
-                  <p className="text-foreground font-medium">{existingCase.caseNumber}</p>
+                  <p className="text-foreground font-medium"><bdi>{existingCase.caseNumber}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع القضية</label>
@@ -428,7 +430,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
-                      {formData.advanceFeeType === 'percentage' ? 'النسبة (%)' : 'المبلغ (ر.س)'}
+                      {formData.advanceFeeType === 'percentage' ? 'النسبة (%)' : 'المبلغ بالريال'}
                     </label>
                     <input
                       type="number"
@@ -440,7 +442,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   </div>
                   {formData.advanceFeeType === 'percentage' && (
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">المبلغ الأساسي (ر.س)</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">المبلغ الأساسي بالريال</label>
                       <input
                         type="number"
                         value={formData.advanceBaseAmount}
@@ -472,7 +474,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
-                      {formData.deferredFeeType === 'percentage' ? 'النسبة (%)' : 'المبلغ (ر.س)'}
+                      {formData.deferredFeeType === 'percentage' ? 'النسبة (%)' : 'المبلغ بالريال'}
                     </label>
                     <input
                       type="number"
@@ -484,7 +486,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   </div>
                   {formData.deferredFeeType === 'percentage' && (
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">المبلغ الأساسي (ر.س)</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">المبلغ الأساسي بالريال</label>
                       <input
                         type="number"
                         value={formData.deferredBaseAmount}
@@ -506,7 +508,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  المبلغ الإجمالي (ر.س)
+                  المبلغ الإجمالي بالريال
                 </label>
                 <input
                   type="number"
@@ -519,7 +521,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  المبلغ المحصل (ر.س)
+                  المبلغ المحصل بالريال
                 </label>
                 <input
                   type="number"
@@ -550,7 +552,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <div className="p-3 bg-card rounded border">
                 <p className="text-sm text-muted-foreground">
                   المبلغ المتبقي: <span className="font-medium text-destructive">
-                    {(parseFloat(formData.totalAmount) - parseFloat(formData.collectedAmount)).toLocaleString()} ر.س
+                    <Money value={(parseFloat(formData.totalAmount) - parseFloat(formData.collectedAmount))} />
                   </span>
                 </p>
               </div>
@@ -579,7 +581,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    {formData.commissionType === 'percentage' ? 'النسبة (%)' : 'المبلغ (ر.س)'}
+                    {formData.commissionType === 'percentage' ? 'النسبة (%)' : 'المبلغ بالريال'}
                   </label>
                   <input
                     type="number"
@@ -595,7 +597,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 <div className="p-3 bg-card rounded border">
                   <p className="text-sm text-muted-foreground">
                     العمولة المحسوبة: <span className="font-medium text-info">
-                      {((parseFloat(formData.collectedAmount) * parseFloat(formData.commissionValue)) / 100).toLocaleString()} ر.س
+                      <Money value={((parseFloat(formData.collectedAmount) * parseFloat(formData.commissionValue)) / 100)} />
                     </span>
                   </p>
                 </div>

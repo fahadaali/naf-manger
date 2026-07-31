@@ -7,6 +7,7 @@ import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import { Client, Prospect, Case, ActivityLog } from '../../types';
 import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { db } from '../../data/database';
+import { Money } from '@/registry/naf/currency/money';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
@@ -598,7 +599,7 @@ export default function Analytics() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">القيمة المتوقعة الإجمالية</span>
                   <span className="font-medium text-success">
-                    {prospects.reduce((sum, p) => sum + (p.expectedValue || 0), 0).toLocaleString()} ر.س
+                    <Money value={prospects.reduce((sum, p) => sum + (p.expectedValue || 0), 0)} />
                   </span>
                 </div>
               </div>

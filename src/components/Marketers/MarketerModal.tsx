@@ -8,6 +8,8 @@ import { format } from 'date-fns';
 import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { Money } from '@/registry/naf/currency/money';
+import { formatDate, formatDateTime, formatNumber, formatPhone, formatTime } from '@/registry/naf/lib/format';
 
 interface MarketerModalProps {
   marketer?: Marketer;
@@ -145,7 +147,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">رقم الجوال</label>
-                  <p className="text-foreground">{marketer.phone}</p>
+                  <p className="text-foreground"><bdi>{formatPhone(marketer.phone)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">البريد الإلكتروني</label>
@@ -203,7 +205,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                   <p className="text-sm text-muted-foreground">معدل النجاح</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-info">{stats.averageCaseValue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-info"><bdi>{formatNumber(stats.averageCaseValue)}</bdi></p>
                   <p className="text-sm text-muted-foreground">متوسط قيمة القضية</p>
                 </div>
               </div>
@@ -218,19 +220,19 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground">إجمالي الإيرادات</label>
-                  <p className="text-xl font-bold text-success">{stats.totalRevenue.toLocaleString()} ر.س</p>
+                  <p className="text-xl font-bold text-success"><Money value={stats.totalRevenue} /></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">العمولة المستحقة</label>
-                  <p className="text-xl font-bold text-primary">{stats.totalCommissionEarned.toLocaleString()} ر.س</p>
+                  <p className="text-xl font-bold text-primary"><Money value={stats.totalCommissionEarned} /></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">العمولة المدفوعة</label>
-                  <p className="text-xl font-bold text-info">{stats.totalCommissionPaid.toLocaleString()} ر.س</p>
+                  <p className="text-xl font-bold text-info"><Money value={stats.totalCommissionPaid} /></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">العمولة المتبقية</label>
-                  <p className="text-xl font-bold text-warning">{stats.remainingCommission.toLocaleString()} ر.س</p>
+                  <p className="text-xl font-bold text-warning"><Money value={stats.remainingCommission} /></p>
                 </div>
               </div>
             </div>
@@ -243,21 +245,21 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                   <table className="w-full border border-border rounded-lg">
                     <thead className="bg-muted">
                       <tr>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">رقم القضية</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">العميل</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">الحالة</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">المبلغ الإجمالي</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">المحصل</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">العمولة المدفوعة</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">المتبقي</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">رقم القضية</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">العميل</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">الحالة</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">المبلغ الإجمالي</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">المحصل</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">العمولة المدفوعة</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">المتبقي</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {marketerCases.map((case_) => (
                         <tr key={case_.id} className="hover:bg-muted">
-                          <td className="px-4 py-3 text-sm font-medium text-primary">{case_.caseNumber}</td>
-                          <td className="px-4 py-3 text-sm text-foreground">{case_.clientName}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 text-sm font-medium text-primary tabular-nums"><bdi>{case_.caseNumber}</bdi></td>
+                          <td className="px-4 py-3 text-sm text-foreground tabular-nums">{case_.clientName}</td>
+                          <td className="px-4 py-3 tabular-nums">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               case_.status === 'completed' ? 'bg-success-soft text-success-strong' :
                               case_.status === 'in-progress' ? 'bg-primary-soft text-primary-strong' :
@@ -267,17 +269,17 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                                case_.status === 'in-progress' ? 'قيد المعالجة' : 'منظورة'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-foreground">
-                            {(case_ as any).paymentStatus?.totalAmount?.toLocaleString() || '0'} ر.س
+                          <td className="px-4 py-3 text-sm text-foreground tabular-nums">
+                            <Money value={(case_ as any).paymentStatus?.totalAmount ?? 0} />
                           </td>
-                          <td className="px-4 py-3 text-sm text-success font-medium">
-                            {(case_ as any).paymentStatus?.collectedAmount?.toLocaleString() || '0'} ر.س
+                          <td className="px-4 py-3 text-sm text-success font-medium tabular-nums">
+                            <Money value={(case_ as any).paymentStatus?.collectedAmount ?? 0} />
                           </td>
-                          <td className="px-4 py-3 text-sm text-info font-medium">
-                            {(case_ as any).totalCommissionPaid?.toLocaleString() || '0'} ر.س
+                          <td className="px-4 py-3 text-sm text-info font-medium tabular-nums">
+                            <Money value={(case_ as any).totalCommissionPaid ?? 0} />
                           </td>
-                          <td className="px-4 py-3 text-sm text-warning font-medium">
-                            {(case_ as any).remainingCommission?.toLocaleString() || '0'} ر.س
+                          <td className="px-4 py-3 text-sm text-warning font-medium tabular-nums">
+                            <Money value={(case_ as any).remainingCommission ?? 0} />
                           </td>
                         </tr>
                       ))}

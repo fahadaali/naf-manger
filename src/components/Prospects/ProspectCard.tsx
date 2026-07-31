@@ -7,6 +7,8 @@ import { VideoCameraIcon } from '@heroicons/react/24/outline';
 import { Prospect } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { Money } from '@/registry/naf/currency/money';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 
 interface ProspectCardProps {
   prospect: Prospect;
@@ -89,7 +91,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <PhoneIcon className="h-4 w-4" />
-          <span>{prospect.phone}</span>
+          <span><bdi>{formatPhone(prospect.phone)}</bdi></span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Mail className="h-4 w-4" />
@@ -97,7 +99,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
         </div>
         {prospect.expectedValue && (
           <p className="text-sm text-muted-foreground">
-            القيمة المتوقعة: {prospect.expectedValue.toLocaleString()} ريال
+            القيمة المتوقعة: <Money value={prospect.expectedValue} />
           </p>
         )}
         {prospect.followUpDate && (

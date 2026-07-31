@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileOutput } from 'lucide-react';
 import { db } from '../../data/database';
+import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
 
 export default function DataExport() {
   const [selectedData, setSelectedData] = useState({
@@ -73,7 +74,7 @@ export default function DataExport() {
           row['رقم الهوية'] = client.idNumber;
           row['نوع العميل'] = client.clientType;
           row['حالة العميل'] = client.status;
-          row['تاريخ الانضمام'] = client.joinDate.toLocaleDateString('ar-SA');
+          row['تاريخ الانضمام'] = formatDate(client.joinDate);
         }
         
         if (selectedFields.clients.contactInfo) {
@@ -103,7 +104,7 @@ export default function DataExport() {
           row['الاسم الكامل'] = prospect.fullName;
           row['رقم الهوية'] = prospect.idNumber;
           row['نوع العميل'] = prospect.clientType;
-          row['تاريخ الإضافة'] = prospect.joinDate.toLocaleDateString('ar-SA');
+          row['تاريخ الإضافة'] = formatDate(prospect.joinDate);
         }
         
         if (selectedFields.prospects.contactInfo) {
@@ -115,7 +116,7 @@ export default function DataExport() {
           row['حالة العميل المحتمل'] = prospect.prospectStatus;
           row['المصدر'] = prospect.source || '';
           row['القيمة المتوقعة'] = prospect.expectedValue || 0;
-          row['موعد المتابعة'] = prospect.followUpDate?.toLocaleDateString('ar-SA') || '';
+          row['موعد المتابعة'] = prospect.followUpDate ? formatDate(prospect.followUpDate) : '';
         }
         
         if (selectedFields.prospects.notes && prospect.notes) {
@@ -137,12 +138,12 @@ export default function DataExport() {
           row['نوع القضية'] = case_.caseType;
           row['العميل'] = case_.clientName;
           row['الحالة'] = case_.status;
-          row['تاريخ الإنشاء'] = case_.createdDate.toLocaleDateString('ar-SA');
+          row['تاريخ الإنشاء'] = formatDate(case_.createdDate);
         }
         
         if (selectedFields.cases.details) {
           row['ملخص القضية'] = case_.summary;
-          row['تاريخ التحديث'] = case_.updatedDate.toLocaleDateString('ar-SA');
+          row['تاريخ التحديث'] = formatDate(case_.updatedDate);
         }
         
         if (selectedFields.cases.basecampLinks && case_.basecampUrl) {
@@ -168,7 +169,7 @@ export default function DataExport() {
           row['رقم الهوية'] = marketer.idNumber;
           row['نوع العلاقة'] = marketer.relationshipType;
           row['الحالة'] = marketer.status;
-          row['تاريخ بدء التعاون'] = marketer.startDate.toLocaleDateString('ar-SA');
+          row['تاريخ بدء التعاون'] = formatDate(marketer.startDate);
         }
         
         if (selectedFields.marketers.contactInfo) {
@@ -196,8 +197,8 @@ export default function DataExport() {
         'الاسم': user.name,
         'البريد الإلكتروني': user.email,
         'الدور': user.role,
-        'تاريخ الإنشاء': user.createdDate.toLocaleDateString('ar-SA'),
-        'آخر تسجيل دخول': user.lastLogin?.toLocaleDateString('ar-SA') || 'لم يسجل دخول'
+        'تاريخ الإنشاء': formatDate(user.createdDate),
+        'آخر تسجيل دخول': user.lastLogin ? formatDate(user.lastLogin) : 'لم يسجل دخول'
       }));
       data.users = usersData;
     }
@@ -208,8 +209,8 @@ export default function DataExport() {
         'النوع': activity.type,
         'الوصف': activity.description,
         'المستخدم': activity.userName,
-        'التاريخ': activity.timestamp.toLocaleDateString('ar-SA'),
-        'الوقت': activity.timestamp.toLocaleTimeString('ar-SA')
+        'التاريخ': formatDate(activity.timestamp),
+        'الوقت': formatTime(activity.timestamp)
       }));
       data.activities = activitiesData;
     }
@@ -289,7 +290,7 @@ export default function DataExport() {
   const generatePDFContent = async (data: any) => {
     let content = 'تقرير بيانات NAF Law\n';
     content += '===================\n\n';
-    content += `تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}\n\n`;
+    content += `تاريخ التصدير: ${formatDate(new Date())}\n\n`;
 
     Object.keys(data).forEach(sheetName => {
       const sheetTitle = {

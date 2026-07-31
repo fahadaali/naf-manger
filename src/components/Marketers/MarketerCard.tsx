@@ -8,6 +8,8 @@ import { Marketer, MarketerStats } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { db } from '../../data/database';
+import { Money } from '@/registry/naf/currency/money';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 
 interface MarketerCardProps {
   marketer: Marketer;
@@ -112,7 +114,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <PhoneIcon className="h-4 w-4" />
-          <span>{marketer.phone}</span>
+          <span><bdi>{formatPhone(marketer.phone)}</bdi></span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Mail className="h-4 w-4" />
@@ -140,11 +142,11 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           </div>
           <div>
             <p className="text-muted-foreground">الإيرادات</p>
-            <p className="font-semibold text-primary">{stats.totalRevenue.toLocaleString()} ر.س</p>
+            <p className="font-semibold text-primary"><Money value={stats.totalRevenue} /></p>
           </div>
           <div>
             <p className="text-muted-foreground">العمولة المتبقية</p>
-            <p className="font-semibold text-warning">{stats.remainingCommission.toLocaleString()} ر.س</p>
+            <p className="font-semibold text-warning"><Money value={stats.remainingCommission} /></p>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { User, UserPermissions } from '../../types';
 import { db } from '../../data/database';
+import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
@@ -211,19 +212,19 @@ export default function UserManagement() {
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
                 المستخدم
               </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
                 الدور
               </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
                 آخر تسجيل دخول
               </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
                 تاريخ الإنشاء
               </th>
-              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tabular-nums">
                 إجراءات
               </th>
             </tr>
@@ -231,24 +232,24 @@ export default function UserManagement() {
           <tbody className="divide-y divide-border">
             {users.map((user) => (
               <tr key={user.id} className="hover:bg-muted">
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 tabular-nums">
                   <div>
                     <div className="text-sm font-medium text-foreground">{user.name}</div>
-                    <div className="text-sm text-muted-foreground">{user.email}</div>
+                    <div className="text-sm text-muted-foreground"><bdi>{user.email}</bdi></div>
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 tabular-nums">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">
+                <td className="px-6 py-4 text-sm text-muted-foreground tabular-nums">
                   {formatLastLogin(user.lastLogin)}
                 </td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">
-                  {user.createdDate.toLocaleDateString('ar-SA')}
+                <td className="px-6 py-4 text-sm text-muted-foreground tabular-nums">
+                  <bdi>{formatDate(user.createdDate)}</bdi>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 tabular-nums">
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEditingUser(user)}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, ClipboardList, Plus, Send, Trash2, Users, Video, X } from 'lucide-react';
 import { Client, Prospect } from '../../types';
+import { formatDate, formatDateTime, formatTime, isolate } from '@/registry/naf/lib/format';
 
 interface ZoomMeetingModalProps {
   client?: Client | Prospect;
@@ -119,7 +120,11 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
 
       onMeetingCreated?.(meetingDetails);
       
-      alert(`تم إنشاء الاجتماع بنجاح!\nرقم الاجتماع: ${meetingId}\nتم إرسال الدعوات إلى ${invitees.length} مدعو`);
+      alert(
+        `تم إنشاء الاجتماع\n` +
+          `رقم الاجتماع: ${isolate(meetingId)}\n` +
+          `تم إرسال الدعوات إلى ${isolate(invitees.length)} مدعو`
+      );
       onClose();
 
     } catch (error) {
@@ -149,11 +154,8 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
 
   const generateEmailContent = (meetingDetails: any) => {
     const meetingDate = new Date(meetingDetails.startTime);
-    const formattedDate = meetingDate.toLocaleDateString('ar-SA');
-    const formattedTime = meetingDate.toLocaleTimeString('ar-SA', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    const formattedDate = formatDate(meetingDate);
+    const formattedTime = formatTime(meetingDate);
 
     return `
 موضوع: دعوة اجتماع - ${meetingDetails.title}
@@ -164,7 +166,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
 
 📅 التاريخ: ${formattedDate}
 🕐 الوقت: ${formattedTime}
-⏱️ المدة: ${meetingDetails.duration} دقيقة
+⏱️ المدة: ${isolate(meetingDetails.duration)} دقيقة
 
 🔗 رابط الانضمام:
 ${meetingDetails.joinUrl}

@@ -5,6 +5,7 @@ import {
 import { CircleCheck, MessageSquare, RefreshCw, Send, Sparkles, TriangleAlert, User } from 'lucide-react';
 import { db } from '../../data/database';
 import { geminiService } from '../../services/geminiService';
+import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
 
 interface Message {
   id: string;
@@ -261,7 +262,7 @@ export default function AIAssistant() {
                 }`}>
                   <p className="whitespace-pre-wrap">{message.content}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {message.timestamp.toLocaleTimeString('ar-SA')}
+                    <bdi>{formatTime(message.timestamp)}</bdi>
                   </p>
                 </div>
               </div>

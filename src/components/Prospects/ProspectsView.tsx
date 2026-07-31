@@ -112,7 +112,7 @@ export default function ProspectsView() {
           } as any);
 
             loadProspects(); // إعادة تحميل القائمة
-            alert(`تم تحويل "${prospect.fullName}" إلى عميل فعلي بنجاح!`);
+            alert(`تم تحويل "${prospect.fullName}" إلى عميل`);
         } catch (error) {
           console.error('Error converting prospect:', error);
           alert('حدث خطأ أثناء تحويل العميل المحتمل');
