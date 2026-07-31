@@ -101,7 +101,7 @@ const SmartLawyer: React.FC = () => {
                 <Scale className="h-16 w-16 text-surface-deep-foreground" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">
               المحامي الذكي
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-surface-deep-muted max-w-3xl mx-auto">

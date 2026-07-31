@@ -81,7 +81,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
                 <Scale className="h-16 w-16 text-surface-deep-foreground" />
               </div>
             </div>
-            <h2 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
               نظام NAF Law
             </h2>
             <p className="text-xl md:text-2xl text-surface-deep-muted mb-8 max-w-4xl mx-auto leading-relaxed">
