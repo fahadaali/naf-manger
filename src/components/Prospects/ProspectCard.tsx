@@ -1,10 +1,9 @@
 import React from 'react';
 import { ArrowRight, CircleSlash, CircleX, Clock, FileCheck, Info, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Prospect } from '../../types';
-import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
-import { formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -98,11 +97,11 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
         )}
         {prospect.followUpDate && (
           <p className="text-sm text-muted-foreground">
-            موعد المتابعة: {format(prospect.followUpDate, 'dd/MM/yyyy')}
+            موعد المتابعة: <bdi>{formatDate(prospect.followUpDate)}</bdi>
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          تاريخ الإضافة: {format(prospect.joinDate, 'dd/MM/yyyy')}
+          تاريخ الإضافة: <bdi>{formatDate(prospect.joinDate)}</bdi>
         </p>
       </div>
 

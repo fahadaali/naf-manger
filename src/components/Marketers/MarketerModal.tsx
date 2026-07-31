@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Archive, Banknote, ChartColumn, CircleCheck, CircleSlash, Clock, LoaderCircle, User } from 'lucide-react';
 import { Marketer } from '../../types';
+/* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
+   ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
+   يمرّ بـ formatDate من naf-format. */
 import { format } from 'date-fns';
 import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
-import { formatNumber, formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -160,7 +163,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">تاريخ بدء التعاون</label>
-                  <p className="text-foreground">{format(marketer.startDate, 'dd/MM/yyyy')}</p>
+                  <p className="text-foreground"><bdi>{formatDate(marketer.startDate)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">الحالة</label>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Case } from '../../types';
-import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import { db } from '../../data/database';
+import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
@@ -301,7 +301,7 @@ export default function CasesView() {
                     )}
                   </TableCell>
                   <TableCell className="sm:px-6 sm:text-sm hidden lg:table-cell">
-                    {format(case_.createdDate, 'dd/MM/yyyy')}
+                    <bdi>{formatDate(case_.createdDate)}</bdi>
                   </TableCell>
                   <TableCell className="sm:px-6 sm:text-sm">
                     <div className="flex gap-2">
@@ -424,7 +424,7 @@ export default function CasesView() {
                         })()}
                       </TableCell>
                       <TableCell>
-                        {format(case_.updatedDate, 'dd/MM/yyyy')}
+                        <bdi>{formatDate(case_.updatedDate)}</bdi>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">

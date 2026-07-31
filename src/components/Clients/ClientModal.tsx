@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { CircleCheck, Clock, LoaderCircle } from 'lucide-react';
 import { Client } from '../../types';
-import { format } from 'date-fns';
 import { mockCases } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
-import { formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -155,7 +154,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">تاريخ الانضمام</label>
-                  <p className="text-foreground">{format(client.joinDate, 'dd/MM/yyyy')}</p>
+                  <p className="text-foreground"><bdi>{formatDate(client.joinDate)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع العميل</label>

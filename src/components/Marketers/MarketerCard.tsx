@@ -2,11 +2,10 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { Archive, ChartColumn, CircleCheck, CircleSlash, Mail, Pencil, Phone } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';
-import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
-import { formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -123,7 +122,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           <span>{marketer.email}</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          بدء التعاون: {format(marketer.startDate, 'dd/MM/yyyy')}
+          بدء التعاون: <bdi>{formatDate(marketer.startDate)}</bdi>
         </p>
       </div>
 

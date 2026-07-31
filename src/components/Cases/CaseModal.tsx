@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
-import { format } from 'date-fns';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
+import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -209,11 +209,11 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">تاريخ الإنشاء</label>
-                  <p className="text-foreground">{format(existingCase.createdDate, 'dd/MM/yyyy')}</p>
+                  <p className="text-foreground"><bdi>{formatDate(existingCase.createdDate)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">آخر تحديث</label>
-                  <p className="text-foreground">{format(existingCase.updatedDate, 'dd/MM/yyyy')}</p>
+                  <p className="text-foreground"><bdi>{formatDate(existingCase.updatedDate)}</bdi></p>
                 </div>
                 {existingCase.outcome && (
                   <div>

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Archive, CircleCheck, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Client } from '../../types';
-import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
-import { formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -94,7 +93,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
           <span>{client.email}</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          عميل منذ: {format(client.joinDate, 'dd/MM/yyyy')}
+          عميل منذ: <bdi>{formatDate(client.joinDate)}</bdi>
         </p>
       </div>
 

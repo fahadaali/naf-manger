@@ -4,9 +4,10 @@ import { useChartPalette, softFill } from '../../lib/chart-tokens';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import { Client, Prospect, Case, ActivityLog } from '../../types';
-import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
+import { formatDateTime, formatMonth } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
@@ -113,7 +114,7 @@ export default function Analytics() {
       ).length;
       
       months.push({
-        month: format(monthStart, 'MMM yyyy'),
+        month: formatMonth(monthStart),
         clients: monthClients,
         cases: monthCases,
         prospects: monthProspects
@@ -621,7 +622,7 @@ export default function Analytics() {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                     <span>{activity.userName}</span>
                     <span>•</span>
-                    <span>{format(activity.timestamp, 'dd/MM/yyyy HH:mm')}</span>
+                    <span><bdi>{formatDateTime(activity.timestamp)}</bdi></span>
                   </div>
                 </div>
               </div>

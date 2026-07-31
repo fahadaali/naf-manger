@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Prospect } from '../../types';
+/* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
+   ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
+   يمرّ بـ formatDate من naf-format. */
 import { format } from 'date-fns';
 import { mockSystemSettings } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
-import { formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -157,7 +160,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">تاريخ الإضافة</label>
-                  <p className="text-foreground">{format(prospect.joinDate, 'dd/MM/yyyy')}</p>
+                  <p className="text-foreground"><bdi>{formatDate(prospect.joinDate)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع العميل</label>
@@ -216,7 +219,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 {prospect.followUpDate && (
                   <div>
                     <label className="block text-sm font-medium text-foreground">موعد المتابعة</label>
-                    <p className="text-foreground">{format(prospect.followUpDate, 'dd/MM/yyyy')}</p>
+                    <p className="text-foreground"><bdi>{formatDate(prospect.followUpDate)}</bdi></p>
                   </div>
                 )}
               </div>
