@@ -96,9 +96,9 @@ export default function SupabaseMigration() {
       }`}>
         <div className="flex items-center gap-3">
           {isSupabaseConnected ? (
-            <CircleCheck className="h-6 w-6 text-success" />
+            <CircleCheck className="h-6 w-6 text-success-strong" />
           ) : (
-            <TriangleAlert className="h-6 w-6 text-destructive" />
+            <TriangleAlert className="h-6 w-6 text-destructive-strong" />
           )}
           <div>
             <h4 className={`font-medium ${
@@ -158,8 +158,8 @@ export default function SupabaseMigration() {
           'bg-primary-soft border-primary/30'
         }`}>
           <div className="flex items-start gap-3">
-            {migrationStatus === 'success' && <CircleCheck className="h-6 w-6 text-success flex-shrink-0" />}
-            {migrationStatus === 'error' && <TriangleAlert className="h-6 w-6 text-destructive flex-shrink-0" />}
+            {migrationStatus === 'success' && <CircleCheck className="h-6 w-6 text-success-strong flex-shrink-0" />}
+            {migrationStatus === 'error' && <TriangleAlert className="h-6 w-6 text-destructive-strong flex-shrink-0" />}
             {migrationStatus === 'migrating' && (
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary flex-shrink-0"></div>
             )}
@@ -191,7 +191,7 @@ export default function SupabaseMigration() {
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              isSupabaseConnected ? 'bg-success-soft text-success' : 'bg-muted text-muted-foreground'
+              isSupabaseConnected ? 'bg-success-soft text-success-strong' : 'bg-muted text-muted-foreground'
             }`}>
               1
             </div>
@@ -208,7 +208,7 @@ export default function SupabaseMigration() {
           
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              migrationStatus === 'success' ? 'bg-success-soft text-success' : 'bg-muted text-muted-foreground'
+              migrationStatus === 'success' ? 'bg-success-soft text-success-strong' : 'bg-muted text-muted-foreground'
             }`}>
               2
             </div>
@@ -284,7 +284,7 @@ export default function SupabaseMigration() {
       {/* Important Notes */}
       <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <TriangleAlert className="h-6 w-6 text-warning flex-shrink-0" />
+          <TriangleAlert className="h-6 w-6 text-warning-strong flex-shrink-0" />
           <div>
             <h5 className="font-medium text-warning-strong mb-2">ملاحظات مهمة:</h5>
             <ul className="text-sm text-warning-strong space-y-1">

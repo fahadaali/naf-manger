@@ -517,7 +517,7 @@ export default function Settings() {
               {/* Notification Schedule */}
               <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
                 <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <Bell className="h-6 w-6 text-primary" />
+                  <Bell className="h-6 w-6 text-primary-strong" />
                   جدولة التقارير
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -54,15 +54,15 @@ export default function ActivityFeed() {
       case 'client_created':
       case 'case_created':
       case 'user_created':
-        return 'bg-success-soft text-success';
+        return 'bg-success-soft text-success-strong';
       case 'client_updated':
       case 'case_updated':
-        return 'bg-primary-soft text-primary';
+        return 'bg-primary-soft text-primary-strong';
       case 'client_deleted':
       case 'case_deleted':
-        return 'bg-destructive-soft text-destructive';
+        return 'bg-destructive-soft text-destructive-strong';
       case 'user_login':
-        return 'bg-info-soft text-info';
+        return 'bg-info-soft text-info-strong';
       default:
         return 'bg-muted text-muted-foreground';
     }

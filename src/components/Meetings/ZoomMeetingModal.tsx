@@ -211,7 +211,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">
-              <Video className="h-6 w-6 text-primary" />
+              <Video className="h-6 w-6 text-primary-strong" />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold">إنشاء اجتماع Zoom</DialogTitle>
@@ -332,7 +332,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
                 <div key={index} className="flex items-center justify-between bg-muted rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-primary-soft rounded-full flex items-center justify-center">
-                      <span className="text-primary text-sm font-medium">
+                      <span className="text-primary-strong text-sm font-medium">
                         {email.charAt(0).toUpperCase()}
                       </span>
                     </div>

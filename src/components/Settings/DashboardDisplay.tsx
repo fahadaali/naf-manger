@@ -56,7 +56,7 @@ export default function DashboardDisplay() {
               className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                 copySuccess 
                   ? 'bg-success text-success-foreground' 
-                  : 'bg-card text-primary hover:bg-primary-soft'
+                  : 'bg-card text-primary-strong hover:bg-primary-soft'
               }`}
             >
               {copySuccess ? (
@@ -94,7 +94,7 @@ export default function DashboardDisplay() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
             <div className="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-primary font-bold text-lg">1</span>
+              <span className="text-primary-strong font-bold text-lg">1</span>
             </div>
             <h5 className="font-medium text-foreground mb-2">نسخ الرابط</h5>
             <p className="text-sm text-muted-foreground">
@@ -103,8 +103,8 @@ export default function DashboardDisplay() {
           </div>
           
           <div className="text-center">
-            <div className="w-12 h-12 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-success font-bold text-lg">2</span>
+            <div className="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-primary-strong font-bold text-lg">2</span>
             </div>
             <h5 className="font-medium text-foreground mb-2">افتح في المتصفح</h5>
             <p className="text-sm text-muted-foreground">
@@ -113,8 +113,8 @@ export default function DashboardDisplay() {
           </div>
           
           <div className="text-center">
-            <div className="w-12 h-12 bg-info-soft rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-info font-bold text-lg">3</span>
+            <div className="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-primary-strong font-bold text-lg">3</span>
             </div>
             <h5 className="font-medium text-foreground mb-2">مراقبة مستمرة</h5>
             <p className="text-sm text-muted-foreground">

@@ -363,7 +363,7 @@ export default function Analytics() {
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">
-              <Users className="h-6 w-6 text-primary" />
+              <Users className="h-6 w-6 text-primary-strong" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">العملاء الجدد</p>
@@ -375,7 +375,7 @@ export default function Analytics() {
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-info-soft rounded-lg">
-              <TrendingUp className="h-6 w-6 text-info" />
+              <TrendingUp className="h-6 w-6 text-info-strong" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">العملاء المحتملين</p>
@@ -387,7 +387,7 @@ export default function Analytics() {
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-success-soft rounded-lg">
-              <FileText className="h-6 w-6 text-success" />
+              <FileText className="h-6 w-6 text-success-strong" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">القضايا الجديدة</p>
@@ -399,7 +399,7 @@ export default function Analytics() {
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-warning-soft rounded-lg">
-              <ChartColumn className="h-6 w-6 text-warning" />
+              <ChartColumn className="h-6 w-6 text-warning-strong" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">معدل الربح</p>

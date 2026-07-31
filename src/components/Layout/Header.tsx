@@ -81,7 +81,7 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
             </div>
             <button
               onClick={logout}
-              className="p-1 sm:p-2 hover:bg-destructive-soft hover:text-destructive rounded-full transition-colors"
+              className="p-1 sm:p-2 hover:bg-destructive-soft hover:text-destructive-strong rounded-full transition-colors"
               title="تسجيل الخروج"
             >
               <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />

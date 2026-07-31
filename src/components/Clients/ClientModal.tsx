@@ -195,7 +195,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <h3 className="text-lg font-semibold text-foreground mb-3">إحصائيات القضايا</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{clientCases.length}</p>
+                  <p className="text-2xl font-bold text-primary-strong">{clientCases.length}</p>
                   <p className="text-sm text-muted-foreground">إجمالي القضايا</p>
                 </div>
                 <div className="text-center">

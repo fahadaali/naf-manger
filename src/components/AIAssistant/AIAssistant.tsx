@@ -326,7 +326,7 @@ export default function AIAssistant() {
 
       <div className="bg-primary-soft rounded-lg p-4">
         <div className="flex items-center gap-2 mb-2">
-          <MessageSquare className="h-5 w-5 text-primary" />
+          <MessageSquare className="h-5 w-5 text-primary-strong" />
           <h3 className="font-semibold text-primary-strong">ميزات المساعد الذكي:</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">

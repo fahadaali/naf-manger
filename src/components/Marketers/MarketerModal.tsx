@@ -111,7 +111,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-info-soft rounded-lg">
-                <User className="h-6 w-6 text-info" />
+                <User className="h-6 w-6 text-info-strong" />
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold">{marketer.fullName}</DialogTitle>

@@ -174,7 +174,7 @@ export default function ReportsView() {
               onClick={() => {/* Create from template */}}
               className="p-4 border border-border rounded-lg hover:border-ring hover:bg-primary-soft transition-colors text-start"
             >
-              <template.icon className="h-8 w-8 text-primary mb-2" />
+              <template.icon className="h-8 w-8 text-primary-strong mb-2" />
               <h4 className="font-medium text-foreground mb-1">{template.name}</h4>
               <p className="text-sm text-muted-foreground">{template.description}</p>
             </button>
@@ -197,7 +197,7 @@ export default function ReportsView() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
                       <div className="p-2 bg-primary-soft rounded-lg">
-                        <IconComponent className="h-6 w-6 text-primary" />
+                        <IconComponent className="h-6 w-6 text-primary-strong" />
                       </div>
                       <div>
                         <h4 className="font-medium text-foreground mb-1">{report.name}</h4>

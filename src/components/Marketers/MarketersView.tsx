@@ -117,7 +117,7 @@ export default function MarketersView() {
           {hasPermission('marketers', 'create') && (
             <button 
               onClick={handleCreateMarketer}
-              className="bg-card text-info px-4 py-2 rounded-lg hover:bg-info-soft flex items-center gap-2 font-medium shadow-lg"
+              className="bg-card text-info-strong px-4 py-2 rounded-lg hover:bg-info-soft flex items-center gap-2 font-medium shadow-lg"
             >
               <Plus className="h-5 w-5" />
               إضافة مسوّق جديد

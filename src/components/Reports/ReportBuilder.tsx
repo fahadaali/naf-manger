@@ -196,7 +196,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 onClick={() => setCurrentStep(step.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start transition-colors ${
                   currentStep === step.id
-                    ? 'bg-primary-soft text-primary border border-primary/30'
+                    ? 'bg-primary-soft text-primary-strong border border-primary/30'
                     : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
@@ -423,7 +423,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                       onClick={() => handleVisualizationChange({ type: viz.type as any })}
                       className={`p-4 border rounded-lg text-center transition-colors ${
                         reportData.visualization?.type === viz.type
-                          ? 'border-primary bg-primary-soft text-primary'
+                          ? 'border-primary bg-primary-soft text-primary-strong'
                           : 'border-border hover:border-ring'
                       }`}
                     >
