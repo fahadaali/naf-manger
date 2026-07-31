@@ -152,33 +152,41 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
     await new Promise(resolve => setTimeout(resolve, 1000));
   };
 
+  /* ═══ نصّ الدعوة — مرآةُ القالب المُرسَل ═══
+   *
+   * القالب الحقيقي في `server/naf-email.js`، وهذا نصُّه العاديّ لمن
+   * ينسخه بيده ما دام الإرسال معطَّلاً. والقاعدة تشترط أن تُطابق
+   * المعاينةُ ما يصل المستلم: معاينةٌ تعرض غير ما يُرسَل تُري المُرسِلَ
+   * شيئاً لا يراه أحد سواه.
+   *
+   * فالحقول هنا وترتيبها وصيغة تاريخها نسخةٌ من ذلك القالب. وأي تعديل
+   * في أحدهما يلزم الآخر.
+   *
+   * وقد سقطت الإيموجي التي كانت هنا: القالب المُرسَل لا يحملها، وبقاؤها
+   * في المعاينة وحدها هو الافتراق بعينه.
+   */
   const generateEmailContent = (meetingDetails: any) => {
     const meetingDate = new Date(meetingDetails.startTime);
-    const formattedDate = formatDate(meetingDate);
-    const formattedTime = formatTime(meetingDate);
 
-    return `
-موضوع: دعوة اجتماع - ${meetingDetails.title}
-
-عزيزي/عزيزتي،
-
-أنت مدعو للانضمام إلى اجتماع Zoom:
-
-📅 التاريخ: ${formattedDate}
-🕐 الوقت: ${formattedTime}
-⏱️ المدة: ${isolate(meetingDetails.duration)} دقيقة
-
-🔗 رابط الانضمام:
-${meetingDetails.joinUrl}
-
-${meetingDetails.password ? `🔐 كلمة المرور: ${meetingDetails.password}` : ''}
-
-${meetingDetails.agenda ? `📋 جدول الأعمال:\n${meetingDetails.agenda}` : ''}
-
-نتطلع لرؤيتك في الاجتماع.
-
-مع تحيات فريق NAF Law
-    `;
+    return [
+      `موضوع: دعوة اجتماع - ${meetingDetails.title}`,
+      '',
+      'تفاصيل الاجتماع',
+      `التاريخ والوقت: ${isolate(formatDateTime(meetingDate))}`,
+      `المدة: ${isolate(meetingDetails.duration)} دقيقة`,
+      `رقم الاجتماع: ${isolate(meetingDetails.id)}`,
+      meetingDetails.password
+        ? `كلمة المرور: ${isolate(meetingDetails.password)}`
+        : '',
+      '',
+      'رابط الدخول:',
+      meetingDetails.joinUrl,
+      meetingDetails.agenda ? `\nجدول الأعمال:\n${meetingDetails.agenda}` : '',
+      '',
+      'مع تحيات فريق ناف'
+    ]
+      .filter(Boolean)
+      .join('\n');
   };
 
   const saveMeetingToStorage = (meetingDetails: any) => {

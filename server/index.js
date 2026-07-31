@@ -3,6 +3,11 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 
+/* قوالب البريد في ملفّ واحد — الاستثناء المنصوص عليه في §١، وشرحُه
+   وجدول تحويل القيم من رموز الثيم هناك. لا تكتب لوناً ولا صيغة تاريخ
+   في هذا الملفّ. */
+const nafEmail = require('./naf-email');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -53,18 +58,8 @@ app.post('/api/send-test-email', async (req, res) => {
     const mailOptions = {
       from: emailSettings ? `${emailSettings.fromName} <${emailSettings.fromAddress}>` : process.env.EMAIL_FROM,
       to: testEmail,
-      subject: 'Test Email from NAF Law System',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">NAF Law System - Test Email</h2>
-          <p>This is a test email to verify your email configuration is working correctly.</p>
-          <p>If you received this email, your email settings are properly configured.</p>
-          <hr style="margin: 20px 0;">
-          <p style="color: #666; font-size: 12px;">
-            This email was sent from the NAF Law management system.
-          </p>
-        </div>
-      `
+      subject: 'ناف — اختبار البريد',
+      html: nafEmail.testEmail()
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -102,18 +97,7 @@ app.post('/api/send-notification', async (req, res) => {
       from: `${process.env.EMAIL_FROM_NAME || 'NAF Law'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to: to,
       subject: subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">NAF Law System</h2>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            ${message}
-          </div>
-          <hr style="margin: 20px 0;">
-          <p style="color: #666; font-size: 12px;">
-            This email was sent from the NAF Law management system.
-          </p>
-        </div>
-      `
+      html: nafEmail.notificationEmail({ subject, message })
     };
 
     await transporter.sendMail(mailOptions);
@@ -156,45 +140,7 @@ app.post('/api/send-meeting-invitation', async (req, res) => {
           from: `${process.env.EMAIL_FROM_NAME || 'NAF Law'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
           to: email,
           subject: `دعوة اجتماع - ${meetingDetails.title}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl;">
-              <div style="background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                <h1 style="margin: 0; font-size: 24px;">دعوة اجتماع Zoom</h1>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">${meetingDetails.title}</p>
-              </div>
-              
-              <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                  <h3 style="color: #1f2937; margin-top: 0;">تفاصيل الاجتماع:</h3>
-                  <p style="margin: 5px 0;"><strong>📅 التاريخ والوقت:</strong> ${new Date(meetingDetails.startTime).toLocaleString('ar-SA')}</p>
-                  <p style="margin: 5px 0;"><strong>⏱️ المدة:</strong> ${meetingDetails.duration} دقيقة</p>
-                  <p style="margin: 5px 0;"><strong>🆔 رقم الاجتماع:</strong> ${meetingDetails.id}</p>
-                  ${meetingDetails.password ? `<p style="margin: 5px 0;"><strong>🔐 كلمة المرور:</strong> ${meetingDetails.password}</p>` : ''}
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${meetingDetails.joinUrl}" 
-                     style="background: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-                    الانضمام إلى الاجتماع
-                  </a>
-                </div>
-                
-                ${meetingDetails.agenda ? `
-                  <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <h4 style="color: #92400e; margin-top: 0;">📋 جدول الأعمال:</h4>
-                    <p style="color: #92400e; white-space: pre-wrap; margin-bottom: 0;">${meetingDetails.agenda}</p>
-                  </div>
-                ` : ''}
-                
-                <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
-                  <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                    نتطلع لرؤيتك في الاجتماع.<br>
-                    مع تحيات فريق NAF Law
-                  </p>
-                </div>
-              </div>
-            </div>
-          `
+          html: nafEmail.meetingInviteEmail(meetingDetails)
         };
 
         const info = await transporter.sendMail(mailOptions);
