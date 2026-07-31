@@ -83,7 +83,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           <div>
             <button 
               onClick={() => onViewDetails(marketer)}
-              className="text-lg font-semibold text-info hover:text-info-strong hover:underline text-right"
+              className="text-lg font-semibold text-info hover:text-info-strong hover:underline text-start"
             >
               {marketer.fullName}
             </button>

@@ -52,7 +52,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
           <div>
             <button 
               onClick={() => onViewDetails(client)}
-              className="text-lg font-semibold text-primary hover:text-primary-strong hover:underline text-right"
+              className="text-lg font-semibold text-primary hover:text-primary-strong hover:underline text-start"
             >
               {client.fullName}
             </button>

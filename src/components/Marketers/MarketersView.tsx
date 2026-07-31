@@ -127,13 +127,13 @@ export default function MarketersView() {
       <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <MagnifyingGlassIcon className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث عن مسوّق..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
+              className="w-full pe-10 ps-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">

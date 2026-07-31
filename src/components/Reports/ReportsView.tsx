@@ -148,13 +148,13 @@ export default function ReportsView() {
       <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <FunnelIcon className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث في التقارير..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
+              className="w-full pe-10 ps-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             />
           </div>
           <select
@@ -183,7 +183,7 @@ export default function ReportsView() {
             <button
               key={index}
               onClick={() => {/* Create from template */}}
-              className="p-4 border border-border rounded-lg hover:border-ring hover:bg-primary-soft transition-colors text-right"
+              className="p-4 border border-border rounded-lg hover:border-ring hover:bg-primary-soft transition-colors text-start"
             >
               <template.icon className="h-8 w-8 text-primary mb-2" />
               <h4 className="font-medium text-foreground mb-1">{template.name}</h4>

@@ -75,7 +75,7 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
               name={user?.name || 'مستخدم'} 
               size="sm" 
             />
-            <div className="text-right hidden sm:block">
+            <div className="text-start hidden sm:block">
               <p className="text-sm font-medium text-foreground truncate max-w-32">{user?.name}</p>
               <p className="text-xs text-muted-foreground">{getRoleLabel(user?.role || '')}</p>
             </div>

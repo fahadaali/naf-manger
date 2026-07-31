@@ -663,7 +663,7 @@ export default function Settings() {
                       <button
                         key={tab.id}
                         onClick={() => handleTabClick(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right transition-all duration-200 ${
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-start transition-all duration-200 ${
                           activeTab === tab.id
                             ? `${getColorClasses(category.color, 'bg')} ${getColorClasses(
                                 category.color,
@@ -677,7 +677,7 @@ export default function Settings() {
                             ? getColorClasses(category.color, 'fg')
                             : getColorClasses(category.color, 'text')
                         }`} />
-                        <div className="flex-1 text-right">
+                        <div className="flex-1 text-start">
                           <div className={`font-medium ${
                               activeTab === tab.id
                                 ? getColorClasses(category.color, 'fg')

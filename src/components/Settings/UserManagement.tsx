@@ -211,19 +211,19 @@ export default function UserManagement() {
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
                 المستخدم
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
                 الدور
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
                 آخر تسجيل دخول
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
                 تاريخ الإنشاء
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+              <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase">
                 إجراءات
               </th>
             </tr>

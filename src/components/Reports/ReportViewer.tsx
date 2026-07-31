@@ -138,22 +138,22 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                 <DocumentArrowDownIcon className="h-4 w-4" />
                 تصدير
               </button>
-              <div className="absolute left-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <div className="absolute end-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                 <button
                   onClick={() => exportReport('csv')}
-                  className="w-full px-4 py-2 text-right hover:bg-muted first:rounded-t-lg"
+                  className="w-full px-4 py-2 text-start hover:bg-muted first:rounded-t-lg"
                 >
                   تصدير CSV
                 </button>
                 <button
                   onClick={() => exportReport('excel')}
-                  className="w-full px-4 py-2 text-right hover:bg-muted"
+                  className="w-full px-4 py-2 text-start hover:bg-muted"
                 >
                   تصدير Excel
                 </button>
                 <button
                   onClick={() => exportReport('pdf')}
-                  className="w-full px-4 py-2 text-right hover:bg-muted last:rounded-b-lg"
+                  className="w-full px-4 py-2 text-start hover:bg-muted last:rounded-b-lg"
                 >
                   تصدير PDF
                 </button>
@@ -178,21 +178,21 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">مصدر البيانات:</span>
-              <span className="font-medium text-foreground mr-2">{report.dataSource}</span>
+              <span className="font-medium text-foreground ms-2">{report.dataSource}</span>
             </div>
             <div>
               <span className="text-muted-foreground">عدد السجلات:</span>
-              <span className="font-medium text-foreground mr-2">{reportData.length}</span>
+              <span className="font-medium text-foreground ms-2">{reportData.length}</span>
             </div>
             <div>
               <span className="text-muted-foreground">آخر تحديث:</span>
-              <span className="font-medium text-foreground mr-2">
+              <span className="font-medium text-foreground ms-2">
                 {report.lastModified.toLocaleDateString('ar-SA')}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground">نوع العرض:</span>
-              <span className="font-medium text-foreground mr-2">{report.visualization.type}</span>
+              <span className="font-medium text-foreground ms-2">{report.visualization.type}</span>
             </div>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                   <thead className="bg-muted">
                     <tr>
                       {Object.keys(reportData[0]).map(key => (
-                        <th key={key} className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <th key={key} className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           {key}
                         </th>
                       ))}
@@ -255,7 +255,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             <div className="space-y-1">
               {report.filters.map((filter, index) => (
                 <div key={filter.id} className="text-sm text-primary-strong">
-                  {index > 0 && <span className="mr-2">{filter.logicalOperator}</span>}
+                  {index > 0 && <span className="ms-2">{filter.logicalOperator}</span>}
                   <span className="font-medium">{filter.fieldId}</span>
                   <span className="mx-2">{filter.operator}</span>
                   <span className="font-medium">{filter.value}</span>

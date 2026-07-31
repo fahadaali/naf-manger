@@ -169,13 +169,13 @@ export default function CasesView() {
       <div className="bg-card rounded-lg shadow-sm border border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <MagnifyingGlassIcon className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="البحث في القضايا..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
+              className="w-full pe-10 ps-4 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
@@ -238,25 +238,25 @@ export default function CasesView() {
           <table className="w-full">
             <thead className="bg-muted">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   رقم القضية
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
                   النوع
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   العميل
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">
                   الملخص
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   الحالة
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
                   تاريخ الإنشاء
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   إجراءات
                 </th>
               </tr>
@@ -358,25 +358,25 @@ export default function CasesView() {
               <table className="w-full">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       رقم القضية
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       النوع
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       العميل
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       الملخص
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       النتيجة
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       تاريخ الإنجاز
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       إجراءات
                     </th>
                   </tr>

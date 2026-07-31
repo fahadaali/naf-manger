@@ -99,13 +99,13 @@ export default function LoginPage() {
                   required
                   value={credentials.password}
                   onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors pr-12"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors pe-12"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? (
                     <EyeSlashIcon className="h-5 w-5" />

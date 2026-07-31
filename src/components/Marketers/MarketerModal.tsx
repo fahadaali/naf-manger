@@ -240,13 +240,13 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                   <table className="w-full border border-border rounded-lg">
                     <thead className="bg-muted">
                       <tr>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">رقم القضية</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">العميل</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">الحالة</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">المبلغ الإجمالي</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">المحصل</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">العمولة المدفوعة</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">المتبقي</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">رقم القضية</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">العميل</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">الحالة</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">المبلغ الإجمالي</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">المحصل</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">العمولة المدفوعة</th>
+                        <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase">المتبقي</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">

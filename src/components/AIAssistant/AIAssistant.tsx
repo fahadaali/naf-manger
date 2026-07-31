@@ -217,7 +217,7 @@ export default function AIAssistant() {
             <button
               key={index}
               onClick={() => setInputMessage(question)}
-              className="bg-card bg-opacity-20 hover:bg-opacity-30 rounded-lg p-3 text-right transition-all text-sm"
+              className="bg-card bg-opacity-20 hover:bg-opacity-30 rounded-lg p-3 text-start transition-all text-sm"
               disabled={isTyping}
             >
               <p>{question}</p>

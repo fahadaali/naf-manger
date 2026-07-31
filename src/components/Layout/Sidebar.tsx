@@ -59,8 +59,8 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
   };
 
   return (
-    <div className={`bg-sidebar text-sidebar-foreground w-64 min-h-screen fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
-      isOpen ? 'translate-x-0' : 'translate-x-full'
+    <div className={`bg-sidebar text-sidebar-foreground w-64 min-h-screen fixed inset-y-0 start-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+      isOpen ? 'translate-x-0' : 'rtl:translate-x-full ltr:-translate-x-full'
     }`}>
       <div className="p-4 sm:p-6">
         {/* Close button for mobile */}
@@ -112,7 +112,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
               <button
                 key={item.id}
                 onClick={() => onViewChange(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-right transition-colors ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start transition-colors ${
                   currentView === item.id 
                     ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'

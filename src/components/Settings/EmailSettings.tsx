@@ -207,13 +207,13 @@ export default function EmailSettings() {
                 type={showPassword ? 'text' : 'password'}
                 value={settings?.password || ''}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring pr-10"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring pe-10"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute end-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? (
                   <EyeSlashIcon className="h-5 w-5" />
@@ -358,7 +358,7 @@ export default function EmailSettings() {
               <p>• <strong>اختبار الإعدادات:</strong> يتحقق من صحة البيانات المدخلة</p>
               <p>• <strong>الاستخدام:</strong> سيتم استخدام الإعدادات في ميزات الاجتماعات</p>
               <p>• <strong>خوادم شائعة:</strong></p>
-              <div className="mr-4 space-y-1">
+              <div className="ms-4 space-y-1">
                 <p>- Gmail: smtp.gmail.com:587</p>
                 <p>- Outlook: smtp-mail.outlook.com:587</p>
                 <p>- Hostinger: smtp.hostinger.com:587</p>

@@ -200,13 +200,13 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
 
       <div className="flex">
         {/* Steps Sidebar */}
-        <div className="w-64 bg-card border-r border-border p-6">
+        <div className="w-64 bg-card border-e border-border p-6">
           <nav className="space-y-2">
             {steps.map((step) => (
               <button
                 key={step.id}
                 onClick={() => setCurrentStep(step.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-right transition-colors ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start transition-colors ${
                   currentStep === step.id
                     ? 'bg-primary-soft text-primary border border-primary/30'
                     : 'text-muted-foreground hover:bg-muted'
@@ -477,7 +477,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                       <thead>
                         <tr className="border-b border-border">
                           {Object.keys(previewData[0]).map(key => (
-                            <th key={key} className="text-right py-2 px-4 font-medium text-foreground">
+                            <th key={key} className="text-start py-2 px-4 font-medium text-foreground">
                               {key}
                             </th>
                           ))}

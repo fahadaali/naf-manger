@@ -121,15 +121,15 @@ const SmartLawyer: React.FC = () => {
                 onClick={() => handleOpenLawyerAI()}
                 className="inline-flex items-center px-8 py-4 bg-card text-primary font-semibold rounded-lg hover:bg-primary-soft transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
-                <ChatBubbleLeftRightIcon className="h-6 w-6 ml-2" />
+                <ChatBubbleLeftRightIcon className="h-6 w-6 me-2" />
                 بدء محادثة مع المحامي الذكي
-                <ArrowTopRightOnSquareIcon className="h-5 w-5 mr-2" />
+                <ArrowTopRightOnSquareIcon className="h-5 w-5 ms-2" />
               </button>
               <button
                 onClick={handleCopyLink}
                 className="inline-flex items-center px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                <ClipboardDocumentIcon className="h-6 w-6 ml-2" />
+                <ClipboardDocumentIcon className="h-6 w-6 me-2" />
                 نسخ الرابط
               </button>
             </div>
@@ -218,12 +218,12 @@ const SmartLawyer: React.FC = () => {
       </div>
 
       {/* Disclaimer */}
-      <div className="bg-warning-soft border-l-4 border-warning p-6 mx-4 sm:mx-6 lg:mx-8 mb-8 rounded-r-lg">
+      <div className="bg-warning-soft border-e-4 border-warning p-6 mx-4 sm:mx-6 lg:mx-8 mb-8 rounded-s-lg">
         <div className="flex">
           <div className="flex-shrink-0">
             <ShieldCheckIcon className="h-5 w-5 text-warning" />
           </div>
-          <div className="mr-3">
+          <div className="ms-3">
             <h3 className="text-sm font-medium text-warning-strong">تنبيه مهم</h3>
             <div className="mt-2 text-sm text-warning">
               <p>

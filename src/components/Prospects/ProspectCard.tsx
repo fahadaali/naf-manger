@@ -51,7 +51,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
           <div>
             <button 
               onClick={() => onViewDetails(prospect)}
-              className="text-lg font-semibold text-primary hover:text-primary-strong hover:underline text-right"
+              className="text-lg font-semibold text-primary hover:text-primary-strong hover:underline text-start"
             >
               {prospect.fullName}
             </button>
