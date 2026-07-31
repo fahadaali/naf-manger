@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-  CurrencyDollarIcon
-} from '@heroicons/react/24/outline';
-import { ChartColumn, User, X } from 'lucide-react';
+import { Banknote, ChartColumn, User, X } from 'lucide-react';
 import { Marketer, Case, MarketerStats } from '../../types';
 import { format } from 'date-fns';
 import { db } from '../../data/database';
@@ -214,7 +211,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
             {/* Financial Summary */}
             <div className="bg-success-soft rounded-lg p-4">
               <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                <CurrencyDollarIcon className="h-5 w-5" />
+                <Banknote className="h-5 w-5" />
                 الملخص المالي
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

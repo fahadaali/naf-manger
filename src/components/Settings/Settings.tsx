@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-import {
-  ComputerDesktopIcon,
-  DocumentArrowUpIcon
-} from '@heroicons/react/24/outline';
-import { Bell, Check, ChevronDown, FileOutput, FileText, Globe, Mail, Settings, ShieldCheck, User, Users } from 'lucide-react';
+import { Bell, Check, ChevronDown, FileOutput, FileText, Globe, Import, Mail, Settings, ShieldCheck, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
@@ -70,16 +66,16 @@ export default function Settings() {
       tabs: [
         { id: 'users', label: 'إدارة المستخدمين', icon: Users, description: 'إضافة وتعديل المستخدمين والصلاحيات', permission: 'users.read' },
         { id: 'export', label: 'تصدير البيانات', icon: FileOutput, description: 'تصدير بيانات العملاء والقضايا', permission: 'settings.read' },
-        { id: 'import', label: 'استيراد البيانات', icon: DocumentArrowUpIcon, description: 'استيراد البيانات من ملفات Excel', permission: 'settings.update' }
+        { id: 'import', label: 'استيراد البيانات', icon: Import, description: 'استيراد البيانات من ملفات Excel', permission: 'settings.update' }
       ]
     },
     {
       id: 'display',
       name: 'العرض والمراقبة',
-      icon: ComputerDesktopIcon,
+      icon: Tv,
       color: 'amber',
       tabs: [
-        { id: 'dashboard-display', label: 'عرض لوحة التحكم', icon: ComputerDesktopIcon, description: 'إعداد عرض البيانات على الشاشات', permission: 'admin.only' }
+        { id: 'dashboard-display', label: 'عرض لوحة التحكم', icon: Tv, description: 'إعداد عرض البيانات على الشاشات', permission: 'admin.only' }
       ]
     }
   ];

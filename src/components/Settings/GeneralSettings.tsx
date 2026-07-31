@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  SwatchIcon
-} from '@heroicons/react/24/outline';
-import { Building2, Image } from 'lucide-react';
+import { Building2, Image, Palette } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
 
@@ -227,7 +224,7 @@ export default function GeneralSettings() {
       {/* لوحة الهوية — تُعرَض ولا تُحرَّر */}
       <div className="bg-muted rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <SwatchIcon className="h-6 w-6 text-muted-foreground" />
+          <Palette className="h-6 w-6 text-muted-foreground" />
           <h4 className="font-medium text-foreground">لوحة الهوية</h4>
         </div>
 

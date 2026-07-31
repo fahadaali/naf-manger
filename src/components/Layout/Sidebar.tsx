@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  ChatBubbleBottomCenterTextIcon,
-  UserPlusIcon
-} from '@heroicons/react/24/outline';
-import { ChartColumn, FileText, LayoutDashboard, Settings, Users, X } from 'lucide-react';
-import { Scale, Sparkles } from 'lucide-react';
+import { ChartColumn, FileText, LayoutDashboard, Scale, Settings, Sparkles, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import { ThemeToggle } from '@/registry/naf/ui/theme-toggle';
@@ -19,12 +14,12 @@ interface SidebarProps {
 const menuItems = [
   { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, permission: null },
   { id: 'clients', label: 'العملاء', icon: Users, permission: 'clients.read' },
-  { id: 'prospects', label: 'العملاء المحتملين', icon: UserPlusIcon, permission: 'prospects.read' },
+  { id: 'prospects', label: 'العملاء المحتملين', icon: UserPlus, permission: 'prospects.read' },
   { id: 'cases', label: 'القضايا', icon: FileText, permission: 'cases.read' },
   { id: 'marketers', label: 'المسوّقين', icon: Users, permission: null },
   { id: 'analytics', label: 'التحليلات', icon: ChartColumn, permission: 'analytics.read' },
   { id: 'reports', label: 'التقارير المخصصة', icon: ChartColumn, permission: 'analytics.read' },
-  { id: 'smart-lawyer', label: 'المحامي الذكي', icon: ChatBubbleBottomCenterTextIcon, permission: null },
+  { id: 'smart-lawyer', label: 'المحامي الذكي', icon: Sparkles, permission: null },
   { id: 'settings', label: 'الإعدادات', icon: Settings, permission: 'settings.read' },
 ];
 

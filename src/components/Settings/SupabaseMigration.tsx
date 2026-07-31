@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  CloudIcon
-} from '@heroicons/react/24/outline';
-import { CircleCheck, FileOutput, RefreshCw, Settings, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { CircleCheck, Database, FileOutput, RefreshCw, Settings, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 
@@ -83,7 +80,7 @@ export default function SupabaseMigration() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <CloudIcon className="h-6 w-6 text-primary" />
+        <Database className="h-6 w-6 text-primary" />
         <div>
           <h3 className="text-lg font-semibold text-foreground">قاعدة البيانات المركزية</h3>
           <p className="text-sm text-muted-foreground">إعداد وترحيل البيانات إلى Supabase</p>

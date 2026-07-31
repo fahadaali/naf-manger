@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scale, Users, FileText, BarChart as ChartBar, Sparkles, Mail, Briefcase, ShieldCheck } from 'lucide-react';
+import { Briefcase, FileText, Mail, Scale, ShieldCheck, Sparkles, TrendingUp, Users } from 'lucide-react';
 
 interface LandingPageProps {
   onShowLogin: () => void;
@@ -18,7 +18,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
       description: 'تتبع مفصل للقضايا القانونية وحالاتها ومواعيدها مع ربطها بأدوات إدارة المشاريع'
     },
     {
-      icon: ChartBar,
+      icon: TrendingUp,
       title: 'تحليلات متقدمة',
       description: 'لوحات تحكم تفاعلية وتقارير مخصصة لتحليل أداء المكتب واتخاذ قرارات مستنيرة'
     },

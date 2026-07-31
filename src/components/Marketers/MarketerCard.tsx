@@ -1,9 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import {
-  PhoneIcon
-} from '@heroicons/react/24/outline';
-import { ChartColumn, Mail, Pencil, User } from 'lucide-react';
+import { ChartColumn, Mail, Pencil, Phone, User } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
@@ -113,7 +110,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <PhoneIcon className="h-4 w-4" />
+          <Phone className="h-4 w-4" />
           <span><bdi>{formatPhone(marketer.phone)}</bdi></span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

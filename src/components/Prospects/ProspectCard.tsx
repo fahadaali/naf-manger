@@ -1,9 +1,5 @@
 import React from 'react';
-import {
-  PhoneIcon
-} from '@heroicons/react/24/outline';
-import { ArrowRight, Building2, Mail, Pencil, User } from 'lucide-react';
-import { VideoCameraIcon } from '@heroicons/react/24/outline';
+import { ArrowRight, Building2, Mail, Pencil, Phone, User, Video } from 'lucide-react';
 import { Prospect } from '../../types';
 import { format } from 'date-fns';
 import ProfileAvatar from '../Common/ProfileAvatar';
@@ -73,7 +69,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
               className="text-primary hover:text-primary-strong p-1"
               title="إنشاء اجتماع Zoom"
             >
-              <VideoCameraIcon className="h-4 w-4" />
+              <Video className="h-4 w-4" />
             </button>
           )}
           {canEdit && (
@@ -90,7 +86,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <PhoneIcon className="h-4 w-4" />
+          <Phone className="h-4 w-4" />
           <span><bdi>{formatPhone(prospect.phone)}</bdi></span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

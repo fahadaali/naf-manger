@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChartColumn, Download, FileText, Funnel, Users } from 'lucide-react';
-import { TrendingUp } from 'lucide-react';
+import { Calendar, ChartColumn, Download, FileText, Funnel, TrendingUp, Users } from 'lucide-react';
 import { useChartPalette, softFill } from '../../lib/chart-tokens';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';

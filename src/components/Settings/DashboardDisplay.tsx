@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-  ComputerDesktopIcon
-} from '@heroicons/react/24/outline';
-import { CircleCheck, Copy, Eye, Lightbulb, Link2, Settings } from 'lucide-react';
+import { CircleCheck, Copy, Eye, Lightbulb, Link2, Settings, Tv } from 'lucide-react';
 
 export default function DashboardDisplay() {
   const [copySuccess, setCopySuccess] = useState(false);
@@ -43,7 +40,7 @@ export default function DashboardDisplay() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-card bg-opacity-20 rounded-full">
-              <ComputerDesktopIcon className="h-8 w-8" />
+              <Tv className="h-8 w-8" />
             </div>
             <div>
               <h4 className="text-xl font-bold mb-2">رابط لوحة التحكم</h4>

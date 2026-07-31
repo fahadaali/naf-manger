@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  ComputerDesktopIcon
-} from '@heroicons/react/24/outline';
-import { CircleCheck, MessageSquare, RefreshCw, Send, Sparkles, TriangleAlert, User } from 'lucide-react';
+import { CircleCheck, MessageSquare, RefreshCw, Send, Sparkles, TriangleAlert, Tv, User } from 'lucide-react';
 import { db } from '../../data/database';
 import { geminiService } from '../../services/geminiService';
 import { formatDate, formatDateTime, formatTime } from '@/registry/naf/lib/format';
