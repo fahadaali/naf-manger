@@ -56,7 +56,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
             </div>
           <div className="flex items-center gap-4">
             <Button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }} variant="ghost">
-              استعراض الميزات
+              الميزات
             </Button>
             <Button onClick={onShowLogin} className="shadow-md hover:shadow-lg">
               تسجيل الدخول
@@ -89,7 +89,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
                 دخول
               </Button>
               <Button onClick={() => { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }} className="border-2 border-surface-deep-foreground bg-transparent text-surface-deep-foreground hover:bg-card hover:text-foreground" variant="outline" size="lg">
-                استعراض الميزات
+                الميزات
               </Button>
             </div>
           </div>

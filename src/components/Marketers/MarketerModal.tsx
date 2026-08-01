@@ -440,7 +440,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              placeholder="ملاحظات إضافية..."
+              placeholder="ملاحظات إضافية"
             />
           </div>
 

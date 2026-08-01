@@ -5,6 +5,7 @@ import { mockCases } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
+import { clientTypeLabel } from '../../lib/labels';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -158,7 +159,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع العميل</label>
-                  <p className="text-foreground">{client.clientType}</p>
+                  <p className="text-foreground">{clientTypeLabel(client.clientType)}</p>
                 </div>
               </div>
 
@@ -435,7 +436,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              placeholder="ملاحظات إضافية..."
+              placeholder="ملاحظات إضافية"
             />
           </div>
 

@@ -132,7 +132,7 @@ export default function MarketersView() {
             <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="البحث عن مسوّق..."
+              placeholder="البحث عن مسوّق"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
@@ -167,7 +167,7 @@ export default function MarketersView() {
           <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(marketers.length)}</bdi></p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">النشطين</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">المسوّقين النشطين</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
             <bdi>{formatNumber(marketers.filter(m => m.status === 'active').length)}</bdi>
           </p>

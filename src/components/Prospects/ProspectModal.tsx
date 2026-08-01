@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CircleHelp, CircleSlash, CircleX, Clock, FileCheck, Info } from 'lucide-react';
 import { Prospect } from '../../types';
 /* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
    ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
@@ -9,11 +10,13 @@ import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { clientTypeLabel } from '../../lib/labels';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
 
 interface ProspectModalProps {
   prospect?: Prospect;
@@ -164,11 +167,30 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع العميل</label>
-                  <p className="text-foreground">{prospect.clientType}</p>
+                  <p className="text-foreground">{clientTypeLabel(prospect.clientType)}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">الحالة</label>
-                  <p className="text-foreground">{prospect.prospectStatus}</p>
+                  {(() => {
+                    /* §٦ لا تقبل حالةً بالنصّ وحده. المقابلات مسجَّلة في
+                       naf-icons.md تحت «حالة العميل المحتمل». */
+                    const map = {
+                      'مهتم': { variant: 'primary' as const, Icon: Info },
+                      'تم التواصل': { variant: 'warning' as const, Icon: Clock },
+                      'بانتظار توقيع': { variant: 'success' as const, Icon: FileCheck },
+                      'غير مناسب': { variant: 'destructive' as const, Icon: CircleSlash },
+                      'تم الرفض': { variant: 'default' as const, Icon: CircleX }
+                    };
+                    const { variant, Icon } =
+                      map[prospect.prospectStatus as keyof typeof map] ??
+                      { variant: 'default' as const, Icon: CircleHelp };
+                    return (
+                      <Badge variant={variant}>
+                        <Icon aria-hidden="true" />
+                        {prospect.prospectStatus}
+                      </Badge>
+                    );
+                  })()}
                 </div>
                 {prospect.source && (
                   <div>
@@ -438,7 +460,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              placeholder="ملاحظات إضافية..."
+              placeholder="ملاحظات إضافية"
             />
           </div>
 

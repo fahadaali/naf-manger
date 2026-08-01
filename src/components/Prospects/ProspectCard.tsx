@@ -4,6 +4,7 @@ import { Prospect } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { clientTypeLabel } from '../../lib/labels';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -30,16 +31,6 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
   const statusOf = (status: string) =>
     STATUS[status as keyof typeof STATUS] ?? STATUS['تم الرفض'];
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'individual': return 'فرد';
-      case 'company': return 'شركة';
-      case 'association': return 'جمعية';
-      case 'government': return 'جهة حكومية';
-      default: return type;
-    }
-  };
-
   const isReadyToConvert = prospect.prospectStatus === 'بانتظار توقيع';
 
   return (
@@ -55,7 +46,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
             <Button onClick={() => onViewDetails(prospect)} className="justify-start text-start" variant="link" size="lg">
               {prospect.fullName}
             </Button>
-            <p className="text-sm text-muted-foreground">{getTypeLabel(prospect.clientType)}</p>
+            <p className="text-sm text-muted-foreground">{clientTypeLabel(prospect.clientType)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -142,7 +133,7 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
       {prospect.clientType === 'company' && prospect.commercialRegister && (
         <div className="mt-3 pt-3 border-t border-border">
           <span className="text-xs text-muted-foreground">
-            س.ت: {prospect.commercialRegister}
+            السجل التجاري: <bdi>{prospect.commercialRegister}</bdi>
           </span>
         </div>
       )}

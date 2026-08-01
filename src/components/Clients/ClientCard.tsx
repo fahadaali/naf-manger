@@ -3,6 +3,7 @@ import { Archive, CircleCheck, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Client } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
+import { clientTypeLabel } from '../../lib/labels';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -26,24 +27,6 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
   const statusOf = (status: string) =>
     STATUS[status as keyof typeof STATUS] ?? STATUS.former;
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'current': return 'حالي';
-      case 'former': return 'سابق';
-      default: return status;
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'individual': return 'فرد';
-      case 'company': return 'شركة';
-      case 'association': return 'جمعية';
-      case 'government': return 'جهة حكومية';
-      default: return type;
-    }
-  };
-
   return (
     <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
@@ -57,7 +40,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
             <Button onClick={() => onViewDetails(client)} className="justify-start text-start" variant="link" size="lg">
               {client.fullName}
             </Button>
-            <p className="text-sm text-muted-foreground">{getTypeLabel(client.clientType)}</p>
+            <p className="text-sm text-muted-foreground">{clientTypeLabel(client.clientType)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -107,7 +90,7 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
         </Button>
         {client.clientType === 'company' && client.commercialRegister && (
           <span className="text-xs text-muted-foreground">
-            س.ت: {client.commercialRegister}
+            السجل التجاري: <bdi>{client.commercialRegister}</bdi>
           </span>
         )}
       </div>

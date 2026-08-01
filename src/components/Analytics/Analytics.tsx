@@ -547,12 +547,12 @@ export default function Analytics() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">نمو العملاء (شهرياً)</span>
-                  <span className="font-medium text-success">+{Math.round(kpis.totalClients / 6)}%</span>
+                  <span className="font-medium text-success"><bdi>+{formatNumber(Math.round(kpis.totalClients / 6))}%</bdi></span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">معدل الاحتفاظ</span>
                   <span className="font-medium text-primary">
-                    {Math.round((clients.filter(c => c.status === 'current').length / clients.length) * 100)}%
+                    <bdi>{formatNumber(clients.length > 0 ? Math.round((clients.filter(c => c.status === 'current').length / clients.length) * 100) : 0)}%</bdi>
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -568,7 +568,7 @@ export default function Analytics() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">معدل الإنجاز</span>
                   <span className="font-medium text-success">
-                    {cases.length > 0 ? Math.round((kpis.completedCases / cases.length) * 100) : 0}%
+                    <bdi>{formatNumber(cases.length > 0 ? Math.round((kpis.completedCases / cases.length) * 100) : 0)}%</bdi>
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -590,9 +590,9 @@ export default function Analytics() {
                   <span className="font-medium text-info"><bdi>{formatNumber(kpis.conversionRate)}%</bdi></span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">العملاء المحتملين النشطين</span>
+                  <span className="text-muted-foreground">العملاء المحتملين قيد المتابعة</span>
                   <span className="font-medium text-primary">
-                    {prospects.filter(p => p.prospectStatus !== 'غير مناسب' && p.prospectStatus !== 'تم الرفض').length}
+                    <bdi>{formatNumber(prospects.filter(p => p.prospectStatus !== 'غير مناسب' && p.prospectStatus !== 'تم الرفض').length)}</bdi>
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

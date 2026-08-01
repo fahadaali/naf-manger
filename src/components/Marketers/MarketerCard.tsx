@@ -6,6 +6,7 @@ import ProfileAvatar from '../Common/ProfileAvatar';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
+import { relationshipTypeLabel } from '../../lib/labels';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -71,10 +72,6 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
   const statusOf = (status: string) =>
     STATUS[status as keyof typeof STATUS] ?? STATUS.former;
 
-  const getTypeLabel = (type: string) => {
-    return type;
-  };
-
   return (
     <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
@@ -91,7 +88,7 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
             >
               {marketer.fullName}
             </button>
-            <p className="text-sm text-muted-foreground">{getTypeLabel(marketer.relationshipType)}</p>
+            <p className="text-sm text-muted-foreground">{relationshipTypeLabel(marketer.relationshipType)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
