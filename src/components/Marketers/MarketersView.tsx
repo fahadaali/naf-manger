@@ -29,7 +29,7 @@ export default function MarketersView() {
   const loadMarketers = () => {
     const loadMarketersAsync = async () => {
       try {
-        // جلب المسوّقين مباشرة من Supabase
+        // جلب المسوّقين من مسارات المنصة على D1
         setMarketers(await db.getMarketers());
       } catch (error) {
         console.error('Error loading marketers:', error);

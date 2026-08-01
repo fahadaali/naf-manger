@@ -32,7 +32,7 @@ export default function CasesView() {
   const loadCases = () => {
     const loadCasesAsync = async () => {
       try {
-        // جلب القضايا مباشرة من Supabase
+        // جلب القضايا من مسارات المنصة على D1
         setCases(await db.getCases());
       } catch (error) {
         console.error('Error loading cases:', error);

@@ -587,9 +587,8 @@ export default function DataExport() {
       <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
         <h4 className="font-medium text-warning-strong mb-2">ملاحظة مهمة حول قاعدة البيانات:</h4>
         <ul className="list-disc ps-5 text-sm text-warning-strong space-y-2">
-          <li>التطبيق يدعم الآن قاعدة بيانات Supabase المركزية</li>
-          <li>عند توصيل Supabase، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</li>
-          <li>يمكنك ترحيل البيانات الحالية من localStorage إلى Supabase</li>
+          <li>بيانات المنصة كلُّها في قاعدة D1 المركزية — مشتركة بين جميع المستخدمين</li>
+          <li>التصدير يقرأ من القاعدة مباشرةً، فما يُصدَّر هو الحالة الحيّة لا نسخةً في المتصفّح</li>
           <li>تنسيق JSON مناسب للنسخ الاحتياطية الكاملة واستعادة البيانات</li>
         </ul>
       </div>

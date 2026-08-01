@@ -8,7 +8,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import GeneralSettings from './GeneralSettings';
 import DashboardDisplay from './DashboardDisplay';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
-import SupabaseMigration from './SupabaseMigration';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
@@ -59,8 +58,7 @@ export default function Settings() {
       tabs: [
         { id: 'general', label: 'الإعدادات العامة', icon: Globe, description: 'معلومات الشركة والألوان والشعار', permission: 'settings.update' },
         { id: 'system', label: 'تكوين النظام', icon: Settings, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
-        { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' },
-        { id: 'supabase', label: 'قاعدة البيانات المركزية', icon: FileText, description: 'إعداد وترحيل البيانات إلى Supabase', permission: 'settings.update' }
+        { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' }
       ]
     },
     {
@@ -574,8 +572,6 @@ export default function Settings() {
       default:
         if (activeTab === 'general') {
           return <GeneralSettings />;
-        } else if (activeTab === 'supabase') {
-          return <SupabaseMigration />;
         }
         return <div>المحتوى غير متوفر</div>;
     }
