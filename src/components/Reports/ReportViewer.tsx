@@ -4,7 +4,7 @@ import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport } from '../../types';
 import { db } from '../../data/database';
 import ChartCard from '../Dashboard/ChartCard';
-import { formatDate } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 import { Card } from '@/registry/naf/ui/card';
@@ -80,7 +80,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
       <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">جارٍ تحميل التقرير...</p>
+          <p className="text-muted-foreground">جارٍ تحميل التقرير</p>
         </div>
       </div>
     );
@@ -164,7 +164,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             </div>
             <div>
               <span className="text-muted-foreground">عدد السجلات:</span>
-              <span className="font-medium text-foreground ms-2">{reportData.length}</span>
+              <span className="font-medium text-foreground ms-2"><bdi>{formatNumber(reportData.length)}</bdi></span>
             </div>
             <div>
               <span className="text-muted-foreground">آخر تحديث:</span>

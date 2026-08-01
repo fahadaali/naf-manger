@@ -87,7 +87,7 @@ export default function SystemConfiguration() {
     if (category === 'marketerStatuses') {
       switch (item) {
         case 'active': return 'نشط';
-        case 'suspended': return 'موقوف';
+        case 'suspended': return 'معطّل';
         case 'former': return 'سابق';
         default: return item;
       }
@@ -246,7 +246,7 @@ export default function SystemConfiguration() {
           {isSaving ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-              جارٍ الحفظ...
+              جارٍ الحفظ
             </>
           ) : (
             'حفظ الإعدادات'

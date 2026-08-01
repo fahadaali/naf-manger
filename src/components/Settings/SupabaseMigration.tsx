@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CircleCheck, Database, FileOutput, RefreshCw, Settings, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { formatNumber } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 
 export default function SupabaseMigration() {
@@ -48,7 +49,7 @@ export default function SupabaseMigration() {
     }
 
     setMigrationStatus('migrating');
-    setMigrationMessage('جاري ترحيل البيانات...');
+    setMigrationMessage('جارٍ ترحيل البيانات');
 
     try {
       await migrateData();
@@ -96,9 +97,9 @@ export default function SupabaseMigration() {
       }`}>
         <div className="flex items-center gap-3">
           {isSupabaseConnected ? (
-            <CircleCheck className="h-6 w-6 text-success" />
+            <CircleCheck className="h-6 w-6 text-success-strong" />
           ) : (
-            <TriangleAlert className="h-6 w-6 text-destructive" />
+            <TriangleAlert className="h-6 w-6 text-destructive-strong" />
           )}
           <div>
             <h4 className={`font-medium ${
@@ -127,23 +128,23 @@ export default function SupabaseMigration() {
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-primary">{localDataStats.clients}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.clients)}</bdi></p>
               <p className="text-sm text-muted-foreground">العملاء</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-info">{localDataStats.prospects}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.prospects)}</bdi></p>
               <p className="text-sm text-muted-foreground">العملاء المحتملين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-success">{localDataStats.cases}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.cases)}</bdi></p>
               <p className="text-sm text-muted-foreground">القضايا</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-warning">{localDataStats.marketers}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.marketers)}</bdi></p>
               <p className="text-sm text-muted-foreground">المسوّقين</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-destructive">{localDataStats.activities}</p>
+              <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(localDataStats.activities)}</bdi></p>
               <p className="text-sm text-muted-foreground">الأنشطة</p>
             </div>
           </div>
@@ -158,8 +159,8 @@ export default function SupabaseMigration() {
           'bg-primary-soft border-primary/30'
         }`}>
           <div className="flex items-start gap-3">
-            {migrationStatus === 'success' && <CircleCheck className="h-6 w-6 text-success flex-shrink-0" />}
-            {migrationStatus === 'error' && <TriangleAlert className="h-6 w-6 text-destructive flex-shrink-0" />}
+            {migrationStatus === 'success' && <CircleCheck className="h-6 w-6 text-success-strong flex-shrink-0" />}
+            {migrationStatus === 'error' && <TriangleAlert className="h-6 w-6 text-destructive-strong flex-shrink-0" />}
             {migrationStatus === 'migrating' && (
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary flex-shrink-0"></div>
             )}
@@ -191,7 +192,7 @@ export default function SupabaseMigration() {
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              isSupabaseConnected ? 'bg-success-soft text-success' : 'bg-muted text-muted-foreground'
+              isSupabaseConnected ? 'bg-success-soft text-success-strong' : 'bg-muted text-muted-foreground'
             }`}>
               1
             </div>
@@ -208,7 +209,7 @@ export default function SupabaseMigration() {
           
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              migrationStatus === 'success' ? 'bg-success-soft text-success' : 'bg-muted text-muted-foreground'
+              migrationStatus === 'success' ? 'bg-success-soft text-success-strong' : 'bg-muted text-muted-foreground'
             }`}>
               2
             </div>
@@ -248,7 +249,7 @@ export default function SupabaseMigration() {
           {migrationStatus === 'migrating' ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-card"></div>
-              جارٍ الترحيل...
+              جارٍ الترحيل
             </>
           ) : (
             <>
@@ -266,17 +267,17 @@ export default function SupabaseMigration() {
           مزايا استخدام Supabase
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">
-          <ul className="space-y-2">
-            <li>• قاعدة بيانات مركزية آمنة</li>
-            <li>• مزامنة البيانات بين جميع المستخدمين</li>
-            <li>• نسخ احتياطية تلقائية</li>
-            <li>• أداء عالي وموثوقية</li>
+          <ul className="list-disc ps-5 space-y-2">
+            <li>قاعدة بيانات مركزية آمنة</li>
+            <li>مزامنة البيانات بين جميع المستخدمين</li>
+            <li>نسخ احتياطية تلقائية</li>
+            <li>أداء عالي وموثوقية</li>
           </ul>
-          <ul className="space-y-2">
-            <li>• مصادقة متقدمة للمستخدمين</li>
-            <li>• أمان على مستوى الصفوف (RLS)</li>
-            <li>• إمكانية الوصول من أي جهاز</li>
-            <li>• دعم فني متخصص</li>
+          <ul className="list-disc ps-5 space-y-2">
+            <li>مصادقة متقدمة للمستخدمين</li>
+            <li>أمان على مستوى الصفوف (RLS)</li>
+            <li>إمكانية الوصول من أي جهاز</li>
+            <li>دعم فني متخصص</li>
           </ul>
         </div>
       </div>
@@ -284,15 +285,15 @@ export default function SupabaseMigration() {
       {/* Important Notes */}
       <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <TriangleAlert className="h-6 w-6 text-warning flex-shrink-0" />
+          <TriangleAlert className="h-6 w-6 text-warning-strong flex-shrink-0" />
           <div>
             <h5 className="font-medium text-warning-strong mb-2">ملاحظات مهمة:</h5>
-            <ul className="text-sm text-warning-strong space-y-1">
-              <li>• تأكد من إنشاء نسخة احتياطية قبل بدء الترحيل</li>
-              <li>• عملية الترحيل قد تستغرق عدة دقائق حسب حجم البيانات</li>
-              <li>• بعد الترحيل، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</li>
-              <li>• يُنصح بعدم استخدام التطبيق أثناء عملية الترحيل</li>
-              <li>• في حالة فشل الترحيل، يمكنك استعادة البيانات من النسخة الاحتياطية</li>
+            <ul className="list-disc ps-5 text-sm text-warning-strong space-y-1">
+              <li>تأكد من إنشاء نسخة احتياطية قبل بدء الترحيل</li>
+              <li>عملية الترحيل قد تستغرق عدة دقائق حسب حجم البيانات</li>
+              <li>بعد الترحيل، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</li>
+              <li>يُنصح بعدم استخدام التطبيق أثناء عملية الترحيل</li>
+              <li>في حالة فشل الترحيل، يمكنك استعادة البيانات من النسخة الاحتياطية</li>
             </ul>
           </div>
         </div>

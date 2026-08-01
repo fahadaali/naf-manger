@@ -111,8 +111,8 @@ export default function GeneralSettings() {
     if (window.confirm('هل أنت متأكد من إعادة تعيين الإعدادات إلى القيم الافتراضية؟')) {
       const defaultSettings = {
         ...settings!,
-        companyName: 'NAF Law',
-        companyDescription: 'نظام إدارة المكتب القانوني',
+        companyName: 'شركة ناف',
+        companyDescription: 'نظام إدارة العملاء',
         companyLogo: undefined
       };
 
@@ -268,7 +268,7 @@ export default function GeneralSettings() {
           إلغاء التغييرات
         </Button>
         <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
+          {isSaving ? 'جارٍ الحفظ' : 'حفظ الإعدادات'}
         </Button>
       </div>
     </div>

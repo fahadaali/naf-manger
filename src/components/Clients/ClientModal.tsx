@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { CircleCheck, Clock, LoaderCircle } from 'lucide-react';
 import { Client } from '../../types';
-import { format } from 'date-fns';
 import { mockCases } from '../../data/mockData';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
-import { formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
+import { clientTypeLabel } from '../../lib/labels';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -155,11 +155,11 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">تاريخ الانضمام</label>
-                  <p className="text-foreground">{format(client.joinDate, 'dd/MM/yyyy')}</p>
+                  <p className="text-foreground"><bdi>{formatDate(client.joinDate)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع العميل</label>
-                  <p className="text-foreground">{client.clientType}</p>
+                  <p className="text-foreground">{clientTypeLabel(client.clientType)}</p>
                 </div>
               </div>
 
@@ -196,19 +196,19 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               <h3 className="text-lg font-semibold text-foreground mb-3">إحصائيات القضايا</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{clientCases.length}</p>
+                  <p className="text-2xl font-bold text-primary-strong"><bdi>{formatNumber(clientCases.length)}</bdi></p>
                   <p className="text-sm text-muted-foreground">إجمالي القضايا</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-warning">{pendingCases}</p>
+                  <p className="text-2xl font-bold text-warning"><bdi>{formatNumber(pendingCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">المنظورة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-success">{wonCases}</p>
+                  <p className="text-2xl font-bold text-success"><bdi>{formatNumber(wonCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">الرابحة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-destructive">{lostCases}</p>
+                  <p className="text-2xl font-bold text-destructive"><bdi>{formatNumber(lostCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">الخاسرة</p>
                 </div>
               </div>
@@ -436,7 +436,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              placeholder="ملاحظات إضافية..."
+              placeholder="ملاحظات إضافية"
             />
           </div>
 

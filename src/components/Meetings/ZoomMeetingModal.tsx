@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Plus, Send, Trash2, User, Users, Video } from 'lucide-react';
 import { Client, Prospect } from '../../types';
-import { formatDateTime, isolate } from '@/registry/naf/lib/format';
+import { formatDateTime, formatNumber, isolate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -211,7 +211,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg">
-              <Video className="h-6 w-6 text-primary" />
+              <Video className="h-6 w-6 text-primary-strong" />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold">إنشاء اجتماع Zoom</DialogTitle>
@@ -332,7 +332,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
                 <div key={index} className="flex items-center justify-between bg-muted rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-primary-soft rounded-full flex items-center justify-center">
-                      <span className="text-primary text-sm font-medium">
+                      <span className="text-primary-strong text-sm font-medium">
                         {email.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -404,7 +404,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
               <p><strong>العنوان:</strong> {meetingData.title}</p>
               <p><strong>التاريخ والوقت:</strong> {meetingData.date} في {meetingData.time}</p>
               <p><strong>المدة:</strong> {meetingData.duration} دقيقة</p>
-              <p><strong>عدد المدعوين:</strong> {invitees.length}</p>
+              <p><strong>عدد المدعوين:</strong> <bdi>{formatNumber(invitees.length)}</bdi></p>
               {meetingData.password && (
                 <p><strong>محمي بكلمة مرور:</strong> نعم</p>
               )}
@@ -421,7 +421,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
               {isCreating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-                  جارٍ الإنشاء...
+                  جارٍ الإنشاء
                 </>
               ) : (
                 <>

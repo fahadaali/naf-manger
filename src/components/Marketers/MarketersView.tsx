@@ -5,6 +5,8 @@ import MarketerCard from './MarketerCard';
 import MarketerModal from './MarketerModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { formatNumber } from '@/registry/naf/lib/format';
+import { Button } from '@/registry/naf/ui/button';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Card } from '@/registry/naf/ui/card';
@@ -115,13 +117,10 @@ export default function MarketersView() {
             </div>
           </div>
           {hasPermission('marketers', 'create') && (
-            <button 
-              onClick={handleCreateMarketer}
-              className="bg-card text-info px-4 py-2 rounded-lg hover:bg-info-soft flex items-center gap-2 font-medium shadow-lg"
-            >
+            <Button onClick={handleCreateMarketer}>
               <Plus className="h-5 w-5" />
               إضافة مسوّق جديد
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -133,7 +132,7 @@ export default function MarketersView() {
             <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="البحث عن مسوّق..."
+              placeholder="البحث عن مسوّق"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
@@ -145,7 +144,7 @@ export default function MarketersView() {
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط</option>
-              <option value="suspended">موقوف</option>
+              <option value="suspended">معطّل</option>
               <option value="former">سابق</option>
             </Select>
             <Select
@@ -165,24 +164,24 @@ export default function MarketersView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي المسوّقين</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{marketers.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(marketers.length)}</bdi></p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">النشطين</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">المسوّقين النشطين</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
-            {marketers.filter(m => m.status === 'active').length}
+            <bdi>{formatNumber(marketers.filter(m => m.status === 'active').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الموظفين</p>
-          <p className="text-xl sm:text-2xl font-bold text-primary">
-            {marketers.filter(m => m.relationshipType === 'employee').length}
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
+            <bdi>{formatNumber(marketers.filter(m => m.relationshipType === 'employee').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">المستقلين</p>
-          <p className="text-xl sm:text-2xl font-bold text-info">
-            {marketers.filter(m => m.relationshipType === 'freelancer').length}
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
+            <bdi>{formatNumber(marketers.filter(m => m.relationshipType === 'freelancer').length)}</bdi>
           </p>
         </Card>
       </div>

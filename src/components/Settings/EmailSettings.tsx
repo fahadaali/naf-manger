@@ -100,7 +100,7 @@ export default function EmailSettings() {
         secure: false,
         user: '',
         password: '',
-        fromName: 'NAF Law',
+        fromName: 'شركة ناف',
         fromAddress: ''
       });
     }
@@ -230,7 +230,7 @@ export default function EmailSettings() {
               type="text"
               value={settings?.fromName || ''}
               onChange={(e) => handleInputChange('fromName', e.target.value)}
-              placeholder="NAF Law"
+              placeholder="شركة ناف"
             />
           </div>
 
@@ -251,12 +251,12 @@ export default function EmailSettings() {
       {/* معلومات مساعدة */}
       <div className="bg-primary-soft border border-primary/30 rounded-lg p-4">
         <h4 className="font-medium text-primary-strong mb-2">معلومات مهمة:</h4>
-        <ul className="text-sm text-primary-strong space-y-1">
-          <li>• تأكد من تفعيل SMTP في إعدادات البريد الإلكتروني لدى مزود الخدمة</li>
-          <li>• للمنفذ 587 استخدم STARTTLS (غير مؤمن في البداية)</li>
-          <li>• للمنفذ 465 استخدم SSL/TLS (مؤمن من البداية)</li>
-          <li>• تأكد من صحة اسم المستخدم وكلمة المرور</li>
-          <li>• قد تحتاج لإنشاء كلمة مرور تطبيق منفصلة</li>
+        <ul className="list-disc ps-5 text-sm text-primary-strong space-y-1">
+          <li>تأكد من تفعيل SMTP في إعدادات البريد الإلكتروني لدى مزود الخدمة</li>
+          <li>للمنفذ 587 استخدم STARTTLS (غير مؤمن في البداية)</li>
+          <li>للمنفذ 465 استخدم SSL/TLS (مؤمن من البداية)</li>
+          <li>تأكد من صحة اسم المستخدم وكلمة المرور</li>
+          <li>قد تحتاج لإنشاء كلمة مرور تطبيق منفصلة</li>
         </ul>
       </div>
 
@@ -280,7 +280,7 @@ export default function EmailSettings() {
           {isTesting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-              جاري إرسال البريد التجريبي...
+              جارٍ إرسال البريد التجريبي
             </>
           ) : (
             <>
@@ -297,7 +297,7 @@ export default function EmailSettings() {
             إلغاء التغييرات
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
+            {isSaving ? 'جارٍ الحفظ' : 'حفظ الإعدادات'}
           </Button>
         </div>
       </div>
@@ -323,24 +323,26 @@ export default function EmailSettings() {
             : 'text-primary-strong'
         }`}>
           {settings?.host && settings?.user && settings?.password ? (
-            <>
-              <p>• <strong>الخادم المكون:</strong> {settings.host}:{settings.port}</p>
-              <p>• <strong>المستخدم:</strong> {settings.user}</p>
-              <p>• <strong>الأمان:</strong> {settings.secure ? 'SSL/TLS' : 'STARTTLS'}</p>
-              <p>• <strong>المرسل:</strong> {settings.fromName} &lt;{settings.fromAddress}&gt;</p>
-              <p>• <strong>الحالة:</strong> جاهز للاستخدام في ميزات الاجتماعات والإشعارات</p>
-            </>
+            <ul className="list-disc ps-5 space-y-1">
+              <li><strong>الخادم المكون:</strong> <bdi>{settings.host}:{settings.port}</bdi></li>
+              <li><strong>المستخدم:</strong> <bdi>{settings.user}</bdi></li>
+              <li><strong>الأمان:</strong> {settings.secure ? 'SSL/TLS' : 'STARTTLS'}</li>
+              <li><strong>المرسل:</strong> {settings.fromName} <bdi>&lt;{settings.fromAddress}&gt;</bdi></li>
+              <li><strong>الحالة:</strong> جاهز للاستخدام في ميزات الاجتماعات والإشعارات</li>
+            </ul>
           ) : (
-            <>
-              <p>• <strong>اختبار الإعدادات:</strong> يتحقق من صحة البيانات المدخلة</p>
-              <p>• <strong>الاستخدام:</strong> سيتم استخدام الإعدادات في ميزات الاجتماعات</p>
-              <p>• <strong>خوادم شائعة:</strong></p>
-              <div className="ms-4 space-y-1">
-                <p>- Gmail: smtp.gmail.com:587</p>
-                <p>- Outlook: smtp-mail.outlook.com:587</p>
-                <p>- Hostinger: smtp.hostinger.com:587</p>
-              </div>
-            </>
+            <ul className="list-disc ps-5 space-y-1">
+              <li><strong>اختبار الإعدادات:</strong> يتحقق من صحة البيانات المدخلة</li>
+              <li><strong>الاستخدام:</strong> سيتم استخدام الإعدادات في ميزات الاجتماعات</li>
+              <li>
+                <strong>خوادم شائعة:</strong>
+                <ul className="list-disc ps-5 mt-1 space-y-1">
+                  <li><bdi>Gmail: smtp.gmail.com:587</bdi></li>
+                  <li><bdi>Outlook: smtp-mail.outlook.com:587</bdi></li>
+                  <li><bdi>Hostinger: smtp.hostinger.com:587</bdi></li>
+                </ul>
+              </li>
+            </ul>
           )}
         </div>
       </div>

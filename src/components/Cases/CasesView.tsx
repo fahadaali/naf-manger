@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Case } from '../../types';
-import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import { db } from '../../data/database';
+import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
@@ -133,6 +133,17 @@ export default function CasesView() {
     STATUS[status as keyof typeof STATUS] ??
     { variant: 'default' as const, Icon: CircleHelp };
 
+  /* نتيجة القضية حالة كغيرها: أيقونة ولون ونصّ معاً كما تُلزم §٦،
+     والمقابلات مسجَّلة في naf-icons.md تحت «نتيجة القضية». */
+  const OUTCOME = {
+    won: { variant: 'success' as const, Icon: CircleCheck },
+    lost: { variant: 'destructive' as const, Icon: CircleX },
+    settled: { variant: 'warning' as const, Icon: Handshake }
+  };
+
+  const outcomeOf = (outcome: string) =>
+    OUTCOME[outcome as keyof typeof OUTCOME] ?? OUTCOME.settled;
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completed': return 'مكتملة';
@@ -178,7 +189,7 @@ export default function CasesView() {
             <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="البحث في القضايا..."
+              placeholder="البحث في القضايا"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
@@ -212,23 +223,23 @@ export default function CasesView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي القضايا</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{cases.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(cases.length)}</bdi></p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">قيد المعالجة</p>
           <p className="text-xl sm:text-2xl font-bold text-primary">
-            {activeCases.filter(c => c.status === 'in-progress').length}
+            <bdi>{formatNumber(activeCases.filter(c => c.status === 'in-progress').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">المكتملة</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
-            {completedCases.length}
+            <bdi>{formatNumber(completedCases.length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">معدل الربح</p>
-          <p className="text-xl sm:text-2xl font-bold text-warning">{winRate}%</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(winRate)}%</bdi></p>
         </Card>
       </div>
 
@@ -294,14 +305,20 @@ export default function CasesView() {
                         </Badge>
                       );
                     })()}
-                    {case_.outcome && (
-                      <div className="text-xs text-muted-foreground mt-1 hidden sm:block">
-                        {getOutcomeLabel(case_.outcome)}
-                      </div>
-                    )}
+                    {case_.outcome && (() => {
+                      const { variant, Icon } = outcomeOf(case_.outcome);
+                      return (
+                        <div className="mt-1 hidden sm:block">
+                          <Badge variant={variant}>
+                            <Icon aria-hidden="true" />
+                            {getOutcomeLabel(case_.outcome)}
+                          </Badge>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="sm:px-6 sm:text-sm hidden lg:table-cell">
-                    {format(case_.createdDate, 'dd/MM/yyyy')}
+                    <bdi>{formatDate(case_.createdDate)}</bdi>
                   </TableCell>
                   <TableCell className="sm:px-6 sm:text-sm">
                     <div className="flex gap-2">
@@ -408,13 +425,7 @@ export default function CasesView() {
                       </TableCell>
                       <TableCell>
                         {case_.outcome && (() => {
-                          const map = {
-                            won: { variant: 'success' as const, Icon: CircleCheck },
-                            lost: { variant: 'destructive' as const, Icon: CircleX },
-                            settled: { variant: 'warning' as const, Icon: Handshake }
-                          };
-                          const { variant, Icon } =
-                            map[case_.outcome as keyof typeof map] ?? map.settled;
+                          const { variant, Icon } = outcomeOf(case_.outcome);
                           return (
                             <Badge variant={variant}>
                               <Icon aria-hidden="true" />
@@ -424,7 +435,7 @@ export default function CasesView() {
                         })()}
                       </TableCell>
                       <TableCell>
-                        {format(case_.updatedDate, 'dd/MM/yyyy')}
+                        <bdi>{formatDate(case_.updatedDate)}</bdi>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">

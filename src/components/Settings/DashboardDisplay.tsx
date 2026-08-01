@@ -56,7 +56,7 @@ export default function DashboardDisplay() {
               className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                 copySuccess 
                   ? 'bg-success text-success-foreground' 
-                  : 'bg-card text-primary hover:bg-primary-soft'
+                  : 'bg-card text-primary-strong hover:bg-primary-soft'
               }`}
             >
               {copySuccess ? (
@@ -94,7 +94,7 @@ export default function DashboardDisplay() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
             <div className="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-primary font-bold text-lg">1</span>
+              <span className="text-primary-strong font-bold text-lg">1</span>
             </div>
             <h5 className="font-medium text-foreground mb-2">نسخ الرابط</h5>
             <p className="text-sm text-muted-foreground">
@@ -103,8 +103,8 @@ export default function DashboardDisplay() {
           </div>
           
           <div className="text-center">
-            <div className="w-12 h-12 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-success font-bold text-lg">2</span>
+            <div className="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-primary-strong font-bold text-lg">2</span>
             </div>
             <h5 className="font-medium text-foreground mb-2">افتح في المتصفح</h5>
             <p className="text-sm text-muted-foreground">
@@ -113,8 +113,8 @@ export default function DashboardDisplay() {
           </div>
           
           <div className="text-center">
-            <div className="w-12 h-12 bg-info-soft rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-info font-bold text-lg">3</span>
+            <div className="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-primary-strong font-bold text-lg">3</span>
             </div>
             <h5 className="font-medium text-foreground mb-2">مراقبة مستمرة</h5>
             <p className="text-sm text-muted-foreground">
@@ -133,27 +133,27 @@ export default function DashboardDisplay() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">إحصائيات محدثة في الوقت الفعلي</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-success rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">رسوم بيانية تفاعلية</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-info rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">مراقبة أداء الفريق</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-warning rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">تتبع تقدم القضايا</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-destructive rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">معدلات النجاح والتحويل</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-info rounded-full"></div>
+            <div className="w-2 h-2 bg-muted-foreground rounded-full"></div>
             <span className="text-foreground">نشاط المستخدمين الحديث</span>
           </div>
         </div>
@@ -169,11 +169,11 @@ export default function DashboardDisplay() {
           </div>
           <div>
             <h5 className="font-medium text-warning-strong mb-2">نصائح للاستخدام الأمثل:</h5>
-            <ul className="text-sm text-warning-strong space-y-1">
-              <li>• استخدم شاشات بدقة عالية للحصول على أفضل تجربة عرض</li>
-              <li>• تأكد من اتصال الشاشة بالإنترنت لتحديث البيانات</li>
-              <li>• يُنصح بتحديث الصفحة كل 24 ساعة للحصول على أحدث البيانات</li>
-              <li>• يمكن عرض لوحة التحكم على عدة شاشات في نفس الوقت</li>
+            <ul className="list-disc ps-5 text-sm text-warning-strong space-y-1">
+              <li>استخدم شاشات بدقة عالية للحصول على أفضل تجربة عرض</li>
+              <li>تأكد من اتصال الشاشة بالإنترنت لتحديث البيانات</li>
+              <li>يُنصح بتحديث الصفحة كل 24 ساعة للحصول على أحدث البيانات</li>
+              <li>يمكن عرض لوحة التحكم على عدة شاشات في نفس الوقت</li>
             </ul>
           </div>
         </div>

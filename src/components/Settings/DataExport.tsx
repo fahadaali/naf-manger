@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CircleCheck, FileOutput, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
-import { formatDate, formatTime } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber, formatTime } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { messageTone } from '../../lib/status-message';
 import { Alert } from '@/registry/naf/ui/alert';
@@ -291,7 +291,7 @@ export default function DataExport() {
   };
 
   const generatePDFContent = async (data: any) => {
-    let content = 'تقرير بيانات NAF Law\n';
+    let content = 'تقرير بيانات شركة ناف\n';
     content += '===================\n\n';
     content += `تاريخ التصدير: ${formatDate(new Date())}\n\n`;
 
@@ -561,37 +561,37 @@ export default function DataExport() {
       {/* Export Summary */}
       <div className="bg-primary-soft rounded-lg p-6">
         <h4 className="font-medium text-primary-strong mb-3">ملخص التصدير</h4>
-        <div className="space-y-2 text-sm text-primary-strong">
-          <p>• التنسيق: {
+        <ul className="list-disc ps-5 space-y-2 text-sm text-primary-strong">
+          <li>التنسيق: {
             selectedFormat === 'json' ? 'JSON (نسخة احتياطية كاملة)' :
             selectedFormat === 'excel' ? 'CSV/Excel' : 
             'نص منسق'
-          }</p>
-          <p>• البيانات المحددة: {Object.values(selectedData).filter(Boolean).length} من 4</p>
-          <p>• سيتم إنشاء الملف وتنزيله تلقائياً</p>
+          }</li>
+          <li>البيانات المحددة: <bdi>{formatNumber(Object.values(selectedData).filter(Boolean).length)}</bdi> من <bdi>{formatNumber(4)}</bdi></li>
+          <li>سيتم إنشاء الملف وتنزيله تلقائياً</li>
           {selectedFormat === 'json' && (
-            <p>• تنسيق JSON يحتوي على جميع البيانات ويمكن استخدامه لاستعادة النظام</p>
+            <li>تنسيق JSON يحتوي على جميع البيانات ويمكن استخدامه لاستعادة النظام</li>
           )}
-        </div>
+        </ul>
       </div>
 
       {/* Export Button */}
       <div className="flex justify-end">
         <Button onClick={exportData} disabled={!Object.values(selectedData).some(Boolean) || isExporting} size="lg">
           <FileOutput className="h-5 w-5" />
-          {isExporting ? 'جارٍ التصدير...' : 'تصدير البيانات'}
+          {isExporting ? 'جارٍ التصدير' : 'تصدير البيانات'}
         </Button>
       </div>
 
       {/* Migration Notice */}
       <div className="bg-warning-soft border border-warning/30 rounded-lg p-4">
         <h4 className="font-medium text-warning-strong mb-2">ملاحظة مهمة حول قاعدة البيانات:</h4>
-        <div className="text-sm text-warning-strong space-y-2">
-          <p>• التطبيق يدعم الآن قاعدة بيانات Supabase المركزية</p>
-          <p>• عند توصيل Supabase، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</p>
-          <p>• يمكنك ترحيل البيانات الحالية من localStorage إلى Supabase</p>
-          <p>• تنسيق JSON مناسب للنسخ الاحتياطية الكاملة واستعادة البيانات</p>
-        </div>
+        <ul className="list-disc ps-5 text-sm text-warning-strong space-y-2">
+          <li>التطبيق يدعم الآن قاعدة بيانات Supabase المركزية</li>
+          <li>عند توصيل Supabase، ستصبح البيانات مركزية ومتاحة لجميع المستخدمين</li>
+          <li>يمكنك ترحيل البيانات الحالية من localStorage إلى Supabase</li>
+          <li>تنسيق JSON مناسب للنسخ الاحتياطية الكاملة واستعادة البيانات</li>
+        </ul>
       </div>
     </div>
   );

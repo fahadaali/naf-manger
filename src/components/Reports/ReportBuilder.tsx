@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, X } from 'lucide-react';
 import { CustomReport, ReportField, ReportFilter, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { formatNumber } from '@/registry/naf/lib/format';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
@@ -172,7 +173,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
               <h1 className="text-xl font-bold text-foreground">
                 {report ? 'تعديل التقرير' : 'إنشاء تقرير جديد'}
               </h1>
-              <p className="text-sm text-muted-foreground">الخطوة {currentStep} من {steps.length}</p>
+              <p className="text-sm text-muted-foreground">الخطوة <bdi>{formatNumber(currentStep)}</bdi> من <bdi>{formatNumber(steps.length)}</bdi></p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -196,7 +197,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 onClick={() => setCurrentStep(step.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-start transition-colors ${
                   currentStep === step.id
-                    ? 'bg-primary-soft text-primary border border-primary/30'
+                    ? 'bg-primary-soft text-primary-strong border border-primary/30'
                     : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
@@ -423,7 +424,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                       onClick={() => handleVisualizationChange({ type: viz.type as any })}
                       className={`p-4 border rounded-lg text-center transition-colors ${
                         reportData.visualization?.type === viz.type
-                          ? 'border-primary bg-primary-soft text-primary'
+                          ? 'border-primary bg-primary-soft text-primary-strong'
                           : 'border-border hover:border-ring'
                       }`}
                     >
@@ -477,13 +478,13 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
               
               <div className="bg-primary-soft border border-primary/30 rounded-lg p-4">
                 <h4 className="font-medium text-primary-strong mb-2">ملخص التقرير</h4>
-                <div className="text-sm text-primary-strong space-y-1">
-                  <p>• الاسم: {reportData.name}</p>
-                  <p>• مصدر البيانات: {reportData.dataSource}</p>
-                  <p>• عدد الحقول: {reportData.fields?.length || 0}</p>
-                  <p>• عدد الفلاتر: {reportData.filters?.length || 0}</p>
-                  <p>• نوع العرض: {reportData.visualization?.type}</p>
-                </div>
+                <ul className="list-disc ps-5 text-sm text-primary-strong space-y-1">
+                  <li>الاسم: {reportData.name}</li>
+                  <li>مصدر البيانات: {reportData.dataSource}</li>
+                  <li>عدد الحقول: <bdi>{formatNumber(reportData.fields?.length || 0)}</bdi></li>
+                  <li>عدد الفلاتر: <bdi>{formatNumber(reportData.filters?.length || 0)}</bdi></li>
+                  <li>نوع العرض: {reportData.visualization?.type}</li>
+                </ul>
               </div>
             </div>
           )}

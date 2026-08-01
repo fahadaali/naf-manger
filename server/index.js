@@ -23,7 +23,7 @@ const createTransporter = (emailSettings = null) => {
     secure: process.env.EMAIL_SECURE === 'true',
     user: process.env.EMAIL_USER,
     password: process.env.EMAIL_PASSWORD,
-    fromName: process.env.EMAIL_FROM_NAME || 'NAF Law',
+    fromName: process.env.EMAIL_FROM_NAME || 'شركة ناف',
     fromAddress: process.env.EMAIL_FROM || process.env.EMAIL_USER
   };
 
@@ -94,7 +94,7 @@ app.post('/api/send-notification', async (req, res) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: `${process.env.EMAIL_FROM_NAME || 'NAF Law'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      from: `${process.env.EMAIL_FROM_NAME || 'شركة ناف'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
       to: to,
       subject: subject,
       html: nafEmail.notificationEmail({ subject, message })
@@ -137,7 +137,7 @@ app.post('/api/send-meeting-invitation', async (req, res) => {
     for (const email of invitees) {
       try {
         const mailOptions = {
-          from: `${process.env.EMAIL_FROM_NAME || 'NAF Law'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+          from: `${process.env.EMAIL_FROM_NAME || 'شركة ناف'} <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
           to: email,
           subject: `دعوة اجتماع - ${meetingDetails.title}`,
           html: nafEmail.meetingInviteEmail(meetingDetails)

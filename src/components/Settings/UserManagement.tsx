@@ -45,8 +45,8 @@ export default function UserManagement() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin': return 'مدير النظام';
-      case 'lawyer': return 'محامي';
+      case 'admin': return 'مسؤول النظام';
+      case 'lawyer': return 'محامٍ';
       case 'staff': return 'إداري';
       default: return role;
     }
@@ -314,8 +314,8 @@ export default function UserManagement() {
                   onChange={(e) => setNewUserData(prev => ({ ...prev, role: e.target.value }))}
                 >
                   <option value="staff">إداري</option>
-                  <option value="lawyer">محامي</option>
-                  <option value="admin">مدير النظام</option>
+                  <option value="lawyer">محامٍ</option>
+                  <option value="admin">مسؤول النظام</option>
                 </Select>
               </div>
               <div>
@@ -332,7 +332,7 @@ export default function UserManagement() {
                 إلغاء
               </Button>
               <Button onClick={handleCreateUser} disabled={isSaving}>
-                {isSaving ? 'جارٍ الإنشاء...' : 'إنشاء المستخدم'}
+                {isSaving ? 'جارٍ الإنشاء' : 'إنشاء المستخدم'}
               </Button>
             </div>
           </DialogContent>
@@ -395,7 +395,7 @@ export default function UserManagement() {
                 إلغاء
               </Button>
               <Button onClick={() => handleUpdatePermissions(editingUser, editingUser.permissions)} disabled={isSaving}>
-                {isSaving ? 'جارٍ الحفظ...' : 'حفظ الصلاحيات'}
+                {isSaving ? 'جارٍ الحفظ' : 'حفظ الصلاحيات'}
               </Button>
             </div>
           </DialogContent>

@@ -99,8 +99,8 @@ const SmartLawyer: React.FC = () => {
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="flex justify-center mb-8">
-              <div className="dark p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
-                <NafLogo variant="mark" className="h-16" />
+              <div className="p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
+                <NafLogo variant="mark" onSurface="deep" className="h-16" />
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
@@ -139,7 +139,7 @@ const SmartLawyer: React.FC = () => {
               className="bg-card rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 cursor-pointer border border-border hover:border-ring transform hover:-translate-y-2"
             >
               <div className="flex items-center justify-center w-12 h-12 bg-primary-soft rounded-lg mb-4">
-                <action.icon className="h-6 w-6 text-primary" />
+                <action.icon className="h-6 w-6 text-primary-strong" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">{action.title}</h3>
               <p className="text-muted-foreground text-sm">{action.description}</p>
@@ -180,7 +180,7 @@ const SmartLawyer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center">
             <div className="flex items-center justify-center w-16 h-16 bg-primary-soft rounded-full mx-auto mb-4">
-              <span className="text-2xl font-bold text-primary">1</span>
+              <span className="text-2xl font-bold text-primary-strong">1</span>
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">اختر نوع الاستشارة</h3>
             <p className="text-muted-foreground">حدد نوع المساعدة القانونية التي تحتاجها من الخيارات المتاحة</p>
@@ -188,7 +188,7 @@ const SmartLawyer: React.FC = () => {
           
           <div className="text-center">
             <div className="flex items-center justify-center w-16 h-16 bg-primary-soft rounded-full mx-auto mb-4">
-              <span className="text-2xl font-bold text-primary">2</span>
+              <span className="text-2xl font-bold text-primary-strong">2</span>
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">اطرح سؤالك</h3>
             <p className="text-muted-foreground">اكتب سؤالك أو وصف حالتك بوضوح للحصول على إجابة دقيقة</p>
@@ -196,7 +196,7 @@ const SmartLawyer: React.FC = () => {
           
           <div className="text-center">
             <div className="flex items-center justify-center w-16 h-16 bg-primary-soft rounded-full mx-auto mb-4">
-              <span className="text-2xl font-bold text-primary">3</span>
+              <span className="text-2xl font-bold text-primary-strong">3</span>
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">احصل على الإجابة</h3>
             <p className="text-muted-foreground">ستحصل على استشارة قانونية مفصلة ومبنية على أحدث القوانين</p>
@@ -208,7 +208,7 @@ const SmartLawyer: React.FC = () => {
       <div className="bg-warning-soft border-e-4 border-warning p-6 mx-4 sm:mx-6 lg:mx-8 mb-8 rounded-s-lg">
         <div className="flex">
           <div className="flex-shrink-0">
-            <ShieldCheck className="h-5 w-5 text-warning" />
+            <ShieldCheck className="h-5 w-5 text-warning-strong" />
           </div>
           <div className="ms-3">
             <h3 className="text-sm font-medium text-warning-strong">تنبيه مهم</h3>

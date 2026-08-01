@@ -25,7 +25,7 @@ export default function Settings() {
     name: user?.name || '',
     email: user?.email || '',
     phone: '+966501234567',
-    jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري',
+    jobTitle: user?.role === 'admin' ? 'مسؤول النظام' : user?.role === 'lawyer' ? 'محامٍ' : 'إداري',
     profilePicture: user?.profilePicture || ''
   });
 
@@ -279,14 +279,14 @@ export default function Settings() {
 
             <div className="max-w-2xl mx-auto border-t border-border pt-6">
               <div className="flex justify-end gap-4">
-                <Button onClick={() => setProfileData({ name: user?.name || '', email: user?.email || '', phone: '+966501234567', jobTitle: user?.role === 'admin' ? 'مدير النظام' : user?.role === 'lawyer' ? 'محامي' : 'إداري', profilePicture: user?.profilePicture || '' })} variant="ghost" size="lg">
+                <Button onClick={() => setProfileData({ name: user?.name || '', email: user?.email || '', phone: '+966501234567', jobTitle: user?.role === 'admin' ? 'مسؤول النظام' : user?.role === 'lawyer' ? 'محامٍ' : 'إداري', profilePicture: user?.profilePicture || '' })} variant="ghost" size="lg">
                   إلغاء
                 </Button>
                 <Button onClick={handleProfileSave} disabled={isSaving} size="lg">
                   {isSaving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-                      جارٍ الحفظ...
+                      جارٍ الحفظ
                     </>
                   ) : (
                     <>
@@ -416,7 +416,7 @@ export default function Settings() {
                     />
                   </div>
                   <Button onClick={handleSecuritySave} disabled={isSaving || !securityData.currentPassword || !securityData.newPassword} className="w-full" size="lg">
-                    {isSaving ? 'جارٍ الحفظ...' : 'تغيير كلمة المرور'}
+                    {isSaving ? 'جارٍ الحفظ' : 'تغيير كلمة المرور'}
                   </Button>
                 </div>
               </div>
@@ -517,14 +517,14 @@ export default function Settings() {
               {/* Notification Schedule */}
               <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
                 <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <Bell className="h-6 w-6 text-primary" />
+                  <Bell className="h-6 w-6 text-primary-strong" />
                   جدولة التقارير
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير يومي</label>
                     <Select>
-                      <option value="disabled">معطل</option>
+                      <option value="disabled">معطّل</option>
                       <option value="8am" selected>8:00 صباحاً</option>
                       <option value="9am">9:00 صباحاً</option>
                       <option value="10am">10:00 صباحاً</option>
@@ -534,7 +534,7 @@ export default function Settings() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير أسبوعي</label>
                     <Select>
-                      <option value="disabled">معطل</option>
+                      <option value="disabled">معطّل</option>
                       <option value="sunday" selected>الأحد</option>
                       <option value="monday">الاثنين</option>
                       <option value="saturday">السبت</option>
@@ -544,7 +544,7 @@ export default function Settings() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-foreground">تقرير شهري</label>
                     <Select>
-                      <option value="disabled">معطل</option>
+                      <option value="disabled">معطّل</option>
                       <option value="1st" selected>أول الشهر</option>
                       <option value="15th">منتصف الشهر</option>
                       <option value="last">آخر الشهر</option>

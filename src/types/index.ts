@@ -1,4 +1,4 @@
-// Core Types for NAF Law System
+// Core Types for the NAF client management system
 export interface Client {
   id: string;
   fullName: string;

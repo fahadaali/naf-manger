@@ -39,8 +39,8 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin': return 'مدير النظام';
-      case 'lawyer': return 'محامي';
+      case 'admin': return 'مسؤول النظام';
+      case 'lawyer': return 'محامٍ';
       case 'staff': return 'إداري';
       default: return role;
     }
@@ -59,9 +59,9 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
         
         <div>
           <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-            {viewTitles[currentView] || settings?.companyName || 'NAF Law'}
+            {viewTitles[currentView] || settings?.companyName || 'شركة ناف'}
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground hidden sm:block">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
+          <p className="text-sm sm:text-base text-muted-foreground hidden sm:block">{settings?.companyDescription || 'نظام إدارة العملاء'}</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -81,7 +81,7 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
             </div>
             <button
               onClick={logout}
-              className="p-1 sm:p-2 hover:bg-destructive-soft hover:text-destructive rounded-full transition-colors"
+              className="p-1 sm:p-2 hover:bg-destructive-soft hover:text-destructive-strong rounded-full transition-colors"
               title="تسجيل الخروج"
             >
               <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />

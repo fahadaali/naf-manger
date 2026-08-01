@@ -322,25 +322,25 @@ export default function AIAssistant() {
             </button>
           </div>
         </div>
-      </div>
+      </Card>
 
       <div className="bg-primary-soft rounded-lg p-4">
         <div className="flex items-center gap-2 mb-2">
-          <MessageSquare className="h-5 w-5 text-primary" />
+          <MessageSquare className="h-5 w-5 text-primary-strong" />
           <h3 className="font-semibold text-primary-strong">ميزات المساعد الذكي:</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-primary-strong">
-          <ul className="space-y-1">
-            <li>• إجابات ذكية مدعومة بـ Gemini AI</li>
-            <li>• تحليل البيانات والإحصائيات</li>
-            <li>• البحث المتقدم في العملاء والقضايا</li>
-            <li>• نصائح قانونية عامة</li>
+          <ul className="list-disc ps-5 space-y-1">
+            <li>إجابات ذكية مدعومة بـ Gemini AI</li>
+            <li>تحليل البيانات والإحصائيات</li>
+            <li>البحث المتقدم في العملاء والقضايا</li>
+            <li>نصائح قانونية عامة</li>
           </ul>
-          <ul className="space-y-1">
-            <li>• تقارير مخصصة وتحليلات</li>
-            <li>• مساعدة في إدارة المكتب</li>
-            <li>• إجابات سياقية ومفصلة</li>
-            <li>• دعم اللغة العربية الكامل</li>
+          <ul className="list-disc ps-5 space-y-1">
+            <li>تقارير مخصصة وتحليلات</li>
+            <li>مساعدة في إدارة المكتب</li>
+            <li>إجابات سياقية ومفصلة</li>
+            <li>دعم اللغة العربية الكامل</li>
           </ul>
         </div>
         
@@ -348,10 +348,12 @@ export default function AIAssistant() {
           <div className="mt-3 p-3 bg-warning-soft rounded-lg">
             <p className="text-warning-strong text-sm">
               <strong>ملاحظة:</strong> المساعد يعمل حالياً في الوضع المحلي. للحصول على إجابات أكثر ذكاءً من Gemini AI، تأكد من:
-              <br />• صحة مفتاح API في ملف .env
-              <br />• الاتصال بالإنترنت
-              <br />• عدم تجاوز حدود الاستخدام
             </p>
+            <ul className="list-disc ps-5 text-warning-strong text-sm mt-1 space-y-1">
+              <li>صحة مفتاح API في ملف .env</li>
+              <li>الاتصال بالإنترنت</li>
+              <li>عدم تجاوز حدود الاستخدام</li>
+            </ul>
           </div>
         )}
         
@@ -363,6 +365,6 @@ export default function AIAssistant() {
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

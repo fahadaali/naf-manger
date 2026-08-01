@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Archive, Banknote, ChartColumn, CircleCheck, CircleSlash, Clock, LoaderCircle, User } from 'lucide-react';
 import { Marketer } from '../../types';
+/* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
+   ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
+   يمرّ بـ formatDate من naf-format. */
 import { format } from 'date-fns';
 import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
-import { formatNumber, formatPhone } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -108,7 +111,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-info-soft rounded-lg">
-                <User className="h-6 w-6 text-info" />
+                <User className="h-6 w-6 text-info-strong" />
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold">{marketer.fullName}</DialogTitle>
@@ -160,14 +163,14 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">تاريخ بدء التعاون</label>
-                  <p className="text-foreground">{format(marketer.startDate, 'dd/MM/yyyy')}</p>
+                  <p className="text-foreground"><bdi>{formatDate(marketer.startDate)}</bdi></p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">الحالة</label>
                   {(() => {
                     const map = {
                       active: { variant: 'success' as const, Icon: CircleCheck, label: 'نشط' },
-                      suspended: { variant: 'warning' as const, Icon: CircleSlash, label: 'موقوف' }
+                      suspended: { variant: 'default' as const, Icon: CircleSlash, label: 'معطّل' }
                     };
                     const { variant, Icon, label } =
                       map[marketer.status as keyof typeof map] ??
@@ -198,15 +201,15 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{stats.totalCases}</p>
+                  <p className="text-2xl font-bold text-primary"><bdi>{formatNumber(stats.totalCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">إجمالي القضايا</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-success">{stats.completedCases}</p>
+                  <p className="text-2xl font-bold text-success"><bdi>{formatNumber(stats.completedCases)}</bdi></p>
                   <p className="text-sm text-muted-foreground">المكتملة</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-warning">{stats.conversionRate}%</p>
+                  <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(stats.conversionRate)}%</bdi></p>
                   <p className="text-sm text-muted-foreground">معدل النجاح</p>
                 </div>
                 <div className="text-center">
@@ -409,7 +412,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 onChange={(e) => handleInputChange('status', e.target.value)}
               >
                 <option value="active">نشط</option>
-                <option value="suspended">موقوف</option>
+                <option value="suspended">معطّل</option>
                 <option value="former">سابق</option>
               </Select>
             </div>
@@ -437,7 +440,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              placeholder="ملاحظات إضافية..."
+              placeholder="ملاحظات إضافية"
             />
           </div>
 

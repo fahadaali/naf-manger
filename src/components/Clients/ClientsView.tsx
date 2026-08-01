@@ -6,6 +6,7 @@ import ClientModal from './ClientModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
@@ -142,7 +143,7 @@ export default function ClientsView() {
             <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="البحث عن عميل..."
+              placeholder="البحث عن عميل"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)} className="pe-10 ps-4"
             />
@@ -174,24 +175,24 @@ export default function ClientsView() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي العملاء</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{clients.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(clients.length)}</bdi></p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">العملاء الحاليين</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
-            {clients.filter(c => c.status === 'current').length}
+            <bdi>{formatNumber(clients.filter(c => c.status === 'current').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الشركات</p>
-          <p className="text-xl sm:text-2xl font-bold text-primary">
-            {clients.filter(c => c.clientType === 'company').length}
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
+            <bdi>{formatNumber(clients.filter(c => c.clientType === 'company').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الأفراد</p>
-          <p className="text-xl sm:text-2xl font-bold text-warning">
-            {clients.filter(c => c.clientType === 'individual').length}
+          <p className="text-xl sm:text-2xl font-bold text-foreground">
+            <bdi>{formatNumber(clients.filter(c => c.clientType === 'individual').length)}</bdi>
           </p>
         </Card>
       </div>
