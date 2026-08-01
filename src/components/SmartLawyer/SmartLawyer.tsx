@@ -99,8 +99,8 @@ const SmartLawyer: React.FC = () => {
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="flex justify-center mb-8">
-              <div className="dark p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
-                <NafLogo variant="mark" className="h-16" />
+              <div className="p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
+                <NafLogo variant="mark" onSurface="deep" className="h-16" />
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-6">

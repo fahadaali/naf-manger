@@ -291,7 +291,7 @@ export default function DataExport() {
   };
 
   const generatePDFContent = async (data: any) => {
-    let content = 'تقرير بيانات NAF Law\n';
+    let content = 'تقرير بيانات شركة ناف\n';
     content += '===================\n\n';
     content += `تاريخ التصدير: ${formatDate(new Date())}\n\n`;
 

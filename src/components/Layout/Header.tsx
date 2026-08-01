@@ -59,9 +59,9 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
         
         <div>
           <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-            {viewTitles[currentView] || settings?.companyName || 'NAF Law'}
+            {viewTitles[currentView] || settings?.companyName || 'شركة ناف'}
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground hidden sm:block">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
+          <p className="text-sm sm:text-base text-muted-foreground hidden sm:block">{settings?.companyDescription || 'نظام إدارة العملاء'}</p>
         </div>
         
         <div className="flex items-center gap-4">

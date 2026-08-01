@@ -37,8 +37,8 @@ const DEFAULT_SETTINGS = {
   commissionTypes: ['percentage', 'fixed_amount'],
   collectionStatuses: ['pending', 'partial', 'collected'],
   feeTypes: ['fixed_amount', 'percentage'],
-  companyName: 'NAF Law',
-  companyDescription: 'نظام إدارة المكتب القانوني',
+  companyName: 'شركة ناف',
+  companyDescription: 'نظام إدارة العملاء',
 };
 
 export async function readSettings(env) {

@@ -111,8 +111,8 @@ export default function GeneralSettings() {
     if (window.confirm('هل أنت متأكد من إعادة تعيين الإعدادات إلى القيم الافتراضية؟')) {
       const defaultSettings = {
         ...settings!,
-        companyName: 'NAF Law',
-        companyDescription: 'نظام إدارة المكتب القانوني',
+        companyName: 'شركة ناف',
+        companyDescription: 'نظام إدارة العملاء',
         companyLogo: undefined
       };
 

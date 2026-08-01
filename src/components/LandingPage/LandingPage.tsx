@@ -50,8 +50,8 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
             <div className="flex items-center gap-3">
               <NafLogo variant="mark" className="h-8" />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">NAF Law</h1>
-                <p className="text-sm text-muted-foreground hidden sm:block">نظام إدارة المكتب القانوني</p>
+                <h1 className="text-2xl font-bold text-foreground">شركة ناف</h1>
+                <p className="text-sm text-muted-foreground hidden sm:block">نظام إدارة العملاء</p>
               </div>
             </div>
           <div className="flex items-center gap-4">
@@ -71,12 +71,12 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="text-center">
             <div className="flex justify-center mb-8">
-              <div className="dark p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
-                <NafLogo variant="mark" className="h-16" />
+              <div className="p-4 bg-surface-deep-foreground/20 rounded-full backdrop-blur-sm">
+                <NafLogo variant="mark" onSurface="deep" className="h-16" />
               </div>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
-              نظام NAF Law
+              نظام إدارة العملاء
             </h2>
             <p className="text-xl md:text-2xl text-surface-deep-muted mb-8 max-w-4xl mx-auto leading-relaxed">
               حلول متكاملة لإدارة المكاتب القانونية بكفاءة واحترافية عالية
@@ -101,7 +101,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              مميزات نظام NAF Law
+              مميزات نظام إدارة العملاء
             </h3>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
               نظام شامل ومتطور لإدارة جميع جوانب المكتب القانوني بكفاءة عالية
@@ -161,7 +161,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
             جاهز لتطوير مكتبك القانوني؟
           </h3>
           <p className="text-lg md:text-xl text-surface-deep-muted mb-8 leading-relaxed">
-            انضم إلى NAF Law اليوم واستفد من قوة الذكاء الاصطناعي والأدوات المتكاملة لإدارة مكتبك بكفاءة استثنائية
+            انضم إلى شركة ناف اليوم واستفد من قوة الذكاء الاصطناعي والأدوات المتكاملة لإدارة مكتبك بكفاءة استثنائية
           </p>
           <Button onClick={onShowLogin} className="text-primary shadow-lg hover:shadow-xl" variant="outline" size="lg">
             دخول
@@ -175,8 +175,8 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <span className="dark inline-flex"><NafLogo variant="mark" className="h-8" /></span>
-                <h4 className="text-xl font-bold">NAF Law</h4>
+                <NafLogo variant="mark" onSurface="deep" className="h-8" />
+                <h4 className="text-xl font-bold">شركة ناف</h4>
               </div>
               <p className="text-surface-deep-muted leading-relaxed">
                 نظام متطور لإدارة المكاتب القانونية يجمع بين الكفاءة والتقنيات الحديثة
@@ -204,7 +204,7 @@ export default function LandingPage({ onShowLogin }: LandingPageProps) {
           
           <div className="border-t border-surface-deep-muted/20 mt-8 pt-8 text-center">
             <p className="text-muted-foreground">
-              © 2024 NAF Law. جميع الحقوق محفوظة.
+              © 2024 شركة ناف. جميع الحقوق محفوظة.
             </p>
           </div>
         </div>

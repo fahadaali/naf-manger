@@ -1098,8 +1098,8 @@ export class SupabaseDatabase {
         commissionTypes: [],
         collectionStatuses: [],
         feeTypes: [],
-        companyName: 'NAF Law',
-        companyDescription: 'نظام إدارة المكتب القانوني',
+        companyName: 'شركة ناف',
+        companyDescription: 'نظام إدارة العملاء',
         /* الحقول الثلاثة تبقى في النوع لأن العمود ما يزال في القاعدة،
            وقيمها الفارغة مقصودة: لم تعد تُقرأ من الواجهة ولا تُحقن على
            الجذر — لوحة الهوية من naf-theme.css وحده. وكتابة رمز سداسي
@@ -1174,8 +1174,8 @@ export class SupabaseDatabase {
         commissionTypes: ['fixed_amount', 'percentage'],
         collectionStatuses: ['fully_paid', 'partially_paid', 'unpaid'],
         feeTypes: ['advance_only', 'deferred_only', 'advance_and_deferred'],
-        companyName: 'NAF Law',
-        companyDescription: 'نظام إدارة المكتب القانوني',
+        companyName: 'شركة ناف',
+        companyDescription: 'نظام إدارة العملاء',
         /* الحقول الثلاثة تبقى في النوع لأن العمود ما يزال في القاعدة،
            وقيمها الفارغة مقصودة: لم تعد تُقرأ من الواجهة ولا تُحقن على
            الجذر — لوحة الهوية من naf-theme.css وحده. وكتابة رمز سداسي

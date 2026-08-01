@@ -100,7 +100,7 @@ export default function EmailSettings() {
         secure: false,
         user: '',
         password: '',
-        fromName: 'NAF Law',
+        fromName: 'شركة ناف',
         fromAddress: ''
       });
     }
@@ -230,7 +230,7 @@ export default function EmailSettings() {
               type="text"
               value={settings?.fromName || ''}
               onChange={(e) => handleInputChange('fromName', e.target.value)}
-              placeholder="NAF Law"
+              placeholder="شركة ناف"
             />
           </div>
 

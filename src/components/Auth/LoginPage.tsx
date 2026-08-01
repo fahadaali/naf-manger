@@ -24,8 +24,8 @@ export default function LoginPage() {
         console.error('Error loading settings:', error);
         // استخدام إعدادات افتراضية في حالة الخطأ
         setSettings({
-          companyName: 'NAF Law',
-          companyDescription: 'نظام إدارة المكتب القانوني',
+          companyName: 'شركة ناف',
+          companyDescription: 'نظام إدارة العملاء',
           companyLogo: null
         });
       }
@@ -63,11 +63,11 @@ export default function LoginPage() {
                 className="h-12 w-12 object-contain"
               />
             ) : (
-              <NafLogo variant="mark" className="h-12" />
+              <NafLogo variant="mark" onSurface="deep" className="h-12" />
             )}
             <div>
-              <h1 className="text-3xl font-bold">{settings?.companyName || 'NAF Law'}</h1>
-              <p className="text-surface-deep-muted">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
+              <h1 className="text-3xl font-bold">{settings?.companyName || 'شركة ناف'}</h1>
+              <p className="text-surface-deep-muted">{settings?.companyDescription || 'نظام إدارة العملاء'}</p>
             </div>
           </div>
         </div>

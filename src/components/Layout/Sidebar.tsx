@@ -73,7 +73,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
             ) : (
               <NafLogo variant="mark" className="h-6" />
             )}
-            <span className="text-lg font-bold">{settings?.companyName || 'NAF Law'}</span>
+            <span className="text-lg font-bold">{settings?.companyName || 'شركة ناف'}</span>
           </div>
           <button
             onClick={onClose}
@@ -95,8 +95,8 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
             <NafLogo variant="mark" className="h-6 sm:h-8" />
           )}
           <div className="hidden lg:block">
-            <h1 className="text-lg sm:text-xl font-bold">{settings?.companyName || 'NAF Law'}</h1>
-            <p className="text-xs sm:text-sm text-sidebar-foreground/70">{settings?.companyDescription || 'نظام إدارة المكتب القانوني'}</p>
+            <h1 className="text-lg sm:text-xl font-bold">{settings?.companyName || 'شركة ناف'}</h1>
+            <p className="text-xs sm:text-sm text-sidebar-foreground/70">{settings?.companyDescription || 'نظام إدارة العملاء'}</p>
           </div>
         </div>
         
