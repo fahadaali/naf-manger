@@ -33,7 +33,7 @@ export default function ClientsView() {
   const loadClients = () => {
     const loadClientsAsync = async () => {
       try {
-        // جلب العملاء مباشرة من Supabase
+        // جلب العملاء من مسارات المنصة على D1
         setClients(await db.getClients());
       } catch (error) {
         console.error('Error loading clients:', error);

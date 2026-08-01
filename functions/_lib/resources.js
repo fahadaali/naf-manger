@@ -79,7 +79,7 @@ export const RESOURCES = {
       paymentStatus: ['payment_status', 'json'],
       commissionStructure: ['commission_structure', 'json'],
       /* الشاشات تقرأ `createdDate` و`updatedDate` لا `createdAt`. والاسمان
-         مكشوفان معاً أدناه، فلا يُمسّ مكوّن. */
+         مكشوفان معاً أدناه، فلا يُمسّ مكوّن منها. */
     },
     required: ['case_number', 'case_type', 'client_id'],
     defaults: { summary: '', client_name: '' },
@@ -169,7 +169,7 @@ export function toClient(resource, row) {
   }
 
   /* الأوقات تُكشف بالاسمين معاً: `createdAt` لمن يقرأ الجديد، و`createdDate`
-     لأن شاشات القضايا والمسوّقين تقرؤه بهذا الاسم منذ عهد Supabase. */
+     لأن شاشات القضايا والمسوّقين تقرؤه بهذا الاسم. */
   if (row.created_at != null) {
     out.createdAt = toIso(row.created_at);
     out.createdDate = out.createdAt;

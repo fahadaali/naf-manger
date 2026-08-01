@@ -33,7 +33,7 @@ export default function ProspectsView() {
   const loadProspects = () => {
     const loadProspectsAsync = async () => {
       try {
-        // جلب العملاء المحتملين مباشرة من Supabase
+        // جلب العملاء المحتملين من مسارات المنصة على D1
         setProspects(await db.getProspects());
       } catch (error) {
         console.error('Error loading prospects:', error);

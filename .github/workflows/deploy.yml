@@ -153,19 +153,17 @@ jobs:
       # في الحزمة نصّاً. فلا ينفع فيه `wrangler secret` — ذاك يصل العامل
       # ولا يصل المتصفّح.
       #
-      # وغيابُها لا يُسقط الصفحة بعد اليوم — العميل صار يُنشأ عند أول
-      # استعمال — لكنه يُعطّل شاشات البيانات. فيُنبَّه ولا يُفشل.
+      # ولا إعدادَ قاعدةٍ هنا: شاشات البيانات تنادي `‎/api/*` على العامل،
+      # وارتباط `DB` عنده لا في الحزمة. فلا مفتاح قاعدةٍ يُشحن إلى متصفّح.
       #
-      # ومفتاح `ANON` ليس سرّاً في حقيقته: يُشحن في الحزمة ويقرؤه كل زائر،
-      # وحارسُه سياساتُ الصفوف في Supabase لا خفاؤه.
+      # و`VITE_GEMINI_API_KEY` وحده اختياريّ: غيابُه يُعطّل المساعد الذكي
+      # ولا يمسّ شيئاً سواه. فيُنبَّه ولا يُفشل.
       - name: البناء
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
         run: |
-          [ -n "$VITE_SUPABASE_URL" ] && [ -n "$VITE_SUPABASE_ANON_KEY" ] \
-            || echo "::warning::لا إعداد Supabase — التطبيق يعمل والدخول يعمل، وشاشات البيانات تُخفق."
+          [ -n "$VITE_GEMINI_API_KEY" ] \
+            || echo "::warning::لا VITE_GEMINI_API_KEY — المنصة تعمل، والمساعد الذكي معطَّل."
           npm run build
 
       # ── النشر يسبق السرّ، ولا بدّ ──
