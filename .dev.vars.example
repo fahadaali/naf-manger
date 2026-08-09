@@ -24,3 +24,24 @@ AUTH_CLIENT_SECRET=
 ZOOM_ACCOUNT_ID=
 ZOOM_CLIENT_ID=
 ZOOM_CLIENT_SECRET=
+
+# ═══ بيسكامب — استيراد بيانات العملاء ومزامنتها ═══
+#
+# اثنان من تطبيقٍ يُسجَّل مرّةً في:
+#   https://launchpad.37signals.com/integrations
+# ورابطُ العودة فيه: https://<النطاق>/api/basecamp/callback
+#
+# والثالث مفتاحٌ من عندك تُعمَّى به الرموز المحفوظة في القاعدة — أيُّ نصٍّ
+# عشوائيٍّ طويل يصلح. وتبديلُه يُبطل الربط القائم فيُطلب ربطٌ جديد، ولا
+# يُفقد شيءٌ ممّا استُورد.
+#
+# وفي النشر:
+#   wrangler secret put BASECAMP_CLIENT_ID
+#   wrangler secret put BASECAMP_CLIENT_SECRET
+#   wrangler secret put BASECAMP_TOKEN_KEY
+#
+# وغيابُ أحدها غيابُ الربط: الشاشة تقول «لم يُسجَّل التطبيق بعد»، ولا
+# يُستورد شيء.
+BASECAMP_CLIENT_ID=
+BASECAMP_CLIENT_SECRET=
+BASECAMP_TOKEN_KEY=

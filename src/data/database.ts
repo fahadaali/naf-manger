@@ -7,6 +7,7 @@
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
 import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
+import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
 /* ═══ التواريخ ═══
@@ -288,6 +289,39 @@ export class LocalDatabase {
      غيرُ «تعذّر الاستدلال»، والصمتُ يخلطهما. */
   async getInsights(refresh = false): Promise<AiInsightsResult> {
     return await api.read<AiInsightsResult>(`/insights${refresh ? '?refresh=1' : ''}`);
+  }
+
+  /* ═══ ربط بيسكامب ═══
+     الاتّجاه واحد: يُقرأ منه ولا يُكتب فيه. ولا `listOr` في شيءٍ منها —
+     شاشةُ الربط تعرض سببَ السقوط، و«لم يُسجَّل التطبيق» غيرُ «لم يُربط
+     الحساب» غيرُ «بُدِّل المفتاح». والصمتُ يخلط الثلاثة. */
+  async getBasecampStatus(): Promise<BasecampStatus> {
+    return await api.read<BasecampStatus>('/basecamp/status');
+  }
+
+  async getBasecampProjects(): Promise<BasecampProject[]> {
+    return await api.read<BasecampProject[]>('/basecamp/projects');
+  }
+
+  async scanBasecamp(): Promise<BasecampScan> {
+    return await api.post<BasecampScan>('/basecamp/scan');
+  }
+
+  async classifyBasecampProject(
+    projectId: string,
+    kind: 'client' | 'internal',
+  ): Promise<{ projectId: string; kind: string; decidedByHand: boolean }> {
+    return await api.patch(`/basecamp/projects/${encodeURIComponent(projectId)}`, { kind });
+  }
+
+  async getBasecampSample(projectId: string): Promise<BasecampSample> {
+    return await api.read<BasecampSample>(
+      `/basecamp/sample?project=${encodeURIComponent(projectId)}`,
+    );
+  }
+
+  async disconnectBasecamp(): Promise<void> {
+    await api.del('/basecamp/connection');
   }
 
   /* ═══ رموز شاشات العرض ═══

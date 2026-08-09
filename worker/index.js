@@ -11,6 +11,16 @@ import { handleResource } from './lib/crud.js';
 import { createMeeting, listMeetings } from './lib/meetings.js';
 import { readInsights } from './lib/insights.js';
 import {
+  classifyProject,
+  disconnect,
+  finishConnect,
+  listProjects,
+  readSample,
+  readStatus,
+  rescan,
+  startConnect,
+} from './lib/basecamp/handlers.js';
+import {
   createReport,
   deleteReport,
   listReports,
@@ -164,6 +174,27 @@ export default {
          أرقامٌ مجمَّعة وحدها، والتفصيل في `lib/insights.js`. */
       if (name === 'insights' && !id && request.method === 'GET') {
         return readInsights(request, env, user, url);
+      }
+      /* ═══ بيسكامب ═══
+         الاتّجاه واحد: يُقرأ منه ولا يُكتب فيه. وكلُّ ما هنا للمسؤول وحده،
+         والفحصُ في `basecamp/handlers.js` لا هنا. و`callback` تحويلُ متصفّح
+         لا نداءُ `fetch` — لكنه بعد الحارس كغيره، لأنّ من يعود من صفحة
+         الإذن يحمل جلسته. */
+      if (name === 'basecamp') {
+        if (id === 'status' && request.method === 'GET') return readStatus(env, user);
+        if (id === 'connect' && request.method === 'GET') {
+          return startConnect(request, env, user, url);
+        }
+        if (id === 'callback' && request.method === 'GET') {
+          return finishConnect(request, env, user, url);
+        }
+        if (id === 'connection' && request.method === 'DELETE') return disconnect(env, user);
+        if (id === 'scan' && request.method === 'POST') return rescan(env, user);
+        if (id === 'sample' && request.method === 'GET') return readSample(env, user, url);
+        if (id === 'projects' && !verb && request.method === 'GET') return listProjects(env, user);
+        if (id === 'projects' && verb && request.method === 'PATCH') {
+          return classifyProject(request, env, user, verb);
+        }
       }
       if (name === 'export' && !id && request.method === 'GET') {
         return exportAll(env, user);

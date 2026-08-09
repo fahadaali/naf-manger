@@ -176,6 +176,68 @@ export interface DisplayToken {
   lastSeenAt: number | null;
 }
 
+/* ═══ ربط بيسكامب ═══
+   الاتّجاه واحد: يُقرأ منه ولا يُكتب فيه. والتفصيل في
+   `worker/lib/basecamp/`. */
+
+/**
+ * حالةُ الربط.
+ *
+ * و`state` ثلاثيّةٌ لا ثنائية: «لم يُسجَّل التطبيق» غيرُ «لم يُربط الحساب».
+ * الأولى يعالجها من يملك أسرارَ المنصة، والثانية ضغطةُ زرٍّ في الشاشة —
+ * وخلطُهما يرسل صاحبَ المكتب يبحث في المكان الخطأ.
+ */
+export interface BasecampStatus {
+  state: 'not_configured' | 'not_connected' | 'connected';
+  accountName?: string;
+  connectedAt?: number;
+  syncEnabled?: boolean;
+  lastSyncAt?: number | null;
+  lastSyncError?: string | null;
+  projects?: { total: number; client: number; internal: number; linked: number };
+  openConflicts?: number;
+}
+
+export interface BasecampProject {
+  projectId: string;
+  name: string;
+  appUrl: string;
+  status: 'active' | 'archived' | 'trashed';
+  /** أفيه ملفّ «ملخص القضية»؟ وهو ما يرجّح أنّه مشروعُ عميل. */
+  hasSummary: boolean;
+  docUpdatedAt: string | null;
+  kind: 'client' | 'internal' | 'unknown';
+  /** صنّفه إنسانٌ بيده — فلا ينقضه مسحٌ لاحق. */
+  decidedByHand: boolean;
+  clientId: string | null;
+  caseId: string | null;
+  caseNumber: string | null;
+  clientName: string | null;
+  lastSyncedAt: number | null;
+  lastError: string | null;
+}
+
+/** حصيلةُ مسحٍ للحساب. */
+export interface BasecampScan {
+  scanned: number;
+  client: number;
+  internal: number;
+  failed: number;
+  /** بلغ المسرد سقفَ الصفحات ولم يكتمل — يُقال ولا يُبتلع. */
+  incomplete: boolean;
+}
+
+/** نصُّ «ملخص القضية» كما هو — تُبنى عليه خريطةُ الحقول. */
+export interface BasecampSample {
+  projectId: string;
+  projectName: string;
+  title: string;
+  /** HTML كما يحفظه محرّر بيسكامب. */
+  content: string;
+  appUrl: string;
+  updatedAt: string | null;
+}
+
 /** تفضيلاتُ إشعارات العضو — مفاتيحُها عقدٌ مع `updateMe` في الخادم. */
 export interface NotificationPrefs {
   newClients: boolean;
