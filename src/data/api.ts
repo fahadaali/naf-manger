@@ -140,6 +140,31 @@ export function fileUrl(key: string | null | undefined): string | undefined {
   return key ? `/api/files/${key}` : undefined;
 }
 
+/**
+ * عنوانُ صورةٍ محفوظة — أياً كانت صيغةُ ما حُفظ.
+ *
+ * ═══ لماذا لا يكفي `fileUrl` ═══
+ *
+ * عمودُ `profile_picture` في العملاء والمحتملين والمسوّقين يحمل اليوم
+ * **صيغتين**: صفوفٌ قديمة فيها `data:image/…;base64,…` مما كانت الواجهة
+ * تحشره، وصفوفٌ جديدة فيها مفتاحُ حاوية `avatar/<uuid>`.
+ *
+ * فـ`fileUrl` وحده يبني `‎/api/files/data:image/…` للقديم — عنوانٌ لا
+ * يقود إلى شيء. ورسمُ المفتاح كما هو يبني `‎<img src="avatar/uuid">`
+ * فيُقرأ نسبياً ويسقط بـ٤٠٤.
+ *
+ * وهذه تقرأ الثلاثة: العنوانَ الجاهز يمرّره، و`data:` يمرّره — فالصورة
+ * القديمة تبقى ظاهرةً حتى تُستبدل — والمفتاحَ يبني له مساره. ولا ترحيلَ
+ * يلزم: الصفوف القديمة تعمل، وأولُ رفعٍ يكتب مفتاحاً.
+ */
+export function pictureUrl(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith('/') || value.startsWith('http') || value.startsWith('data:')) {
+    return value;
+  }
+  return `/api/files/${value}`;
+}
+
 /* التواريخ تصل نصّاً — لا يحمل JSON نوعَ `Date`. والشاشات تنتظر `Date`،
    فتُحوَّل هنا مرّةً واحدة لا في كل مكوّن. */
 export function toDate(value: unknown): Date {

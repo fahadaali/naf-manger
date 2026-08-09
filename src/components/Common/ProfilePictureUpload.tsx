@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Image, User } from 'lucide-react';
 import { Input } from '@/registry/naf/ui/input';
-import { fileUrl, uploadFile } from '../../data/api';
+import { pictureUrl, uploadFile } from '../../data/api';
 
 /* الحدّان مرآةُ `AVATAR` في `worker/lib/files.js` — والخادم هو الحاكم.
    وSVG مستثنًى هناك قصداً: يحمل نصّاً يُنفَّذ حين يُفتح على أصلنا. */
@@ -9,7 +9,8 @@ const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const MAX_BYTES = 2 * 1024 * 1024;
 
 interface ProfilePictureUploadProps {
-  /** مفتاح الصورة في الحاوية — لا بايتات ولا data URL. */
+  /* مفتاحُ الصورة في الحاوية للجديد، وقد يكون `data:` لصفٍّ قديم لم
+     تُستبدل صورتُه بعد. و`pictureUrl` تقرأ الصيغتين. */
   currentPicture?: string;
   onPictureChange: (pictureKey: string | undefined) => void;
   /* ‎xl‎ مقاسٌ مطلوب: شاشة الملفّ الشخصي تمرّره، وكان خارج الخريطة فيسقط
@@ -105,7 +106,7 @@ export default function ProfilePictureUpload({
         >
           {currentPicture ? (
             <img
-              src={fileUrl(currentPicture)}
+              src={pictureUrl(currentPicture)}
               alt="الصورة الشخصية"
               className="w-full h-full object-cover"
             />

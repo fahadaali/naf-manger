@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { pictureUrl } from '../../data/api';
+
 interface ProfileAvatarProps {
   src?: string;
   name: string;
@@ -48,7 +50,7 @@ export default function ProfileAvatar({
         <div className={`${sizeClasses[size]} rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0`}>
           {src ? (
             <img
-              src={src}
+              src={pictureUrl(src)}
               alt={name}
               className="w-full h-full object-cover"
             />
@@ -70,7 +72,7 @@ export default function ProfileAvatar({
     >
       {src ? (
         <img
-          src={src}
+          src={pictureUrl(src)}
           alt={name}
           className="w-full h-full object-cover"
         />
