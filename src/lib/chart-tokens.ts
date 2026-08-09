@@ -36,7 +36,10 @@ export function readToken(name: string): string {
  * لوحة الرسوم بالترتيب، مقصوصة على العدد المطلوب.
  * تدور إن طُلب أكثر من خمسة — والدوران أصدق من اختراع درجة سادسة.
  */
-export function chartPalette(count = CHART_TOKENS.length): string[] {
+/* النوع مصرَّحٌ `number`: `CHART_TOKENS` مجمَّدة بـ`as const`، فطولُها يُستنبط
+   القيمةَ `5` لا النوعَ `number`، فيُرفض كلُّ عددٍ سواها — وهي دالّةٌ تدور
+   على الخمس بأي عدد كان. */
+export function chartPalette(count: number = CHART_TOKENS.length): string[] {
   return Array.from({ length: count }, (_, i) =>
     readToken(CHART_TOKENS[i % CHART_TOKENS.length])
   );
@@ -49,7 +52,7 @@ export function chartPalette(count = CHART_TOKENS.length): string[] {
  * في الداكن — فبلا مراقبةٍ يبقى الرسم بألوان الوضع السابق حتى إعادة
  * التحميل. والمراقب على ‎class‎ وحده فلا يستيقظ لغيرها.
  */
-export function useChartPalette(count = CHART_TOKENS.length): string[] {
+export function useChartPalette(count: number = CHART_TOKENS.length): string[] {
   const [palette, setPalette] = useState<string[]>(() => chartPalette(count));
 
   useEffect(() => {

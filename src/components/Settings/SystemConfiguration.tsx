@@ -7,15 +7,30 @@ import { Button } from '@/registry/naf/ui/button';
 import { messageTone } from '../../lib/status-message';
 import { Alert } from '@/registry/naf/ui/alert';
 
+/* الشاشة تحرّر قوائمَ النصوص من الإعدادات وحدها — لا اسمَ الشركة ولا
+   إعداداتِ البريد. والمفاتيح تُستخرج بالنوع لا بالنصّ، فما ليس قائمةَ نصوصٍ
+   لا يبلغ `addItem` ولا `removeItem` أصلاً: كانا يفترضان مصفوفةً في كل
+   مفتاح، فينشران نصّاً حرفاً حرفاً لو مُرّر مفتاحٌ غيرها. */
+type ListCategory = {
+  [K in keyof SystemSettings]-?: SystemSettings[K] extends string[] | undefined ? K : never;
+}[keyof SystemSettings];
+
+const EMPTY_LISTS: Pick<SystemSettings, ListCategory> = {
+  clientTypes: [],
+  clientStatuses: [],
+  prospectStatuses: [],
+  prospectSources: [],
+  caseTypes: [],
+  caseStatuses: [],
+  marketerStatuses: [],
+  relationshipTypes: [],
+  commissionTypes: [],
+  collectionStatuses: [],
+  feeTypes: []
+};
+
 export default function SystemConfiguration() {
-  const [settings, setSettings] = useState<SystemSettings>({
-    clientTypes: [],
-    clientStatuses: [],
-    prospectStatuses: [],
-    prospectSources: [],
-    caseTypes: [],
-    caseStatuses: []
-  });
+  const [settings, setSettings] = useState<SystemSettings>({ ...EMPTY_LISTS });
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [newItem, setNewItem] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -131,26 +146,22 @@ export default function SystemConfiguration() {
     return item;
   };
 
-  const addItem = (category: string) => {
+  const addItem = (category: ListCategory) => {
     if (!newItem.trim()) return;
-    
-    const updatedSettings = {
-      ...settings,
-      [category]: [...settings[category as keyof SystemSettings], newItem.trim()]
-    };
-    
-    setSettings(updatedSettings);
+
+    setSettings(prev => ({
+      ...prev,
+      [category]: [...(prev[category] ?? []), newItem.trim()]
+    }));
     setNewItem('');
     setEditingCategory(null);
   };
 
-  const removeItem = (category: string, index: number) => {
-    const updatedSettings = {
-      ...settings,
-      [category]: settings[category as keyof SystemSettings].filter((_, i) => i !== index)
-    };
-    
-    setSettings(updatedSettings);
+  const removeItem = (category: ListCategory, index: number) => {
+    setSettings(prev => ({
+      ...prev,
+      [category]: (prev[category] ?? []).filter((_, i) => i !== index)
+    }));
   };
 
   const handleSaveSettings = async () => {
@@ -188,9 +199,12 @@ export default function SystemConfiguration() {
       })()}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {Object.entries(settings)
-          .filter(([category, items]) => Array.isArray(items))
-          .map(([category, items]) => (
+        {/* المرورُ على مفاتيح القوائم بترتيبها المسجَّل، لا على `Object.entries`:
+            ترتيبُ العرض ثابتٌ لا يتبع ترتيبَ ما يردّه الخادم، وقائمةٌ لم يردّها
+            تظهر فارغةً تُملأ بدل أن تغيب عن الشاشة. */}
+        {(Object.keys(EMPTY_LISTS) as ListCategory[]).map((category) => {
+          const items = settings[category] ?? [];
+          return (
           <div key={category} className="bg-muted rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h4 className="font-medium text-foreground">{getCategoryLabel(category)}</h4>
@@ -231,9 +245,10 @@ export default function SystemConfiguration() {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
-      
+
       <div className="bg-primary-soft rounded-lg p-4">
         <h4 className="font-medium text-primary-strong mb-2">ملاحظة مهمة</h4>
         <p className="text-sm text-primary-strong">

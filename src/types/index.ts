@@ -10,6 +10,10 @@ export interface Client {
   status: 'current' | 'former';
   notes: string;
   attachments: Attachment[];
+  /* الحقل قائمٌ في المخطَّط (`clients.profile_picture`) وفي خريطة الأعمدة
+     في `resources.js`، وتقرؤه الشاشات وتكتبه — وكان ساقطاً من النوع وحده،
+     فيُقرأ كلُّ استعمالٍ له خطأً في الفحص بينما هو يعمل. */
+  profilePicture?: string;
   // Company specific fields
   commercialRegister?: string;
   legalRepresentative?: {
@@ -30,6 +34,7 @@ export interface Prospect {
   prospectStatus: string; // Dynamic status from system settings
   notes: string;
   attachments: Attachment[];
+  profilePicture?: string; // `prospects.profile_picture`
   // Company specific fields
   commercialRegister?: string;
   legalRepresentative?: {
@@ -298,6 +303,7 @@ export interface Marketer {
   startDate: Date;
   status: 'active' | 'suspended' | 'former';
   notes: string;
+  profilePicture?: string; // `marketers.profile_picture`
   createdDate: Date;
   updatedDate: Date;
 }

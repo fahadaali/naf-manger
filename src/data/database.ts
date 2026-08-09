@@ -176,11 +176,11 @@ export class LocalDatabase {
 
   /* الاسم والبريد يأتيان من المركز ويُكتبان عند كل دخول، فتعديلُهما محلياً
      يُدهس في الدخول التالي. وموضعُ تغييرهما هو المركز. */
-  async updateCurrentUser(): Promise<User | null> {
+  async updateCurrentUser(_updates: Partial<User>): Promise<User | null> {
     throw new ApiError('managed_by_center', 409);
   }
 
-  async createUser(): Promise<User | null> {
+  async createUser(_userData: Partial<User>): Promise<User | null> {
     throw new ApiError('managed_by_center', 409);
   }
 
@@ -211,13 +211,33 @@ export class LocalDatabase {
     }
   }
 
-  // ── الإعدادات ──
+  /* ═══ الإعدادات — نداءٌ واحد لا خمسة ═══
+   *
+   * خمسة مكوّنات تطلبها بأنفسها: الترويسة والشريط عند كل فتحةِ منصة، ثم
+   * الإعداداتُ العامة وتكوينُ النظام والبريد داخل شاشة الإعدادات. وهي
+   * كائنٌ واحد لا يتغيّر بينها، فكانت خمسَ رحلاتٍ إلى الخادم لنتيجةٍ
+   * واحدة — وأبطأُ ما في الإقلاع رحلتان متزامنتان لا يحتاج إليهما أحد.
+   *
+   * فالوعدُ يُحفظ ويُشارَك: النداءات المتزامنة تنتظر واحداً، واللاحقةُ
+   * تقرأ المحفوظ. ويُنقض عند الكتابة فلا يُقرأ قديمٌ بعد حفظ. */
+  private settingsCache: Promise<SystemSettings> | null = null;
+
   async getSettings(): Promise<SystemSettings> {
-    return await api.read<SystemSettings>('/settings');
+    if (!this.settingsCache) {
+      /* الوعدُ يُنسى إن سقط، وإلّا حُفظ السقوطُ نفسُه فتوارثته كلُّ محاولة
+         تالية ولم تُعد المنصةُ تقرأ إعداداتها حتى تُحمَّل الصفحة. */
+      this.settingsCache = api.read<SystemSettings>('/settings').catch((error) => {
+        this.settingsCache = null;
+        throw error;
+      });
+    }
+    return this.settingsCache;
   }
 
   async updateSettings(updates: Partial<SystemSettings>): Promise<SystemSettings> {
-    return await api.patch<SystemSettings>('/settings', updates);
+    const saved = await api.patch<SystemSettings>('/settings', updates);
+    this.settingsCache = Promise.resolve(saved);
+    return saved;
   }
 
   // ── إحصاءات ──
@@ -282,15 +302,18 @@ export class LocalDatabase {
     return { ...reportData, id: Date.now().toString() } as CustomReport;
   }
 
-  updateCustomReport(): CustomReport | null {
+  /* الوسائط مصرَّحةٌ وإن لم تُستعمل: الشاشات تمرّرها فعلاً، وأغلفةٌ بلا
+     وسائط تجعل كلَّ نداءٍ منها خطأً في الفحص — فيُغرَق الخطأ الحقيقيّ في
+     ضجيج، ويسقط عقدُ الدالّة حين تُبنى. */
+  updateCustomReport(_id: string, _updates: Partial<CustomReport>): CustomReport | null {
     return null;
   }
 
-  deleteCustomReport(): boolean {
+  deleteCustomReport(_id: string): boolean {
     return true;
   }
 
-  generateReportData(): Promise<any[]> {
+  generateReportData(_report: CustomReport): Promise<any[]> {
     return Promise.resolve([]);
   }
 

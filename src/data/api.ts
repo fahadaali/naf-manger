@@ -24,6 +24,23 @@ export class ApiError extends Error {
   }
 }
 
+/* ═══ التحويل إلى الباب يقع مرّةً واحدة ═══
+ *
+ * الشاشة الواحدة تفتح عدّة نداءات معاً — الترويسة والشريط واللوحة وسجلُّ
+ * الأنشطة — وفيها مؤقّتان يعيدان النداء كل خمس عشرة ثانية وكل ثلاثين.
+ * فإن انتهى الرمز ردّت كلُّها ٤٠١ في آنٍ واحد، وكان كلُّ واحدٍ منها يكتب
+ * `window.location.href` من جديد: تحويلةٌ تُلغى وتُستأنف مراراً، فتقف
+ * الصفحة على حالها ويقرأ صاحبُها من وقوفها أنها «علّقت».
+ *
+ * فأوّلُ ٤٠١ يقود، والباقي يُرمى خطأً ولا يمسّ العنوان. */
+let leaving = false;
+
+export function goToLogin(login?: string): void {
+  if (leaving) return;
+  leaving = true;
+  window.location.href = login ?? '/';
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...init,
@@ -37,7 +54,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
      وتبقى اللوحة مكانها وقد أُغلقت جلستها تحتها. */
   if (response.status === 401) {
     const body = (await response.json().catch(() => null)) as ApiEnvelope<never> | null;
-    window.location.href = body?.login ?? '/';
+    goToLogin(body?.login);
     throw new ApiError('unauthorized', 401);
   }
 

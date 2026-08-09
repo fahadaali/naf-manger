@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChartColumn, Download, FileText, TrendingUp, Users } from 'lucide-react';
 import { useChartPalette, softFill } from '../../lib/chart-tokens';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
@@ -60,40 +60,46 @@ export default function Analytics() {
     }
   };
 
-  const getDateRangeFilter = () => {
-    const days = parseInt(dateRange);
-    const endDate = new Date();
-    const startDate = subDays(endDate, days);
-    return { startDate, endDate };
-  };
+  /* ═══ الغربلة تقع مرّةً لا عند كل تصيير ═══
+   *
+   * كانت `getFilteredData()` تُنادى في كل رسمٍ وكل مؤشّر — ثمانَ مرّاتٍ
+   * في التصيير الواحد — وتمرّ في كلٍّ منها على الجداول الأربعة كاملةً.
+   * ومعها `getFilteredCases()` تمرّ على القضايا مرّةً أخرى بالشرط نفسه،
+   * و`getMonthlyTrends()` ثمانَ عشرةَ مرّة. فكل ضغطةٍ على مُبدِّل المدى —
+   * بل كلُّ تصييرٍ مهما كان سببُه — تعيد العدّ كلَّه من أوّله.
+   *
+   * والنتيجةُ محفوظة الآن بمدخلاتها: لا تُعاد إلا إن تبدّلت البيانات أو
+   * المدى. ويلزم ذلك الرسومَ كذلك — `Chart.js` يقارن مرجعَ `data`،
+   * فكائنٌ جديد في كل تصيير يُعيد بناء الرسم بلا داعٍ.
+   *
+   * و«الآن» تُثبَّت مع المدى: كانت تُقرأ في كل نداء، فتختلف حدودُ النافذة
+   * بين رسمٍ وأخيه في الشاشة الواحدة.
+   */
+  const { startDate, endDate } = useMemo(() => {
+    const end = new Date();
+    return { startDate: subDays(end, parseInt(dateRange)), endDate: end };
+  }, [dateRange]);
 
-  const getFilteredData = () => {
-    const { startDate, endDate } = getDateRangeFilter();
-    
-    return {
-      clients: (clients || []).filter(client => 
-        isWithinInterval(client.joinDate, { start: startDate, end: endDate })
-      ),
-      prospects: (prospects || []).filter(prospect => 
-        isWithinInterval(prospect.joinDate, { start: startDate, end: endDate })
-      ),
-      cases: (cases || []).filter(case_ => 
-        isWithinInterval(case_.createdDate, { start: startDate, end: endDate })
-      ),
-      activities: (activities || []).filter(activity => 
-        isWithinInterval(activity.timestamp, { start: startDate, end: endDate })
-      )
-    };
-  };
+  const filteredData = useMemo(() => ({
+    clients: (clients || []).filter(client =>
+      isWithinInterval(client.joinDate, { start: startDate, end: endDate })
+    ),
+    prospects: (prospects || []).filter(prospect =>
+      isWithinInterval(prospect.joinDate, { start: startDate, end: endDate })
+    ),
+    cases: (cases || []).filter(case_ =>
+      isWithinInterval(case_.createdDate, { start: startDate, end: endDate })
+    ),
+    activities: (activities || []).filter(activity =>
+      isWithinInterval(activity.timestamp, { start: startDate, end: endDate })
+    )
+  }), [clients, prospects, cases, activities, startDate, endDate]);
 
-  const getFilteredCases = () => {
-    return (cases || []).filter(case_ => {
-      const { startDate, endDate } = getDateRangeFilter();
-      return isWithinInterval(case_.createdDate, { start: startDate, end: endDate });
-    });
-  };
+  /* القضايا المغربلة هي نفسها في الموضعين — الشرط واحدٌ حرفاً بحرف — فلا
+     تُغربل مرّتين. */
+  const filteredCases = filteredData.cases;
 
-  const getMonthlyTrends = () => {
+  const monthlyTrends = useMemo(() => {
     const months = [];
     const currentDate = new Date();
     
@@ -122,10 +128,10 @@ export default function Analytics() {
     }
     
     return months;
-  };
+  }, [clients, prospects, cases]);
 
-  const getClientTypeDistribution = () => {
-    const filteredClients = getFilteredData().clients;
+  const clientTypeDistribution = useMemo(() => {
+    const filteredClients = filteredData.clients;
     const distribution = {
       individual: filteredClients.filter(c => c.clientType === 'individual').length,
       company: filteredClients.filter(c => c.clientType === 'company').length,
@@ -141,10 +147,9 @@ export default function Analytics() {
         borderWidth: 0
       }]
     };
-  };
+  }, [filteredData, palette]);
 
-  const getCaseStatusDistribution = () => {
-    const filteredCases = getFilteredCases();
+  const caseStatusDistribution = useMemo(() => {
     const distribution = {
       pending: filteredCases.filter(c => c.status === 'pending').length,
       'in-progress': filteredCases.filter(c => c.status === 'in-progress').length,
@@ -160,10 +165,10 @@ export default function Analytics() {
         borderWidth: 0
       }]
     };
-  };
+  }, [filteredCases, palette]);
 
-  const getProspectStatusDistribution = () => {
-    const filteredProspects = getFilteredData().prospects;
+  const prospectStatusDistribution = useMemo(() => {
+    const filteredProspects = filteredData.prospects;
     const statusCounts: Record<string, number> = {};
     
     filteredProspects.forEach(prospect => {
@@ -178,11 +183,11 @@ export default function Analytics() {
         borderWidth: 0
       }]
     };
-  };
+  }, [filteredData, palette]);
 
-  const getMonthlyTrendsChart = () => {
-    const monthlyData = getMonthlyTrends();
-    
+  const monthlyTrendsChart = useMemo(() => {
+    const monthlyData = monthlyTrends;
+
     return {
       labels: monthlyData.map(m => m.month),
       datasets: [
@@ -209,10 +214,9 @@ export default function Analytics() {
         }
       ]
     };
-  };
+  }, [monthlyTrends, palette]);
 
-  const getCaseTypeDistribution = () => {
-    const filteredCases = getFilteredCases();
+  const caseTypeDistribution = useMemo(() => {
     const typeCounts: Record<string, number> = {};
     
     filteredCases.forEach(case_ => {
@@ -228,10 +232,10 @@ export default function Analytics() {
         borderRadius: 4
       }]
     };
-  };
+  }, [filteredCases, palette]);
 
-  const getWinRateAnalysis = () => {
-    const completedCases = getFilteredCases().filter(c => c.status === 'completed');
+  const winRateAnalysis = useMemo(() => {
+    const completedCases = filteredCases.filter(c => c.status === 'completed');
     const wonCases = completedCases.filter(c => c.outcome === 'won');
     const lostCases = completedCases.filter(c => c.outcome === 'lost');
     const settledCases = completedCases.filter(c => c.outcome === 'settled');
@@ -244,9 +248,9 @@ export default function Analytics() {
         borderWidth: 0
       }]
     };
-  };
+  }, [filteredCases, palette]);
 
-  const getConversionFunnel = () => {
+  const conversionFunnel = useMemo(() => {
     const totalProspects = prospects.length;
     const interestedProspects = prospects.filter(p => p.prospectStatus === 'مهتم').length;
     const contactedProspects = prospects.filter(p => p.prospectStatus === 'تم التواصل').length;
@@ -262,12 +266,9 @@ export default function Analytics() {
         borderRadius: 4
       }]
     };
-  };
+  }, [prospects, clients, palette]);
 
-  const getKPIs = () => {
-    const filteredData = getFilteredData();
-    const filteredCases = getFilteredCases();
-    
+  const kpis = useMemo(() => {
     const completedCases = filteredCases.filter(c => c.status === 'completed');
     const wonCases = completedCases.filter(c => c.outcome === 'won');
     const winRate = completedCases.length > 0 ? Math.round((wonCases.length / completedCases.length) * 100) : 0;
@@ -289,22 +290,22 @@ export default function Analytics() {
       avgCasesPerClient,
       activeCases: filteredCases.filter(c => c.status === 'in-progress' || c.status === 'pending').length
     };
-  };
+  }, [filteredData, filteredCases, prospects, clients, cases]);
 
   const exportAnalytics = () => {
     const analyticsData = {
       dateRange: `${dateRange} days`,
       generatedAt: new Date().toISOString(),
-      kpis: getKPIs(),
-      clientTypeDistribution: getClientTypeDistribution(),
-      caseStatusDistribution: getCaseStatusDistribution(),
-      prospectStatusDistribution: getProspectStatusDistribution(),
-      monthlyTrends: getMonthlyTrends(),
+      kpis,
+      clientTypeDistribution,
+      caseStatusDistribution,
+      prospectStatusDistribution,
+      monthlyTrends,
       rawData: {
-        clients: getFilteredData().clients,
-        prospects: getFilteredData().prospects,
-        cases: getFilteredCases(),
-        activities: getFilteredData().activities
+        clients: filteredData.clients,
+        prospects: filteredData.prospects,
+        cases: filteredCases,
+        activities: filteredData.activities
       }
     };
     
@@ -329,9 +330,7 @@ export default function Analytics() {
     );
   }
 
-  const kpis = getKPIs();
-
-  return (
+    return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-surface-deep text-surface-deep-foreground rounded-lg p-6">
@@ -441,14 +440,14 @@ export default function Analytics() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">توزيع العملاء حسب النوع</h3>
               <div className="h-64">
-                <Doughnut data={getClientTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Doughnut data={clientTypeDistribution} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
             
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">حالة القضايا</h3>
               <div className="h-64">
-                <Doughnut data={getCaseStatusDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Doughnut data={caseStatusDistribution} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
           </>
@@ -459,7 +458,7 @@ export default function Analytics() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">توزيع العملاء حسب النوع</h3>
               <div className="h-64">
-                <Bar data={getClientTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Bar data={clientTypeDistribution} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
             
@@ -492,14 +491,14 @@ export default function Analytics() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">أنواع القضايا</h3>
               <div className="h-64">
-                <Bar data={getCaseTypeDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Bar data={caseTypeDistribution} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
             
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">معدل النجاح</h3>
               <div className="h-64">
-                <Doughnut data={getWinRateAnalysis()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Doughnut data={winRateAnalysis} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
           </>
@@ -510,14 +509,14 @@ export default function Analytics() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">حالة العملاء المحتملين</h3>
               <div className="h-64">
-                <Doughnut data={getProspectStatusDistribution()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Doughnut data={prospectStatusDistribution} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
             
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">قمع التحويل</h3>
               <div className="h-64">
-                <Bar data={getConversionFunnel()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Bar data={conversionFunnel} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
           </>
@@ -528,7 +527,7 @@ export default function Analytics() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">الاتجاهات الشهرية</h3>
               <div className="h-80">
-                <Line data={getMonthlyTrendsChart()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <Line data={monthlyTrendsChart} options={{ responsive: true, maintainAspectRatio: false }} />
               </div>
             </Card>
           </div>
@@ -614,7 +613,7 @@ export default function Analytics() {
         </div>
         <div className="p-6">
           <div className="space-y-4">
-            {getFilteredData().activities.slice(0, 10).map((activity) => (
+            {filteredData.activities.slice(0, 10).map((activity) => (
               <div key={activity.id} className="flex items-start gap-3 p-3 bg-muted rounded-lg">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
                 <div className="flex-1">

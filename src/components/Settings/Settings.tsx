@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { Bell, Check, ChevronDown, CircleCheck, FileOutput, FileText, Globe, Import, Mail, Settings, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
+/* ‎Settings‎ اسمُ هذه الشاشة نفسِها، ولا يجتمع اسمان في مجالٍ واحد: كان
+   الاستيراد يُدهَس بتعريف الدالة أدناه، فتصير كلُّ ‎<Settings />‎ في هذا
+   الملفّ نداءً للشاشة لا رسماً لأيقونة — تستدعي نفسَها بلا قرار توقّف،
+   فتنمو شجرةُ التصيير حتى يعلق المتصفّح والجهاز معه.
+   فالأيقونة تُستعار باسمٍ صريح، ويبقى الاسم الأصلي للشاشة وحدها. */
+import { Bell, Check, ChevronDown, CircleCheck, FileOutput, FileText, Globe, Import, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
@@ -53,11 +58,11 @@ export default function Settings() {
     {
       id: 'system',
       name: 'إعدادات النظام',
-      icon: Settings,
+      icon: SettingsIcon,
       color: 'purple',
       tabs: [
         { id: 'general', label: 'الإعدادات العامة', icon: Globe, description: 'معلومات الشركة والألوان والشعار', permission: 'settings.update' },
-        { id: 'system', label: 'تكوين النظام', icon: Settings, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
+        { id: 'system', label: 'تكوين النظام', icon: SettingsIcon, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
         { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' }
       ]
     },
@@ -487,7 +492,7 @@ export default function Settings() {
               {/* System Notifications */}
               <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
                 <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <Settings className="h-6 w-6 text-info" />
+                  <SettingsIcon className="h-6 w-6 text-info" />
                   إشعارات النظام
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -584,7 +589,7 @@ export default function Settings() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-              <Settings className="h-6 w-6 text-primary-foreground" />
+              <SettingsIcon className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>

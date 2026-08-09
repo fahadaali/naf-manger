@@ -18,10 +18,11 @@ export default function ActivityFeed() {
     return () => clearInterval(interval);
   }, []);
   
+  /* الدوّار للجلبة الأولى وحدها: كان `setLoading(true)` يقع في كل دورة
+     تحديث، فتُستبدل القائمةُ المعروضة بدوّارٍ كلَّ خمس عشرة ثانية —
+     وميضٌ لا يخبر بشيء، والقائمةُ الظاهرة أصدق حتى يصل بدلُها. */
   const loadActivities = async () => {
     try {
-      setLoading(true);
-      
       setActivities((await db.getActivities()).slice(0, 10));
     } catch (error) {
       console.error('Error loading activities:', error);

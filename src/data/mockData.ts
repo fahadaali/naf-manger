@@ -208,5 +208,12 @@ export const mockSystemSettings: SystemSettings = {
   prospectStatuses: ['مهتم', 'تم التواصل', 'بانتظار توقيع', 'غير مناسب', 'تم الرفض'],
   caseTypes: ['قضية تجارية', 'قضية عمالية', 'قضية مدنية', 'قضية جزائية'],
   caseStatuses: ['pending', 'in-progress', 'completed', 'postponed'],
-  prospectSources: ['موقع إلكتروني', 'وسائل التواصل الاجتماعي', 'إحالة من عميل', 'إعلان', 'معرض', 'أخرى']
+  prospectSources: ['موقع إلكتروني', 'وسائل التواصل الاجتماعي', 'إحالة من عميل', 'إعلان', 'معرض', 'أخرى'],
+  /* الخمسة الباقية بقيم `DEFAULT_SETTINGS` في `functions/_lib/queries.js`
+     حرفاً بحرف — كانت ساقطةً هنا فلا يطابق النوعُ ما يردّه الخادم. */
+  marketerStatuses: ['active', 'inactive'],
+  relationshipTypes: ['freelancer', 'employee', 'partner'],
+  commissionTypes: ['percentage', 'fixed_amount'],
+  collectionStatuses: ['pending', 'partial', 'collected'],
+  feeTypes: ['fixed_amount', 'percentage']
 };

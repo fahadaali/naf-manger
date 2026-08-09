@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { TriangleAlert } from 'lucide-react';
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
@@ -14,7 +13,7 @@ import ReportsView from './components/Reports/ReportsView';
 import SmartLawyer from './components/SmartLawyer/SmartLawyer';
 import MarketersView from './components/Marketers/MarketersView';
 import Denied from './components/Auth/Denied';
-import { Button } from '@/registry/naf/ui/button';
+import ErrorBoundary from './components/Common/ErrorBoundary';
 
 /* `LoginModal` كان هنا، ويعرض `LoginPage` فوق `LandingPage`. وقد سقط الاثنان
    من المسار حين صار الباب مركزياً: الوسيط يحرس الجذر، فلا يبلغ هذه الحزمةَ
@@ -64,60 +63,32 @@ function AppContent() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
+  /* اختيارُ الشاشة وحده. والأخطاء يمسكها `ErrorBoundary` أدناه لا
+     `try/catch` هنا: الدالة تبني عنصراً، والتصيير يقع بعدها في React
+     فلا تبلغه كتلةٌ من هنا. وكان هنا عشرة `console.log` تُطبع عند كل
+     تصيير — سطورٌ لا تُقرأ وتُثقل المتصفّح بلا فائدة. */
   const renderCurrentView = () => {
-    console.log('Rendering view:', currentView);
-    console.log('User authenticated:', isAuthenticated);
-    console.log('Loading state:', loading);
-    
-    try {
     switch (currentView) {
       case 'dashboard':
-          console.log('Rendering Dashboard component');
         return <Dashboard />;
       case 'clients':
-          console.log('Rendering ClientsView component');
         return <ClientsView />;
       case 'prospects':
-          console.log('Rendering ProspectsView component');
         return <ProspectsView />;
       case 'cases':
-          console.log('Rendering CasesView component');
         return <CasesView />;
       case 'analytics':
-          console.log('Rendering Analytics component');
         return <Analytics />;
       case 'reports':
-          console.log('Rendering ReportsView component');
         return <ReportsView />;
       case 'settings':
-          console.log('Rendering Settings component');
         return <Settings />;
       case 'smart-lawyer':
-          console.log('Rendering SmartLawyer component');
         return <SmartLawyer />;
       case 'marketers':
-          console.log('Rendering MarketersView component');
         return <MarketersView />;
       default:
-          console.log('Rendering default Dashboard component');
         return <Dashboard />;
-    }
-    } catch (error) {
-      console.error('Error rendering view:', error);
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="text-destructive mb-4">
-              <TriangleAlert className="w-16 h-16 mx-auto" aria-hidden="true" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">حدث خطأ في عرض الصفحة</h2>
-            <p className="text-muted-foreground mb-4">يرجى فحص وحدة التحكم للحصول على تفاصيل الخطأ</p>
-            <Button onClick={() => window.location.reload()}>
-              إعادة تحميل الصفحة
-            </Button>
-          </div>
-        </div>
-      );
     }
   };
 
@@ -148,7 +119,11 @@ function AppContent() {
         />
         
         <main className="flex-1 p-4 sm:p-6 overflow-auto">
-          {renderCurrentView()}
+          {/* الحاجز حول الشاشة وحدها: شاشةٌ تسقط لا تُسقط الشريط والترويسة
+              معها، فيُنتقل منها إلى غيرها بلا إعادة تحميل. */}
+          <ErrorBoundary resetKey={currentView}>
+            {renderCurrentView()}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

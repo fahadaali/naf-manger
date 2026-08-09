@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, LoginCredentials } from '../types';
+import { goToLogin } from '../data/api';
 
 /* ═══ الدخول صار مركزياً ═══
  *
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
          لسقط الطلب بخطأ شبكة وبقيت اللوحة مكانها وقد أُغلقت جلستها تحتها. */
       if (response.status === 401) {
         const body = await response.json().catch(() => null);
-        window.location.href = body?.login ?? '/';
+        goToLogin(body?.login);
         return;
       }
 

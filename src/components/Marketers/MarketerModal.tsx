@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Archive, Banknote, ChartColumn, CircleCheck, CircleSlash, Clock, LoaderCircle, User } from 'lucide-react';
-import { Marketer } from '../../types';
+import { Case, Marketer, MarketerStats } from '../../types';
 /* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
    ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
    يمرّ بـ formatDate من naf-format. */
@@ -39,6 +39,62 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /* ═══ الأداء والقضايا يُجلبان، ولا يُقرآن من وعد ═══
+   *
+   * كانا يُقرآن في التصيير هكذا:
+   *     const stats = db.getMarketerStats(marketer.id);
+   *     const marketerCases = db.getCases().filter(...);
+   * والدالّتان غير متزامنتين، فالعائد وعدٌ لا بيانات: `‎.filter‎` عليه
+   * يرمي `TypeError` في أثناء التصيير — فتُهدم الشجرة كلُّها إلى صفحة
+   * بيضاء أوّلَ ما يُفتح «تفاصيل المسوّق»، و`stats.totalCases` تقرأ
+   * `undefined` فتظهر الأرقام فارغة.
+   *
+   * فالجلبُ في تأثير، والحالةُ تبدأ بأصفار — كما في `MarketerCard`.
+   */
+  const [stats, setStats] = useState<MarketerStats>({
+    totalCases: 0,
+    completedCases: 0,
+    wonCases: 0,
+    lostCases: 0,
+    totalRevenue: 0,
+    totalCommissionEarned: 0,
+    totalCommissionPaid: 0,
+    remainingCommission: 0,
+    conversionRate: 0,
+    averageCaseValue: 0
+  });
+  const [marketerCases, setMarketerCases] = useState<Case[]>([]);
+
+  const marketerId = marketer?.id;
+  const viewing = !isEditing && Boolean(marketerId);
+
+  useEffect(() => {
+    if (!viewing || !marketerId) return;
+
+    // مقياسٌ يمنع كتابةَ نتيجةِ مسوّقٍ سابق فوق حالة اللاحق إن تبدّل قبل وصولها.
+    let alive = true;
+
+    const load = async () => {
+      try {
+        const [marketerStats, allCases] = await Promise.all([
+          db.getMarketerStats(marketerId),
+          db.getCases(),
+        ]);
+        if (!alive) return;
+        setStats(marketerStats);
+        setMarketerCases(allCases.filter((c) => (c as any).marketerId === marketerId));
+      } catch (error) {
+        console.error('Error loading marketer details:', error);
+        if (alive) setMarketerCases([]);
+      }
+    };
+
+    load();
+    return () => {
+      alive = false;
+    };
+  }, [viewing, marketerId]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -101,10 +157,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
   };
 
   if (!isEditing && marketer) {
-    // View mode
-    const stats = db.getMarketerStats(marketer.id);
-    const marketerCases = db.getCases().filter(c => (c as any).marketerId === marketer.id);
-
+    // View mode — `stats` و`marketerCases` من التأثير أعلاه.
     return (
       <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
         <DialogContent className="max-w-6xl max-h-full overflow-y-auto p-0">

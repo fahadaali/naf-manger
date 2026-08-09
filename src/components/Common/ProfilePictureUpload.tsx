@@ -5,7 +5,9 @@ import { Input } from '@/registry/naf/ui/input';
 interface ProfilePictureUploadProps {
   currentPicture?: string;
   onPictureChange: (picture: string | undefined) => void;
-  size?: 'sm' | 'md' | 'lg';
+  /* ‎xl‎ مقاسٌ مطلوب: شاشة الملفّ الشخصي تمرّره، وكان خارج الخريطة فيسقط
+     صنفُ المقاس كلُّه ويظهر الإطار بلا حجم. */
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
@@ -22,13 +24,15 @@ export default function ProfilePictureUpload({
   const sizeClasses = {
     sm: 'w-12 h-12',
     md: 'w-20 h-20',
-    lg: 'w-32 h-32'
+    lg: 'w-32 h-32',
+    xl: 'w-40 h-40'
   };
 
   const iconSizes = {
     sm: 'h-6 w-6',
     md: 'h-8 w-8',
-    lg: 'h-12 w-12'
+    lg: 'h-12 w-12',
+    xl: 'h-16 w-16'
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
