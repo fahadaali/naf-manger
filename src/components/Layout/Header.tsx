@@ -15,8 +15,9 @@ const viewTitles: Record<string, string> = {
   prospects: 'إدارة العملاء المحتملين',
   cases: 'إدارة القضايا',
   analytics: 'التحليلات والإحصائيات',
-  settings: 'الإعدادات',
-  'smart-lawyer': 'المحامي الذكي'
+  reports: 'التقارير المخصصة',
+  marketers: 'إدارة المسوّقين',
+  settings: 'الإعدادات'
 };
 
 export default function Header({ currentView, onMenuClick }: HeaderProps) {

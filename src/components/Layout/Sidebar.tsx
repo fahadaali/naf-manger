@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChartColumn, FileText, LayoutDashboard, Settings, Sparkles, UserPlus, Users, X } from 'lucide-react';
+import { ChartColumn, FileText, LayoutDashboard, Settings, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import { ThemeToggle } from '@/registry/naf/ui/theme-toggle';
@@ -20,7 +20,6 @@ const menuItems = [
   { id: 'marketers', label: 'المسوّقين', icon: Users, permission: null },
   { id: 'analytics', label: 'التحليلات', icon: ChartColumn, permission: 'analytics.read' },
   { id: 'reports', label: 'التقارير المخصصة', icon: ChartColumn, permission: 'analytics.read' },
-  { id: 'smart-lawyer', label: 'المحامي الذكي', icon: Sparkles, permission: null },
   { id: 'settings', label: 'الإعدادات', icon: Settings, permission: 'settings.read' },
 ];
 

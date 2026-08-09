@@ -9,7 +9,6 @@ import CasesView from './components/Cases/CasesView';
 import Analytics from './components/Analytics/Analytics';
 import Settings from './components/Settings/Settings';
 import ReportsView from './components/Reports/ReportsView';
-import SmartLawyer from './components/SmartLawyer/SmartLawyer';
 import MarketersView from './components/Marketers/MarketersView';
 import Denied from './components/Auth/Denied';
 import DisplayBoard from './components/Display/DisplayBoard';
@@ -83,8 +82,6 @@ function AppContent() {
         return <ReportsView />;
       case 'settings':
         return <Settings />;
-      case 'smart-lawyer':
-        return <SmartLawyer />;
       case 'marketers':
         return <MarketersView />;
       default:
