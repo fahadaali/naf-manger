@@ -119,6 +119,8 @@ export const RESOURCES = {
       createdBy: ['created_by'],
     },
     required: ['marketer_id', 'case_id'],
+    /* يُختم من الجلسة في `createRow` — والعمود `NOT NULL` بلا افتراض. */
+    actor: 'created_by',
   },
 
   activities: {
@@ -197,8 +199,25 @@ export function toRow(resource, body) {
     const { column, type } = spec(field);
     const value = body[name];
 
-    if (value === null || value === undefined || value === '') {
+    /* ═══ الفراغ ليس عدماً في عمودٍ نصّي ═══
+
+       كان كلُّ `''` يصير `null`. وأعمدةٌ كثيرة `TEXT NOT NULL DEFAULT ''`
+       — `notes` و`phone` و`email` و`summary` — فحقلٌ اختياريٌّ تُرك فارغاً
+       في الشاشة يصل القاعدةَ `NULL` فيسقط بقيد `NOT NULL`، ويُترجَم
+       `missing_field`. ونموذجُ العميل يرسل `notes: ''` دائماً، فكان
+       **كلُّ إضافةِ عميلٍ من الشاشة تسقط** برسالةٍ تقول «حقلٌ ناقص» وكلُّ
+       النجوم ممتلئة.
+
+       فالنصُّ الفارغ يبقى نصّاً فارغاً. أمّا التاريخُ والمبلغ فالفراغُ
+       فيهما غيابٌ حقيقي — لا تاريخَ فارغ ولا مبلغَ فارغ — فيبقيان `null`،
+       ويُسقطهما الإدراج ليعمل افتراضُ العمود. */
+    if (value === null || value === undefined) {
       row[column] = null;
+      continue;
+    }
+
+    if (value === '') {
+      row[column] = type === 'text' ? '' : null;
       continue;
     }
 

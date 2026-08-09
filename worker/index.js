@@ -6,6 +6,7 @@
 import { authenticate, handleBackchannelLogout, handleCallback, handleLogout } from 'naf-auth';
 
 import { platformConfig } from './lib/config.js';
+import { permissionsFor } from './lib/roles.js';
 import { readMember, serveFile, updateMe, uploadFile } from './lib/handlers.js';
 import { handleResource } from './lib/crud.js';
 import { createMeeting, listMeetings } from './lib/meetings.js';
@@ -81,8 +82,12 @@ export default {
 
        وما يُقرأ به إحصاءاتٌ مجمَّعة وحدها، وقراءةً فقط. التفصيل في
        `lib/display.js`. */
+    /* والرمزُ أوّلُ مقطعٍ بعد البادئة لا بقيةُ المسار: اللوحة تنادي
+       `‎/api/display/<رمز>/stats‎`، وأخذُ ما بعد البادئة كلِّه يجعل الرمز
+       `‎<رمز>/stats‎` — فيسقط فحصُ الشكل ويُردّ ٤٠٤ دائماً. وكانت الشاشة
+       العامّة لا تعمل قطّ لهذا. */
     if (url.pathname.startsWith(DISPLAY_API_PREFIX) && request.method === 'GET') {
-      const token = url.pathname.slice(DISPLAY_API_PREFIX.length);
+      const token = url.pathname.slice(DISPLAY_API_PREFIX.length).split('/')[0];
       return readDisplayStats(env, token);
     }
     /* وصفحةُ الشاشة نفسها: `not_found_handling` يعيد `index.html`، واللوحة
@@ -106,7 +111,23 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-    const user = result.user;
+    /* ═══ الصلاحيات تُحلّ هنا، مرّةً، لكل ما بعده ═══
+
+       `authenticate` تردّ `{ id, role, perms }` — و`perms` هو عمودُ الصفّ
+       كما هو: كائنٌ حين ضُبطت صلاحياتٌ دقيقة لعضوٍ بعينه، و`null` في
+       الغالب ومعناه «افتراضُ الدور» لا «لا صلاحية».
+
+       وتسعةُ فحوصٍ في المعالجات تقرأ `user.permissions` — وهو اسمٌ لا
+       تضعه الحزمة. فكانت تقرأ `undefined` في كل طلب، و`may()` تردّ false
+       دائماً: كلُّ إنشاءٍ وتعديلٍ وحذفٍ على العملاء والقضايا والمسوّقين
+       يُردّ ٤٠٣، ولمن هو `admin`. وما نجا إلا ما يفحص `role` مباشرةً.
+
+       والحلُّ في موضعٍ واحد لا في تسعة: `permissionsFor` تُطبّق افتراضَ
+       الدور حين لا `perms`، فيصل المعالجاتِ كائنٌ مفهوم. */
+    const user = {
+      ...result.user,
+      permissions: permissionsFor(result.user.role, result.user.perms),
+    };
 
     if (url.pathname === '/api/me') {
       if (request.method === 'GET') return readMember(env, user);

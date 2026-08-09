@@ -51,7 +51,7 @@ export async function getRow(env, resource, id) {
   return toClient(resource, row);
 }
 
-export async function createRow(env, resource, body) {
+export async function createRow(env, resource, body, user) {
   const row = { ...(resource.defaults ?? {}), ...toRow(resource, body) };
   const now = nowSeconds();
 
@@ -59,10 +59,33 @@ export async function createRow(env, resource, body) {
   row.created_at = now;
   if (resource.timestamps !== 'created') row.updated_at = now;
 
+  /* ═══ عمودُ الفاعل يُختم من الجلسة لا من الجسم ═══
+
+     `commission_payments.created_by` عمودٌ `NOT NULL` بلا افتراض، ولم يكن
+     أحدٌ يملؤه — لا الشاشة ولا هنا. فكان كلُّ تسجيلِ عمولةٍ يسقط بقيدِ
+     `NOT NULL`، ويُترجمه `constraintError` إلى `missing_field` — رسالةٌ
+     تُرسل صاحبَها يبحث عن حقلٍ ناقصٍ في نموذجٍ ممتلئ. والميزة لم تعمل قطّ.
+
+     ويُختم من `user.id` لا من الجسم حتى لو أرسله: «من سجّل هذه العمولة»
+     شهادةٌ على عضو، ومن كتبها بيده نسبها إلى غيره. */
+  if (resource.actor) row[resource.actor] = user?.id ?? null;
+
   for (const column of resource.required ?? []) {
     if (row[column] === undefined || row[column] === null || row[column] === '') {
       return { error: 'missing_field', status: 400 };
     }
+  }
+
+  /* ═══ العمودُ الغائب يأخذ افتراضَه ═══
+
+     الإدراجُ يُسقط ما قيمتُه `null` بدل أن يكتبه صراحةً. فعمودٌ له افتراضٌ
+     في المخطَّط — `join_date` تاريخُ اليوم، و`attachments` قائمةٌ فارغة —
+     يأخذه بدل أن يُدهس بـ`NULL` فيسقط بقيد `NOT NULL`.
+
+     وما كان لازماً فعلاً أُمسك قبل هذا السطر في فحص `required`، برسالةٍ
+     تسمّي الحقل. فالإسقاط هنا لا يخفي نقصاً. */
+  for (const [column, value] of Object.entries(row)) {
+    if (value === null) delete row[column];
   }
 
   const columns = Object.keys(row);
@@ -160,7 +183,7 @@ export async function handleResource(request, env, user, name, id) {
 
   if (request.method === 'POST') {
     if (id) return fail('not_found', 404);
-    return respond(await createRow(env, resource, body), 201);
+    return respond(await createRow(env, resource, body, user), 201);
   }
 
   if (!id) return fail('not_found', 404);
