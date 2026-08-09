@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { CircleCheck, Clock, LoaderCircle } from 'lucide-react';
-import { Case, Client } from '../../types';
+import { Attachment, Case, Client } from '../../types';
 import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import AttachmentList from '../Common/AttachmentList';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
 import { useSettingList } from '../../lib/use-settings';
@@ -38,6 +39,10 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /* المرفقات خارج `formData`: قائمةٌ لا نصّ، و`handleInputChange` يقبل
+     نصّاً وحده. */
+  const [attachments, setAttachments] = useState<Attachment[]>(client?.attachments ?? []);
 
   // من «تكوين النظام» لا من نصوصٍ في التصيير.
   const clientTypes = useSettingList('clientTypes', formData.clientType);
@@ -113,7 +118,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
       status: formData.status as Client['status'],
       notes: formData.notes,
       joinDate: client?.joinDate || new Date(),
-      attachments: client?.attachments || [],
+      attachments,
       profilePicture: formData.profilePicture || undefined
     };
 
@@ -153,6 +158,12 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
           <div className="p-6 space-y-6">
             {/* Client Information */}
+            {/* المرفقات — للعرض والتنزيل، ولا تُحرَّر في وضع القراءة. */}
+            <div className="bg-muted rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">المرفقات</h3>
+              <AttachmentList value={client.attachments ?? []} readOnly />
+            </div>
+
             <div className="bg-muted rounded-lg p-4">
               <h3 className="text-lg font-semibold text-foreground mb-3">المعلومات الأساسية</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -466,6 +477,13 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               rows={3}
               placeholder="ملاحظات إضافية"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              المرفقات
+            </label>
+            <AttachmentList value={attachments} onChange={setAttachments} />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">

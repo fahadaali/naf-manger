@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import { Calendar, Plus, Send, Trash2, User, Users, Video } from 'lucide-react';
-import { Client, Prospect } from '../../types';
+import { Calendar, Copy, ExternalLink, Plus, Trash2, TriangleAlert, User, Users, Video } from 'lucide-react';
+import { Client, Meeting, Prospect } from '../../types';
+import { ApiError, api } from '../../data/api';
 import { formatDateTime, formatNumber, isolate } from '@/registry/naf/lib/format';
+import { Alert } from '@/registry/naf/ui/alert';
+
+/* المحتمل وحده يحمل `prospectStatus` — وهو ما يفرّقه عن العميل في النوع. */
+const subjectTypeOf = (subject: Client | Prospect): 'client' | 'prospect' =>
+  'prospectStatus' in subject ? 'prospect' : 'client';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -34,6 +40,10 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
   const [newInviteeEmail, setNewInviteeEmail] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  /* الاجتماع بعد إنشائه: النافذة تعرض رابطَه ورقمَه بدل أن تُغلق على
+     `alert` — والرابط هو الفائدة كلُّها، فإغلاقُه بعد لمحةٍ يُضيعه. */
+  const [meeting, setMeeting] = useState<Meeting | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -91,111 +101,94 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
     setMeetingData(prev => ({ ...prev, password }));
   };
 
-  const createZoomMeeting = async () => {
+  /* ═══ الاجتماع يُنشأ عند Zoom ═══
+   *
+   * كان هنا `const meetingId = '2534928083'` ورابطٌ ثابت — لكل اجتماع
+   * ولكل عميل — ولا نداءَ لـZoom. ثم `sendMeetingInvitations` ترمي «غير
+   * مربوط» قبل أن يُحفظ شيء، فينتهي كلُّ إنشاءٍ عند «حدث خطأ».
+   *
+   * والآن `POST /api/meetings`: الـWorker ينادي Zoom بسرٍّ عنده — لا في
+   * حزمة المتصفّح — ويحفظ ردَّه في D1. والمعرّفُ والرابط من Zoom نفسه.
+   */
+  const createMeeting = async () => {
     if (!validateForm()) return;
 
     setIsCreating(true);
+    setErrors({});
 
     try {
-      // تفاصيل الاجتماع
-      const meetingId = '2534928083';
-      const joinUrl = 'https://app.zoom.us/wc/2534928083/start?from';
-      const startUrl = 'https://app.zoom.us/wc/2534928083/start?from';
-      
-      const meetingDetails = {
-        id: meetingId,
-        title: meetingData.title,
-        startTime: `${meetingData.date}T${meetingData.time}:00`,
-        duration: meetingData.duration,
-        joinUrl,
-        startUrl,
-        password: meetingData.password || undefined,
+      /* الوقت لحظةٌ بالثواني لا نصّ: `datetime-local` بلا منطقةٍ زمنية،
+         و`new Date('...')` يقرؤه بمنطقة الجهاز — وهي منطقة من يُنشئ. */
+      const startAt = Math.floor(new Date(`${meetingData.date}T${meetingData.time}:00`).getTime() / 1000);
+
+      const created = await api.post<Meeting>('/meetings', {
+        topic: meetingData.title,
         agenda: meetingData.agenda,
+        startAt,
+        duration: Number(meetingData.duration),
+        passcode: meetingData.password || undefined,
         invitees,
-        settings: {
-          waitingRoom: meetingData.waitingRoom,
-          recordMeeting: meetingData.recordMeeting
-        }
-      };
+        waitingRoom: meetingData.waitingRoom,
+        recordMeeting: meetingData.recordMeeting,
+        subjectType: client ? subjectTypeOf(client) : undefined,
+        subjectId: client?.id,
+      });
 
-      // إرسال الإيميلات الفعلية
-      await sendMeetingInvitations(meetingDetails);
-
-      // حفظ معلومات الاجتماع محلياً
-      saveMeetingToStorage(meetingDetails);
-
-      onMeetingCreated?.(meetingDetails);
-      
-      alert(
-        `تم إنشاء الاجتماع\n` +
-          `رقم الاجتماع: ${isolate(meetingId)}\n` +
-          `تم إرسال الدعوات إلى ${isolate(invitees.length)} مدعو`
-      );
-      onClose();
-
+      setMeeting(created);
+      onMeetingCreated?.(created);
     } catch (error) {
-      console.error('Error creating Zoom meeting:', error);
-      alert('حدث خطأ أثناء إنشاء الاجتماع. يرجى المحاولة مرة أخرى.');
+      const code = (error as ApiError)?.code;
+      setErrors({
+        form:
+          code === 'not_connected'
+            ? 'غير مربوط — يلزم ربط حساب Zoom في إعدادات المنصة'
+            : code === 'provider_auth_failed'
+              ? 'تعذّر الاتصال بـZoom — تحقّق من بيانات الربط'
+              : 'تعذّر إنشاء الاجتماع. أعد المحاولة',
+      });
     } finally {
       setIsCreating(false);
     }
   };
 
-  const sendMeetingInvitations = async (meetingDetails: any) => {
-    /* إرسال الدعوة بالبريد معطَّل: خادم Express سقط، وWorkers لا تتكلّم
-       SMTP. والرابط يبقى قابلاً للنسخ واليدِ تُرسله — و`generateEmailContent`
-       أدناه هو نصُّه، فيُطبع ليُنسخ بدل أن يُبنى في متغيّرٍ لا يقرؤه أحد
-       ثم يُرمى مع الاستثناء. */
-    console.info('نصّ الدعوة — يُنسخ ويُرسل باليد:\n' + generateEmailContent(meetingDetails));
-    throw new Error('غير مربوط');
+  const copyInvitation = async () => {
+    if (!meeting) return;
+    const text = generateEmailContent(meeting);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (error) {
+      console.error('تعذّر النسخ:', error);
+    }
   };
 
   /* ═══ نصّ الدعوة — مرآةُ القالب المُرسَل ═══
    *
-   * القالب الحقيقي في `server/naf-email.js`، وهذا نصُّه العاديّ لمن
-   * ينسخه بيده ما دام الإرسال معطَّلاً. والقاعدة تشترط أن تُطابق
-   * المعاينةُ ما يصل المستلم: معاينةٌ تعرض غير ما يُرسَل تُري المُرسِلَ
-   * شيئاً لا يراه أحد سواه.
+   * إرسالُ البريد غير مربوط بعد، فهذا النصُّ يُنسخ ويُرسَل باليد. وكان
+   * يُبنى في متغيّرٍ لا يقرؤه أحد ثم يُرمى مع استثناءٍ حتميّ — والآن
+   * وراءه زرُّ نسخ.
    *
-   * فالحقول هنا وترتيبها وصيغة تاريخها نسخةٌ من ذلك القالب. وأي تعديل
-   * في أحدهما يلزم الآخر.
-   *
-   * وقد سقطت الإيموجي التي كانت هنا: القالب المُرسَل لا يحملها، وبقاؤها
-   * في المعاينة وحدها هو الافتراق بعينه.
-   */
-  const generateEmailContent = (meetingDetails: any) => {
-    const meetingDate = new Date(meetingDetails.startTime);
-
-    return [
-      `موضوع: دعوة اجتماع - ${meetingDetails.title}`,
+   * وحقولُه من ردّ Zoom: الرقمُ والرابط وكلمةُ المرور كما قبلها المزوّد،
+   * لا كما بُنيت هنا. */
+  const generateEmailContent = (details: Meeting) =>
+    [
+      `موضوع: دعوة اجتماع - ${details.topic}`,
       '',
       'تفاصيل الاجتماع',
-      `التاريخ والوقت: ${isolate(formatDateTime(meetingDate))}`,
-      `المدة: ${isolate(meetingDetails.duration)} دقيقة`,
-      `رقم الاجتماع: ${isolate(meetingDetails.id)}`,
-      meetingDetails.password
-        ? `كلمة المرور: ${isolate(meetingDetails.password)}`
-        : '',
+      `التاريخ والوقت: ${isolate(formatDateTime(new Date(details.startAt * 1000)))}`,
+      `المدة: ${isolate(details.duration)} دقيقة`,
+      `رقم الاجتماع: ${isolate(details.providerId)}`,
+      details.passcode ? `كلمة المرور: ${isolate(details.passcode)}` : '',
       '',
       'رابط الدخول:',
-      meetingDetails.joinUrl,
-      meetingDetails.agenda ? `\nجدول الأعمال:\n${meetingDetails.agenda}` : '',
+      details.joinUrl,
+      details.agenda ? `\nجدول الأعمال:\n${details.agenda}` : '',
       '',
       'مع تحيات فريق ناف'
     ]
       .filter(Boolean)
       .join('\n');
-  };
-
-  const saveMeetingToStorage = (meetingDetails: any) => {
-    const meetings = JSON.parse(localStorage.getItem('naflaw_meetings') || '[]');
-    meetings.push({
-      ...meetingDetails,
-      createdAt: new Date().toISOString(),
-      clientId: client?.id
-    });
-    localStorage.setItem('naflaw_meetings', JSON.stringify(meetings));
-  };
 
   return (
     <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
@@ -404,24 +397,69 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
           </div>
         </div>
 
+        {errors.form && (
+          <div className="px-6">
+            <Alert variant="destructive">
+              <TriangleAlert aria-hidden="true" />
+              <span>{errors.form}</span>
+            </Alert>
+          </div>
+        )}
+
+        {/* بعد الإنشاء: الرابط والرقم — وهما الفائدة كلُّها. وكانت النافذة
+            تُغلق على `alert` فيضيع الرابط قبل أن يُنسخ. */}
+        {meeting && (
+          <div className="mx-6 mb-2 bg-success-soft border border-success/30 rounded-lg p-4 space-y-3">
+            <p className="font-semibold text-success-strong">أُنشئ الاجتماع</p>
+            <div className="text-sm space-y-1">
+              <p>رقم الاجتماع: <bdi>{meeting.providerId}</bdi></p>
+              {meeting.passcode && <p>كلمة المرور: <bdi>{meeting.passcode}</bdi></p>}
+            </div>
+            <code className="block truncate text-xs bg-card rounded px-3 py-2" dir="ltr">
+              {meeting.joinUrl}
+            </code>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={copyInvitation} variant={copied ? 'success' : 'outline'} size="sm">
+                <Copy className="h-4 w-4" />
+                {copied ? 'نُسخ نصّ الدعوة' : 'نسخ نصّ الدعوة'}
+              </Button>
+              <a
+                href={meeting.joinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-primary underline underline-offset-4 hover:text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1"
+              >
+                فتح الاجتماع
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
+            {/* الدعوة لا تُرسَل: لا مُرسِل بريد في المنصة بعد. */}
+            <p className="text-xs text-muted-foreground">
+              الدعوة لا تُرسَل تلقائياً — انسخ النصّ وأرسله. (إرسال البريد غير مربوط.)
+            </p>
+          </div>
+        )}
+
         <div className="border-t border-border px-6 py-4">
           <div className="flex justify-end gap-3">
             <Button onClick={onClose} disabled={isCreating} variant="ghost">
-              إلغاء
+              {meeting ? 'إغلاق' : 'إلغاء'}
             </Button>
-            <Button onClick={createZoomMeeting} disabled={isCreating}>
-              {isCreating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-                  جارٍ الإنشاء
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  إنشاء الاجتماع وإرسال الدعوات
-                </>
-              )}
-            </Button>
+            {!meeting && (
+              <Button onClick={createMeeting} disabled={isCreating}>
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
+                    جارٍ الإنشاء
+                  </>
+                ) : (
+                  <>
+                    <Video className="h-4 w-4" />
+                    إنشاء الاجتماع
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CircleCheck, CircleX, ExternalLink, Handshake } from 'lucide-react';
-import { Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
+import { Attachment, Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
+import AttachmentList from '../Common/AttachmentList';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel } from '../../lib/labels';
@@ -51,6 +52,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // قائمةٌ لا نصّ، فخارج `formData` الذي يقبل النصّ وحده.
+  const [attachments, setAttachments] = useState<Attachment[]>(existingCase?.attachments ?? []);
 
   /* المنسدلات من «تكوين النظام» لا من نصوصٍ في التصيير. والقيمةُ المحفوظة
      تُمرَّر فتبقى ظاهرةً حتى لو حُذفت من التكوين بعد حفظها. */
@@ -153,7 +157,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
       marketerName: formData.marketerId ? marketers.find(m => m.id === formData.marketerId)?.fullName : undefined,
       feeStructure,
       paymentStatus,
-      commissionStructure
+      commissionStructure,
+      attachments
     };
 
     onSave?.(caseData);
@@ -252,6 +257,12 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             <div className="bg-primary-soft rounded-lg p-4">
               <h3 className="text-lg font-semibold text-foreground mb-3">ملخص القضية</h3>
               <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
+            </div>
+
+            {/* أوراق القضية */}
+            <div className="bg-muted rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">أوراق القضية</h3>
+              <AttachmentList value={existingCase.attachments ?? []} readOnly />
             </div>
 
             {/* Basecamp Link */}
@@ -607,6 +618,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             {errors.summary && (
               <p className="text-destructive text-sm mt-1">{errors.summary}</p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              أوراق القضية
+            </label>
+            <AttachmentList value={attachments} onChange={setAttachments} />
           </div>
 
           <div>

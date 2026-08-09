@@ -59,6 +59,8 @@ export interface Case {
   status: 'pending' | 'completed' | 'postponed' | 'in-progress';
   outcome?: 'won' | 'lost' | 'settled';
   basecampUrl?: string;
+  /** أوراق القضية في حاوية R2 — `migrations/0004`. */
+  attachments?: Attachment[];
   createdDate: Date;
   updatedDate: Date;
 
@@ -83,12 +85,72 @@ export interface Case {
   remainingCommission?: number;
 }
 
+/**
+ * مرفقٌ في حاوية R2.
+ *
+ * `key` لا `url`: العنوان يُشتقّ من المفتاح بـ`fileUrl` ويتغيّر بتغيّر
+ * النطاق، والمفتاح ثابتٌ في الحاوية. وحفظُ عنوانٍ كاملاً في الصفّ يجعل
+ * نقلَ النطاق يُيتّم كل مرفقٍ مخزَّن.
+ *
+ * و`uploadDate` نصٌّ لا `Date`: هذه البنية تُسلسَل JSON في عمود
+ * `attachments`، وJSON لا يحمل نوع `Date` — فحفظُها كائناً يعيدها نصّاً
+ * ولا يعرف القارئ ذلك.
+ */
 export interface Attachment {
   id: string;
   name: string;
   type: string;
-  url: string;
-  uploadDate: Date;
+  /** مفتاح الكائن: `attachment/<uuid>`. */
+  key: string;
+  size: number;
+  /** ISO 8601. */
+  uploadedAt: string;
+}
+
+/**
+ * نتيجةُ تشغيل تقرير.
+ *
+ * `columns` تأتي من الخادم ولا تُشتقّ من أول صفّ: صفٌّ تخلو فيه قيمةٌ
+ * يُسقط عمودَها من `Object.keys`، فتنقص ترويسةُ الجدول بلا سبب ظاهر.
+ */
+export interface ReportResult {
+  rows: Record<string, string | number | null>[];
+  columns: string[];
+  grouped: boolean;
+}
+
+/** اجتماعٌ أُنشئ عند المزوّد وحُفظ في D1 — `migrations/0006`. */
+export interface Meeting {
+  id: string;
+  /** معرّفُه عند Zoom — وهو ما يُملى على المدعوّ. */
+  providerId: string;
+  joinUrl: string;
+  /** رابطُ البدء مضيفاً. يُردّ لمنشئه مرّةً ولا يُعاد في السرد. */
+  startUrl?: string | null;
+  topic: string;
+  agenda: string;
+  /** ثوانٍ. */
+  startAt: number;
+  duration: number;
+  passcode?: string | null;
+  subjectType?: 'client' | 'prospect' | null;
+  subjectId?: string | null;
+  invitees: string[];
+  createdAt: number;
+}
+
+/**
+ * رمزُ شاشة عرض.
+ *
+ * `token` سرٌّ في العنوان — من ملكه قرأ الإحصاءات المجمَّعة. ولذلك يُعرض
+ * في الشاشة مرّةً لينسخه المسؤول، ويُبطَل بالحذف.
+ */
+export interface DisplayToken {
+  token: string;
+  label: string;
+  /** ثوانٍ، كأعمدة الجدول. */
+  createdAt: number;
+  lastSeenAt: number | null;
 }
 
 /** تفضيلاتُ إشعارات العضو — مفاتيحُها عقدٌ مع `updateMe` في الخادم. */

@@ -5,8 +5,22 @@ import { formatDate, formatNumber, formatTime } from '@/registry/naf/lib/format'
 import { Button } from '@/registry/naf/ui/button';
 import { messageTone } from '../../lib/status-message';
 import { Alert } from '@/registry/naf/ui/alert';
+import { downloadText, toCsv } from '../../lib/csv';
+import { Sheet, downloadXlsx } from '../../lib/xlsx';
+import { useSettings } from '../../lib/use-settings';
+
+/** يحمي النصّ داخل HTML نافذة الطباعة — بياناتُ العملاء نصٌّ لا وسوم. */
+const escapeHtml = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 
 export default function DataExport() {
+  const settings = useSettings();
+  const settingsName = settings?.companyName ?? 'شركة ناف';
+
   const [selectedData, setSelectedData] = useState({
     clients: true,
     prospects: true,
@@ -17,7 +31,7 @@ export default function DataExport() {
     activities: false
   });
   
-  const [selectedFormat, setSelectedFormat] = useState('excel');
+  const [selectedFormat, setSelectedFormat] = useState('xlsx');
   const [isExporting, setIsExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
   const [selectedFields, setSelectedFields] = useState({
@@ -221,140 +235,119 @@ export default function DataExport() {
     return data;
   };
 
-  const downloadExcel = async (data: any, filename: string) => {
-    // Create CSV content
-    let csvContent = '';
-    
-    Object.keys(data).forEach(sheetName => {
-      const sheetTitle = {
-        clients: 'العملاء',
-        prospects: 'العملاء المحتملين',
-        cases: 'القضايا',
-        users: 'المستخدمين',
-        marketers: 'المسوّقين',
-        activities: 'الأنشطة'
-      }[sheetName] || sheetName;
-      
-      csvContent += `\n=== ${sheetTitle} ===\n`;
-      
-      const rows = data[sheetName];
-      if (rows.length > 0) {
-        // Headers
-        const headers = Object.keys(rows[0]);
-        csvContent += headers.join(',') + '\n';
-        
-        // Data rows
-        rows.forEach((row: any) => {
-          const values = headers.map(header => {
-            const value = row[header] || '';
-            // Escape commas and quotes
-            return `"${String(value).replace(/"/g, '""')}"`;
-          });
-          csvContent += values.join(',') + '\n';
-        });
-      }
-      csvContent += '\n';
-    });
-
-    // Create and download file
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const generateJSONContent = async () => {
-    try {
-      const allData = await db.exportAllData();
-      return JSON.stringify(allData, null, 2);
-    } catch (error) {
-      console.error('Error generating JSON content:', error);
-      throw error;
+    const allData = await db.exportAllData();
+    return JSON.stringify(allData, null, 2);
+  };
+
+  const SHEET_TITLE: Record<string, string> = {
+    clients: 'العملاء',
+    prospects: 'العملاء المحتملين',
+    cases: 'القضايا',
+    users: 'المستخدمين',
+    marketers: 'المسوّقين',
+    activities: 'الأنشطة'
+  };
+
+  /** الجداول إلى أوراقٍ لدفتر واحد. والترويسة من أول صفّ في كل جدول. */
+  const toSheets = (data: Record<string, Record<string, unknown>[]>): Sheet[] =>
+    Object.entries(data)
+      .filter(([, rows]) => rows.length > 0)
+      .map(([key, rows]) => ({
+        name: SHEET_TITLE[key] ?? key,
+        headers: Object.keys(rows[0]),
+        rows
+      }));
+
+  /* ═══ ما كان هنا ═══
+   *
+   * `downloadExcel` كان يكتب CSV بامتداد `.csv` والشاشة تسمّيه «Excel»،
+   * و`downloadPDF` كان يبني نصّاً عادياً ثم `filename.replace('.pdf','.txt')`
+   * فيُسلَّم ملفَّ نصّ. صيغتان موعودتان وثالثةٌ مُسلَّمة.
+   *
+   * والآن ثلاثٌ صادقة:
+   *   Excel  → دفتر `.xlsx` حقيقي من `lib/xlsx.ts` — أوراقٌ متعدّدة،
+   *            وأرقامٌ تُجمَع وتُرتَّب، واتجاهٌ من اليمين.
+   *   CSV    → ملفّ لكل جدول، بعلامة ترتيبٍ تقرأ بها العربيةُ سليمة.
+   *   طباعة  → نافذةٌ يطبعها المتصفّح، ومن حوارها «حفظ كـPDF».
+   *
+   * وPDF لا يُبنى بيدنا: العربية فيه تحتاج تشكيلَ حروفٍ ووصلَها وخطّاً
+   * مضمَّناً، ومن بناه بلا ذلك أخرج حروفاً مقطّعة مقلوبة. والمتصفّح يملك
+   * محرّكاً يفعلها كلَّها — فيُستعمل بدل أن يُقلَّد ناقصاً.
+   */
+
+  const printReport = (data: Record<string, Record<string, unknown>[]>) => {
+    const sheets = toSheets(data);
+    const tables = sheets
+      .map((sheet) => {
+        const head = sheet.headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
+        const body = sheet.rows
+          .map(
+            (row) =>
+              `<tr>${sheet.headers.map((h) => `<td>${escapeHtml(row[h])}</td>`).join('')}</tr>`
+          )
+          .join('');
+        return `<h2>${escapeHtml(sheet.name)}</h2><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+      })
+      .join('');
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      setExportMessage('تعذّر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة');
+      return;
     }
-  };
 
-  const downloadJSON = async (content: string, filename: string) => {
-    const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const generatePDFContent = async (data: any) => {
-    let content = 'تقرير بيانات شركة ناف\n';
-    content += '===================\n\n';
-    content += `تاريخ التصدير: ${formatDate(new Date())}\n\n`;
-
-    Object.keys(data).forEach(sheetName => {
-      const sheetTitle = {
-        clients: 'بيانات العملاء',
-        prospects: 'بيانات العملاء المحتملين',
-        cases: 'بيانات القضايا',
-        users: 'بيانات المستخدمين',
-        marketers: 'بيانات المسوّقين',
-        activities: 'سجل الأنشطة'
-      }[sheetName] || sheetName;
-      
-      content += `\n${sheetTitle}\n`;
-      content += '================\n\n';
-      
-      const rows = data[sheetName];
-      rows.forEach((row: any, index: number) => {
-        content += `${index + 1}. `;
-        Object.entries(row).forEach(([key, value]) => {
-          content += `${key}: ${value} | `;
-        });
-        content += '\n\n';
-      });
-    });
-
-    return content;
-  };
-
-  const downloadPDF = (content: string, filename: string) => {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename.replace('.pdf', '.txt'));
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    /* نافذةٌ مستقلّة بأنماطها: أنماطُ المنصة مبنيّةٌ للشاشة، وجدولٌ عريض
+       يُقصّ في الورقة. وهذه أنماطُ طباعةٍ وحدها. */
+    win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>تقرير بيانات ${escapeHtml(settingsName)}</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; color: #111; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: #555; font-size: 12px; margin-bottom: 24px; }
+  h2 { font-size: 15px; margin: 24px 0 8px; page-break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #bbb; padding: 5px 7px; text-align: start; }
+  thead th { background: #eee; }
+  tr { page-break-inside: avoid; }
+  @page { size: A4 landscape; margin: 12mm; }
+</style></head><body>
+<h1>تقرير بيانات ${escapeHtml(settingsName)}</h1>
+<div class="meta">تاريخ التصدير: ${escapeHtml(formatDate(new Date()))} — ${escapeHtml(formatTime(new Date()))}</div>
+${tables}
+</body></html>`);
+    win.document.close();
+    // الطباعة بعد اكتمال الرسم، وإلّا طُبعت صفحةٌ فارغة.
+    win.addEventListener('load', () => win.print());
   };
 
   const exportData = async () => {
     setIsExporting(true);
     setExportMessage('');
-    
+
     try {
       const data = await generateExcelData();
       const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `NAF_Law_Export_${timestamp}`;
+      const base = `NAF_Law_Export_${timestamp}`;
 
       if (selectedFormat === 'json') {
-        const jsonContent = await generateJSONContent();
-        await downloadJSON(jsonContent, `${filename}.json`);
-      } else if (selectedFormat === 'excel') {
-        await downloadExcel(data, `${filename}.csv`);
+        downloadText(await generateJSONContent(), `${base}.json`, 'application/json;charset=utf-8');
+      } else if (selectedFormat === 'xlsx') {
+        downloadXlsx(toSheets(data), `${base}.xlsx`);
+      } else if (selectedFormat === 'csv') {
+        /* ملفٌّ لكل جدول: CSV صيغةُ جدولٍ واحد، ودمجُ الجداول فيه بفواصل
+           `=== العملاء ===` — كما كان — يُخرج ملفّاً لا يفتحه Excel جدولاً. */
+        for (const sheet of toSheets(data)) {
+          downloadText(toCsv(sheet.headers, sheet.rows), `${base}_${sheet.name}.csv`, 'text/csv;charset=utf-8');
+        }
       } else {
-        const pdfContent = await generatePDFContent(data);
-        downloadPDF(pdfContent, `${filename}.pdf`);
+        printReport(data);
       }
 
-      setExportMessage('تم التصدير');
-      setTimeout(() => setExportMessage(''), 3000);
-      
+      if (selectedFormat !== 'print') {
+        setExportMessage('تم التصدير');
+        setTimeout(() => setExportMessage(''), 3000);
+      }
     } catch (error) {
       console.error('Export error:', error);
       setExportMessage('حدث خطأ أثناء تصدير البيانات');
@@ -434,23 +427,34 @@ export default function DataExport() {
             <input
               type="radio"
               name="format"
-              value="excel"
-              checked={selectedFormat === 'excel'}
+              value="xlsx"
+              checked={selectedFormat === 'xlsx'}
               onChange={(e) => setSelectedFormat(e.target.value)}
               className="text-primary focus-visible:ring-ring"
             />
-            <span className="text-foreground">Excel/CSV (.csv)</span>
+            <span className="text-foreground">Excel (.xlsx) — دفتر بأوراق</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="radio"
               name="format"
-              value="pdf"
-              checked={selectedFormat === 'pdf'}
+              value="csv"
+              checked={selectedFormat === 'csv'}
               onChange={(e) => setSelectedFormat(e.target.value)}
               className="text-primary focus-visible:ring-ring"
             />
-            <span className="text-foreground">نص منسق (.txt)</span>
+            <span className="text-foreground">CSV (.csv) — ملفّ لكل جدول</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="format"
+              value="print"
+              checked={selectedFormat === 'print'}
+              onChange={(e) => setSelectedFormat(e.target.value)}
+              className="text-primary focus-visible:ring-ring"
+            />
+            <span className="text-foreground">طباعة — ومنها «حفظ كـPDF»</span>
           </label>
         </div>
       </div>
@@ -563,14 +567,22 @@ export default function DataExport() {
         <h4 className="font-medium text-primary-strong mb-3">ملخص التصدير</h4>
         <ul className="list-disc ps-5 space-y-2 text-sm text-primary-strong">
           <li>التنسيق: {
-            selectedFormat === 'json' ? 'JSON (نسخة احتياطية كاملة)' :
-            selectedFormat === 'excel' ? 'CSV/Excel' : 
-            'نص منسق'
+            selectedFormat === 'json' ? 'JSON — نسخة احتياطية كاملة' :
+            selectedFormat === 'xlsx' ? 'Excel (.xlsx) — دفتر بورقة لكل جدول' :
+            selectedFormat === 'csv' ? 'CSV — ملفّ منفصل لكل جدول' :
+            'طباعة'
           }</li>
-          <li>البيانات المحددة: <bdi>{formatNumber(Object.values(selectedData).filter(Boolean).length)}</bdi> من <bdi>{formatNumber(4)}</bdi></li>
-          <li>سيتم إنشاء الملف وتنزيله تلقائياً</li>
+          <li>البيانات المحددة: <bdi>{formatNumber(Object.values(selectedData).filter(Boolean).length)}</bdi> من <bdi>{formatNumber(Object.keys(selectedData).length)}</bdi></li>
+          {selectedFormat === 'print' ? (
+            <li>تُفتح نافذةُ طباعة — ومن حوارها اختر «حفظ كـPDF» لتخرج بعربيةٍ سليمة</li>
+          ) : (
+            <li>يُنشأ الملفّ ويُنزَّل تلقائياً</li>
+          )}
           {selectedFormat === 'json' && (
-            <li>تنسيق JSON يحتوي على جميع البيانات ويمكن استخدامه لاستعادة النظام</li>
+            <li>JSON يحمل البيانات كلَّها ويصلح لاستعادة النظام</li>
+          )}
+          {selectedFormat === 'csv' && (
+            <li>يُنزَّل ملفٌّ لكل جدول — قد يسألك المتصفّح السماحَ بتنزيلاتٍ متعدّدة</li>
           )}
         </ul>
       </div>

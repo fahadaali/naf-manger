@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CircleHelp, CircleSlash, CircleX, Clock, FileCheck, Info } from 'lucide-react';
-import { Prospect } from '../../types';
+import { Attachment, Prospect } from '../../types';
 /* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
    ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
    يمرّ بـ formatDate من naf-format. */
@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { useSettingList } from '../../lib/use-settings';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import AttachmentList from '../Common/AttachmentList';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
@@ -46,6 +47,9 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // قائمةٌ لا نصّ، فخارج `formData` الذي يقبل النصّ وحده.
+  const [attachments, setAttachments] = useState<Attachment[]>(prospect?.attachments ?? []);
 
   /* من «تكوين النظام» لا من `mockSystemSettings` — ملفّ العيّنات. فحالةٌ
      أو مصدرٌ يُضاف من الإعدادات يظهر هنا، وهو الموضع الوحيد لاستعماله. */
@@ -98,7 +102,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
       prospectStatus: formData.prospectStatus,
       notes: formData.notes,
       joinDate: prospect?.joinDate || new Date(),
-      attachments: prospect?.attachments || [],
+      attachments,
       profilePicture: formData.profilePicture || undefined,
       source: formData.source,
       expectedValue: formData.expectedValue ? parseFloat(formData.expectedValue) : undefined,
@@ -232,6 +236,11 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                   <p className="text-foreground">{prospect.notes}</p>
                 </div>
               )}
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-foreground mb-2">المرفقات</label>
+                <AttachmentList value={prospect.attachments ?? []} readOnly />
+              </div>
             </div>
 
             {/* Prospect Specific Information */}
@@ -467,6 +476,13 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               rows={3}
               placeholder="ملاحظات إضافية"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              المرفقات
+            </label>
+            <AttachmentList value={attachments} onChange={setAttachments} />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">

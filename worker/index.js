@@ -8,6 +8,21 @@ import { authenticate, handleBackchannelLogout, handleCallback, handleLogout } f
 import { platformConfig } from './lib/config.js';
 import { readMember, serveFile, updateMe, uploadFile } from './lib/handlers.js';
 import { handleResource } from './lib/crud.js';
+import { createMeeting, listMeetings } from './lib/meetings.js';
+import {
+  createReport,
+  deleteReport,
+  listReports,
+  previewReport,
+  runReport,
+  updateReport,
+} from './lib/reports.js';
+import {
+  createDisplayToken,
+  deleteDisplayToken,
+  listDisplayTokens,
+  readDisplayStats,
+} from './lib/display.js';
 import {
   convertProspect,
   exportAll,
@@ -20,6 +35,7 @@ import {
 } from './lib/queries.js';
 
 const FILES_PREFIX = '/api/files/';
+const DISPLAY_API_PREFIX = '/api/display/';
 
 export default {
   async fetch(request, env) {
@@ -45,6 +61,23 @@ export default {
         });
       }
       return handleLogout(request, env, config);
+    }
+
+    /* ═══ شاشات العرض تسبق الحارس ═══
+       شاشةٌ معلَّقة في ممرّ لا تسجّل دخولاً، فحراستُها رمزٌ في المسار لا
+       كوكي. وموضعُ ذلك هنا — قبل `authenticate` — لا في `publicPrefixes`:
+       ترتيبُ هذا الملفّ هو الحراسة، وما يُستثنى يُرى فيه لا في إعداد.
+
+       وما يُقرأ به إحصاءاتٌ مجمَّعة وحدها، وقراءةً فقط. التفصيل في
+       `lib/display.js`. */
+    if (url.pathname.startsWith(DISPLAY_API_PREFIX) && request.method === 'GET') {
+      const token = url.pathname.slice(DISPLAY_API_PREFIX.length);
+      return readDisplayStats(env, token);
+    }
+    /* وصفحةُ الشاشة نفسها: `not_found_handling` يعيد `index.html`، واللوحة
+       توجّه نفسها منه وتقرأ رمزَها من المسار. */
+    if (url.pathname === '/display' || url.pathname.startsWith('/display/')) {
+      return env.ASSETS.fetch(request);
     }
 
     /* ═══ الحارس ═══
@@ -100,6 +133,31 @@ export default {
         if (id && (request.method === 'PATCH' || request.method === 'PUT')) {
           return updateMember(request, env, user, id);
         }
+      }
+      /* رموز شاشات العرض — إنشاءً وسرداً وإبطالاً. للمسؤول وحده، والفحص
+         في `lib/display.js` لا هنا. (والقراءةُ بالرمز تسبق الحارس أعلاه.) */
+      if (name === 'display-tokens') {
+        if (!id && request.method === 'GET') return listDisplayTokens(env, user);
+        if (!id && request.method === 'POST') return createDisplayToken(request, env, user);
+        if (id && request.method === 'DELETE') return deleteDisplayToken(env, user, id);
+      }
+      /* الاجتماعات — تُنشأ عند Zoom من هنا لا من المتصفّح: سرُّ المزوّد
+         لا يُشحن في حزمةٍ يقرؤها كل زائر. */
+      if (name === 'meetings' && !id) {
+        if (request.method === 'GET') return listMeetings(env, user, url);
+        if (request.method === 'POST') return createMeeting(request, env, user);
+      }
+      /* التقارير المخصّصة. و`preview` و`run` أفعالٌ خاصة تسبق شكلَ المورد
+         كما يسبقه `convert` — ولولا ذلك عُومل `preview` معرّفَ صفّ. */
+      if (name === 'reports') {
+        if (id === 'preview' && !verb && request.method === 'POST') {
+          return previewReport(request, env, user);
+        }
+        if (id && verb === 'run' && request.method === 'GET') return runReport(env, user, id);
+        if (!id && request.method === 'GET') return listReports(env, user);
+        if (!id && request.method === 'POST') return createReport(request, env, user);
+        if (id && !verb && request.method === 'PATCH') return updateReport(request, env, user, id);
+        if (id && !verb && request.method === 'DELETE') return deleteReport(env, user, id);
       }
       if (name === 'export' && !id && request.method === 'GET') {
         return exportAll(env, user);

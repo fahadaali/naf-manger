@@ -7,3 +7,20 @@
 # سرّ المنصة عند المركز. يُولَّد من لوحة المركز عند تسجيل المنصة،
 # ويُعرض مرة واحدة. وبه يبادل مسارُ الاستقبال رمزَ العبور خادماً لخادم.
 AUTH_CLIENT_SECRET=
+
+# ═══ Zoom — إنشاء الاجتماعات ═══
+#
+# ثلاثةٌ من تطبيق «Server-to-Server OAuth» في لوحة مطوّري Zoom. وغيابُ
+# أحدها غيابُ الربط: المسار يردّ «غير مربوط» والشاشة تقولها، ولا يُفبرك
+# اجتماع.
+#
+# وفي النشر تُضبط أسراراً لا في `wrangler.toml`:
+#   wrangler secret put ZOOM_ACCOUNT_ID
+#   wrangler secret put ZOOM_CLIENT_ID
+#   wrangler secret put ZOOM_CLIENT_SECRET
+#
+# ولا تبدأ بـ`VITE_` أبداً: ما بدأ بها يُشحن في حزمة المتصفّح، فيصير
+# سرُّ المكتب علانيةً ويُنشئ كلُّ زائرٍ اجتماعاتٍ باسمه.
+ZOOM_ACCOUNT_ID=
+ZOOM_CLIENT_ID=
+ZOOM_CLIENT_SECRET=

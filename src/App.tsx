@@ -12,6 +12,7 @@ import ReportsView from './components/Reports/ReportsView';
 import SmartLawyer from './components/SmartLawyer/SmartLawyer';
 import MarketersView from './components/Marketers/MarketersView';
 import Denied from './components/Auth/Denied';
+import DisplayBoard from './components/Display/DisplayBoard';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 
 /* `LoginModal` كان هنا، ويعرض `LoginPage` فوق `LandingPage`. وقد سقط الاثنان
@@ -138,6 +139,15 @@ function App() {
      والمطابقة بالمساواة التامة لا بالبادئة: `‎/denied-something` مسارٌ آخر. */
   if (window.location.pathname === '/denied') {
     return <Denied />;
+  }
+
+  /* `‎/display/<token>` شاشةُ عرضٍ عامّة: مسارُها يسبق الحارس في الـWorker،
+     وحراستُها رمزٌ في العنوان لا جلسة. فلا تمرّ بـ`AuthProvider` — وإلّا
+     استدعت `‎/api/me` فرُدّت بـ٤٠١ فحُوِّلت الشاشةُ المعلَّقة إلى المركز
+     تطلب دخولاً من لا أحد. */
+  if (window.location.pathname.startsWith('/display/')) {
+    const token = window.location.pathname.slice('/display/'.length);
+    if (token) return <DisplayBoard token={token} />;
   }
 
   return (

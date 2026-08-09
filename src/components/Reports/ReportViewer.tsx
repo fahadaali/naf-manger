@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChartColumn, FileOutput, Pencil, Table2, X } from 'lucide-react';
+import { ChartColumn, FileOutput, Pencil, Table2, TriangleAlert, X } from 'lucide-react';
 import { chartPalette } from '../../lib/chart-tokens';
-import { CustomReport } from '../../types';
+import { CustomReport, ReportResult } from '../../types';
 import { db } from '../../data/database';
+import { columnLabel, formatCell } from '../../lib/report-fields';
+import { downloadText, toCsv } from '../../lib/csv';
+import { downloadXlsx } from '../../lib/xlsx';
+import { Alert } from '@/registry/naf/ui/alert';
 import ChartCard from '../Dashboard/ChartCard';
 import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
@@ -16,60 +20,73 @@ interface ReportViewerProps {
 }
 
 export default function ReportViewer({ report, onClose, onEdit }: ReportViewerProps) {
-  const [reportData, setReportData] = useState<any[]>([]);
+  const [result, setResult] = useState<ReportResult | null>(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
+  /* ═══ الصفوف من القاعدة ═══
+   *
+   * كان `db.generateReportData(report)` يُرجع `[]` دائماً، ثم يقع الاستدعاء
+   * في `catch` فتُعرض ثلاثةُ صفوفٍ مكتوبة في الشيفرة — «عينة بيانات 1» —
+   * على أنها نتيجةُ التقرير. فالشاشة تعرض ما لا وجود له في القاعدة.
+   *
+   * والآن `‎/api/reports/:id/run‎`: الاستعلام يُبنى في الخادم من تعريفٍ
+   * منقّى، والأعمدةُ تُردّ معه فلا تُشتقّ من أول صفّ. */
   useEffect(() => {
-    generateReportData();
-  }, [report]);
-
-  const generateReportData = async () => {
+    let alive = true;
     setLoading(true);
-    try {
-      // Generate actual report data based on the report configuration
-      const data = await db.generateReportData(report);
-      setReportData(data);
-    } catch (error) {
-      console.error('Error generating report data:', error);
-      // Fallback to sample data
-      setReportData([
-        { id: 1, name: 'عينة بيانات 1', value: 100, date: '2024-01-01' },
-        { id: 2, name: 'عينة بيانات 2', value: 200, date: '2024-01-02' },
-        { id: 3, name: 'عينة بيانات 3', value: 150, date: '2024-01-03' }
-      ]);
-    } finally {
-      setLoading(false);
+
+    db.runReport(report.id)
+      .then((result) => { if (alive) { setResult(result); setError(''); } })
+      .catch((runError) => {
+        console.error('تعذّر تشغيل التقرير:', runError);
+        if (alive) { setResult(null); setError('تعذّر تشغيل التقرير'); }
+      })
+      .finally(() => { if (alive) setLoading(false); });
+
+    return () => { alive = false; };
+  }, [report.id]);
+
+  const rows = result?.rows ?? [];
+  const columns = result?.columns ?? [];
+
+  /* التصدير يُسلّم ما يَعِد به: دفترُ `.xlsx` حقيقي أو CSV. وكان الثلاثةُ
+     — CSV وExcel وPDF — يكتبون JSON نفسه ويغيّرون الامتداد وحده. */
+  const exportReport = (format: 'csv' | 'xlsx') => {
+    const safeName = report.name.replace(/[\\/:*?"<>|]/g, ' ').trim() || 'تقرير';
+    const labelled = rows.map((row) => {
+      const out: Record<string, unknown> = {};
+      for (const column of columns) out[columnLabel(column)] = row[column] ?? '';
+      return out;
+    });
+    const headers = columns.map(columnLabel);
+
+    if (format === 'xlsx') {
+      downloadXlsx([{ name: safeName, headers, rows: labelled }], `${safeName}.xlsx`);
+    } else {
+      downloadText(toCsv(headers, labelled), `${safeName}.csv`, 'text/csv;charset=utf-8');
     }
   };
 
-  const exportReport = (format: 'csv' | 'pdf' | 'excel') => {
-    // Implementation for exporting report data
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${report.name}.${format}`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const getChartData = () => {
-    if (!reportData.length) return null;
+    if (!rows.length || columns.length < 2) return null;
 
-    // Convert report data to chart format
-    const labels = reportData.map(item => item.name || item.id);
-    const values = reportData.map(item => item.value || 0);
+    /* أوّلُ عمودٍ تسمية، وأوّلُ عمودٍ عدديّ قيمة. وكان يقرأ `item.name` و
+       `item.value` — حقلين لا يردّهما أي تقرير. */
+    const [labelColumn] = columns;
+    const valueColumn =
+      columns.slice(1).find((column) => rows.some((row) => typeof row[column] === 'number')) ??
+      columns[1];
 
     return {
-      labels,
+      labels: rows.map((row) => String(row[labelColumn] ?? '')),
       datasets: [{
-        label: report.name,
-        data: values,
+        label: columnLabel(valueColumn),
+        data: rows.map((row) => Number(row[valueColumn] ?? 0)),
         // ستّ درجات كانت مكتوبةً بيدها، والمسجَّل خمس. اللوحة تدور على
         // الخمس بدل اختراع سادسة تقارب إحداها فتُبطل التمييز الذي وُضعت له.
-        backgroundColor: chartPalette(values.length),
+        backgroundColor: chartPalette(rows.length),
         borderRadius: 4
       }]
     };
@@ -133,14 +150,14 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                 تصدير
               </Button>
               <div className="absolute end-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                <Button onClick={() => exportReport('csv')} className="w-full justify-start first:rounded-t-lg" variant="ghost">
+                <Button onClick={() => exportReport('xlsx')} className="w-full justify-start first:rounded-t-lg" variant="ghost">
+                  تصدير Excel (.xlsx)
+                </Button>
+                <Button onClick={() => exportReport('csv')} className="w-full justify-start" variant="ghost">
                   تصدير CSV
                 </Button>
-                <Button onClick={() => exportReport('excel')} className="w-full justify-start" variant="ghost">
-                  تصدير Excel
-                </Button>
-                <Button onClick={() => exportReport('pdf')} className="w-full justify-start last:rounded-b-lg" variant="ghost">
-                  تصدير PDF
+                <Button onClick={() => window.print()} className="w-full justify-start last:rounded-b-lg" variant="ghost">
+                  طباعة — ومنها «حفظ كـPDF»
                 </Button>
               </div>
             </div>
@@ -164,7 +181,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             </div>
             <div>
               <span className="text-muted-foreground">عدد السجلات:</span>
-              <span className="font-medium text-foreground ms-2"><bdi>{formatNumber(reportData.length)}</bdi></span>
+              <span className="font-medium text-foreground ms-2"><bdi>{formatNumber(rows.length)}</bdi></span>
             </div>
             <div>
               <span className="text-muted-foreground">آخر تحديث:</span>
@@ -183,23 +200,32 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
         <Card className="overflow-hidden">
           {viewMode === 'table' ? (
             <div className="overflow-x-auto">
-              {reportData.length > 0 ? (
+              {error ? (
+                <div className="p-8">
+                  <Alert variant="destructive">
+                    <TriangleAlert aria-hidden="true" />
+                    <span>{error}</span>
+                  </Alert>
+                </div>
+              ) : rows.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {Object.keys(reportData[0]).map(key => (
-                        <TableHead key={key} className="tracking-wider">
-                          {key}
+                      {/* الأعمدة من الخادم لا من `Object.keys(rows[0])`: صفٌّ
+                          تخلو فيه قيمةٌ يُسقط عمودَها فتنقص الترويسة. */}
+                      {columns.map((column) => (
+                        <TableHead key={column} className="tracking-wider">
+                          {columnLabel(column)}
                         </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {reportData.map((row, index) => (
+                    {rows.map((row, index) => (
                       <TableRow key={index}>
-                        {Object.values(row).map((value, cellIndex) => (
-                          <TableCell key={cellIndex} className="text-foreground">
-                            {String(value)}
+                        {columns.map((column) => (
+                          <TableCell key={column} className="text-foreground">
+                            <bdi>{formatCell(row[column])}</bdi>
                           </TableCell>
                         ))}
                       </TableRow>

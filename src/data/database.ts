@@ -5,7 +5,8 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CustomReport, Marketer, CommissionPayment, MarketerStats } from '../types';
+import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats } from '../types';
+import { Meeting, ReportResult } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
 /* ═══ التواريخ ═══
@@ -45,6 +46,12 @@ const asUser = (row: any): User => ({
   ...row,
   createdDate: toDate(row.createdDate),
   lastLogin: toOptionalDate(row.lastLogin),
+});
+
+const asReport = (row: any): CustomReport => ({
+  ...row,
+  createdDate: toDate(row.createdDate),
+  lastModified: toDate(row.lastModified),
 });
 
 const asPayment = (row: any): CommissionPayment => ({
@@ -274,36 +281,64 @@ export class LocalDatabase {
     return asPayment(await api.create<any>('commissions', paymentData));
   }
 
+  /* ═══ رموز شاشات العرض ═══
+     رابطٌ عامّ يُعلَّق في ممرّ ولا يسجّل دخولاً. وما يُقرأ به إحصاءاتٌ
+     مجمَّعة وحدها — التفصيل في `worker/lib/display.js`. */
+  async getDisplayTokens(): Promise<DisplayToken[]> {
+    return await listOr(api.read<DisplayToken[]>('/display-tokens'), 'روابط العرض');
+  }
+
+  async createDisplayToken(label: string): Promise<DisplayToken> {
+    return await api.post<DisplayToken>('/display-tokens', { label });
+  }
+
+  async deleteDisplayToken(token: string): Promise<boolean> {
+    await api.remove('display-tokens', token);
+    return true;
+  }
+
   // ── التصدير ──
   async exportAllData(): Promise<any> {
     return await api.read<any>('/export');
   }
 
-  /* ═══ ما لم يُبنَ بعد ═══
-     التقارير المخصّصة والتنبؤات والاستبصارات أغلفةٌ فارغة: لا جدول لها في
-     D1 ولا مسار، وبناؤها عملٌ جديد. والفراغُ هنا صريحٌ كي لا تُقرأ الشاشةُ
-     على أنها تحفظ شيئاً. */
-  getCustomReports(): CustomReport[] {
-    return [];
+  /* ═══ التقارير المخصّصة ═══
+     كانت هذه أغلفةً تُرجع فراغاً: `getCustomReports() → []` و
+     `updateCustomReport() → null` و`generateReportData() → []` — وثلاثُ
+     شاشاتٍ فوقها تَعِد بالحفظ. والآن جدولٌ في D1 ومساراتٌ في الـWorker،
+     والاستعلام يُبنى هناك بقائمةٍ بيضاء لا من نصّ المستخدم. */
+  async getCustomReports(): Promise<CustomReport[]> {
+    return (await listOr(api.read<any[]>('/reports'), 'التقارير')).map(asReport);
   }
 
-  createCustomReport(reportData: Omit<CustomReport, 'id'>): CustomReport {
-    return { ...reportData, id: Date.now().toString() } as CustomReport;
+  async createCustomReport(report: Partial<CustomReport>): Promise<CustomReport> {
+    return asReport(await api.post<any>('/reports', report));
   }
 
-  /* الوسائط مصرَّحةٌ وإن لم تُستعمل: الشاشات تمرّرها فعلاً، وأغلفةٌ بلا
-     وسائط تجعل كلَّ نداءٍ منها خطأً في الفحص — فيُغرَق الخطأ الحقيقيّ في
-     ضجيج، ويسقط عقدُ الدالّة حين تُبنى. */
-  updateCustomReport(_id: string, _updates: Partial<CustomReport>): CustomReport | null {
-    return null;
+  async updateCustomReport(id: string, updates: Partial<CustomReport>): Promise<CustomReport> {
+    return asReport(await api.patch<any>(`/reports/${encodeURIComponent(id)}`, updates));
   }
 
-  deleteCustomReport(_id: string): boolean {
+  async deleteCustomReport(id: string): Promise<boolean> {
+    await api.remove('reports', id);
     return true;
   }
 
-  generateReportData(_report: CustomReport): Promise<any[]> {
-    return Promise.resolve([]);
+  /** تشغيلُ تقريرٍ محفوظ. */
+  async runReport(id: string): Promise<ReportResult> {
+    return await api.read<ReportResult>(`/reports/${encodeURIComponent(id)}/run`);
+  }
+
+  /** معاينةُ تعريفٍ لم يُحفظ — يستعملها الباني قبل الحفظ. */
+  async previewReport(definition: Partial<CustomReport>): Promise<ReportResult> {
+    return await api.post<ReportResult>('/reports/preview', definition);
+  }
+
+  /* ═══ الاجتماعات ═══
+     تُنشأ عند Zoom من الـWorker: سرُّ المزوّد لا يُشحن في حزمة المتصفّح. */
+  async getMeetings(subject?: { type: 'client' | 'prospect'; id: string }): Promise<Meeting[]> {
+    const query = subject ? `?subjectType=${subject.type}&subjectId=${encodeURIComponent(subject.id)}` : '';
+    return await listOr(api.read<Meeting[]>(`/meetings${query}`), 'الاجتماعات');
   }
 
 }

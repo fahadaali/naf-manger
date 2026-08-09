@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, X } from 'lucide-react';
-import { CustomReport, ReportField, ReportFilter, ReportVisualization } from '../../types';
+import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, TriangleAlert, X } from 'lucide-react';
+import { CustomReport, ReportField, ReportFilter, ReportResult, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { db } from '../../data/database';
+import { REPORT_FIELDS, columnLabel, formatCell } from '../../lib/report-fields';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
+import { Alert } from '@/registry/naf/ui/alert';
 
 interface ReportBuilderProps {
   report?: CustomReport | null;
@@ -35,36 +38,14 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
   });
 
   const [availableFields, setAvailableFields] = useState<ReportField[]>([]);
-  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [preview, setPreview] = useState<ReportResult | null>(null);
+  const [previewError, setPreviewError] = useState('');
+  const [previewing, setPreviewing] = useState(false);
 
-  // Define available fields based on data source
-  const fieldDefinitions: Record<string, ReportField[]> = {
-    clients: [
-      { id: 'fullName', name: 'الاسم الكامل', type: 'text', source: 'clients' },
-      { id: 'clientType', name: 'نوع العميل', type: 'select', source: 'clients', options: ['individual', 'company', 'association', 'government'] },
-      { id: 'status', name: 'الحالة', type: 'select', source: 'clients', options: ['current', 'former'] },
-      { id: 'joinDate', name: 'تاريخ الانضمام', type: 'date', source: 'clients' },
-      { id: 'email', name: 'البريد الإلكتروني', type: 'text', source: 'clients' },
-      { id: 'phone', name: 'رقم الجوال', type: 'text', source: 'clients' }
-    ],
-    prospects: [
-      { id: 'fullName', name: 'الاسم الكامل', type: 'text', source: 'prospects' },
-      { id: 'prospectStatus', name: 'حالة العميل المحتمل', type: 'text', source: 'prospects' },
-      { id: 'expectedValue', name: 'القيمة المتوقعة', type: 'number', source: 'prospects', aggregatable: true },
-      { id: 'source', name: 'المصدر', type: 'text', source: 'prospects' },
-      { id: 'joinDate', name: 'تاريخ الإضافة', type: 'date', source: 'prospects' },
-      { id: 'followUpDate', name: 'موعد المتابعة', type: 'date', source: 'prospects' }
-    ],
-    cases: [
-      { id: 'caseNumber', name: 'رقم القضية', type: 'text', source: 'cases' },
-      { id: 'caseType', name: 'نوع القضية', type: 'text', source: 'cases' },
-      { id: 'status', name: 'الحالة', type: 'select', source: 'cases', options: ['pending', 'in-progress', 'completed', 'postponed'] },
-      { id: 'outcome', name: 'النتيجة', type: 'select', source: 'cases', options: ['won', 'lost', 'settled'] },
-      { id: 'clientName', name: 'اسم العميل', type: 'text', source: 'cases' },
-      { id: 'createdDate', name: 'تاريخ الإنشاء', type: 'date', source: 'cases' },
-      { id: 'updatedDate', name: 'تاريخ التحديث', type: 'date', source: 'cases' }
-    ]
-  };
+  /* الحقول من `lib/report-fields.ts` — موضعٌ واحد يقرؤه الباني والعارض،
+     وهو مرآةُ `FIELDS` في `worker/lib/reports.js`. وكانت مكتوبةً هنا
+     وحدها، فحقلٌ يُضاف في الخادم لا يظهر ولا يُعرف سببُه. */
+  const fieldDefinitions = REPORT_FIELDS;
 
   useEffect(() => {
     if (reportData.dataSource) {
@@ -142,14 +123,28 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
     onSave(reportData);
   };
 
-  const generatePreview = () => {
-    // This would generate actual preview data based on the report configuration
-    // For now, we'll show a placeholder
-    setPreviewData([
-      { id: 1, name: 'عينة بيانات 1', value: 100 },
-      { id: 2, name: 'عينة بيانات 2', value: 200 },
-      { id: 3, name: 'عينة بيانات 3', value: 150 }
-    ]);
+  /* ═══ المعاينة من القاعدة ═══
+   *
+   * كانت تكتب ثلاثة صفوفٍ في الشيفرة — «عينة بيانات 1» — وتسمّيها
+   * معاينةً. فمن ضبط حقولاً ومرشّحات ثم عاين رأى ما لا صلة له بضبطه.
+   *
+   * والآن `POST /api/reports/preview`: يُبنى الاستعلام في الخادم من هذا
+   * التعريف نفسه ويُشغَّل بحدّ عشرة صفوف. */
+  const generatePreview = async () => {
+    setPreviewError('');
+    setPreviewing(true);
+    try {
+      setPreview(await db.previewReport(reportData));
+    } catch (error) {
+      console.error('تعذّر توليد المعاينة:', error);
+      const code = (error as { code?: string })?.code;
+      setPreview(null);
+      setPreviewError(
+        code === 'no_fields' ? 'اختر حقلاً واحداً على الأقل' : 'تعذّر توليد المعاينة'
+      );
+    } finally {
+      setPreviewing(false);
+    }
   };
 
   const steps = [
@@ -177,8 +172,8 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button onClick={generatePreview} className="border-primary text-primary" variant="outline">
-              معاينة
+            <Button onClick={generatePreview} disabled={previewing} className="border-primary text-primary" variant="outline">
+              {previewing ? 'جارٍ المعاينة' : 'معاينة'}
             </Button>
             <Button onClick={handleSave}>
               حفظ التقرير
@@ -444,34 +439,46 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
               <div className="bg-card border border-border rounded-lg p-6">
                 <h3 className="font-medium text-foreground mb-4">معاينة التقرير</h3>
                 
-                {previewData.length > 0 ? (
+                {previewError ? (
+                  <Alert variant="destructive">
+                    <TriangleAlert aria-hidden="true" />
+                    <span>{previewError}</span>
+                  </Alert>
+                ) : preview && preview.rows.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          {Object.keys(previewData[0]).map(key => (
-                            <TableHead key={key} className="text-foreground">
-                              {key}
+                          {preview.columns.map((column) => (
+                            <TableHead key={column} className="text-foreground">
+                              {columnLabel(column)}
                             </TableHead>
                           ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {previewData.map((row, index) => (
+                        {preview.rows.map((row, index) => (
                           <TableRow key={index}>
-                            {Object.values(row).map((value, cellIndex) => (
-                              <TableCell key={cellIndex} className="text-foreground">
-                                {String(value)}
+                            {preview.columns.map((column) => (
+                              <TableCell key={column} className="text-foreground">
+                                <bdi>{formatCell(row[column])}</bdi>
                               </TableCell>
                             ))}
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      المعاينة أوّلُ <bdi>{formatNumber(preview.rows.length)}</bdi> صفّاً — والتقرير الكامل عند تشغيله.
+                    </p>
                   </div>
+                ) : preview ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    لا نتائج تطابق شروط التقرير.
+                  </p>
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground">اضغط على "معاينة" لعرض البيانات</p>
+                    <p className="text-muted-foreground">اضغط «معاينة» لعرض البيانات</p>
                   </div>
                 )}
               </div>

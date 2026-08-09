@@ -21,12 +21,11 @@ export default function ReportsView() {
   const { user, hasPermission } = useAuth();
 
   useEffect(() => {
-    loadReports();
+    loadReports().catch((error) => console.error('تعذّر جلب التقارير:', error));
   }, []);
 
-  const loadReports = () => {
-    const allReports = db.getCustomReports();
-    setReports(allReports);
+  const loadReports = async () => {
+    setReports(await db.getCustomReports());
   };
 
   const filteredReports = reports.filter(report => {
@@ -55,26 +54,30 @@ export default function ReportsView() {
     setViewingReport(report);
   };
 
-  const handleSaveReport = (reportData: Partial<CustomReport>) => {
+  const handleSaveReport = async (reportData: Partial<CustomReport>) => {
     try {
       if (editingReport) {
-        db.updateCustomReport(editingReport.id, reportData);
+        await db.updateCustomReport(editingReport.id, reportData);
       } else {
-        db.createCustomReport(reportData as Omit<CustomReport, 'id'>);
+        await db.createCustomReport(reportData);
       }
-      loadReports();
+      await loadReports();
       setShowBuilder(false);
       setEditingReport(null);
     } catch (error) {
       console.error('Error saving report:', error);
-      alert('حدث خطأ أثناء حفظ التقرير');
+      alert('تعذّر حفظ التقرير');
     }
   };
 
-  const handleDeleteReport = (reportId: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا التقرير؟')) {
-      db.deleteCustomReport(reportId);
-      loadReports();
+  const handleDeleteReport = async (reportId: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا التقرير؟')) return;
+    try {
+      await db.deleteCustomReport(reportId);
+      await loadReports();
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      alert('تعذّر حذف التقرير');
     }
   };
 

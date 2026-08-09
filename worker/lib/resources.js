@@ -78,11 +78,12 @@ export const RESOURCES = {
       feeStructure: ['fee_structure', 'json'],
       paymentStatus: ['payment_status', 'json'],
       commissionStructure: ['commission_structure', 'json'],
+      attachments: ['attachments', 'json'],
       /* الشاشات تقرأ `createdDate` و`updatedDate` لا `createdAt`. والاسمان
          مكشوفان معاً أدناه، فلا يُمسّ مكوّن منها. */
     },
     required: ['case_number', 'case_type', 'client_id'],
-    defaults: { summary: '', client_name: '' },
+    defaults: { summary: '', client_name: '', attachments: '[]' },
   },
 
   marketers: {
