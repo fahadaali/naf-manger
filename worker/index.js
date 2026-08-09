@@ -9,6 +9,7 @@ import { platformConfig } from './lib/config.js';
 import { readMember, serveFile, updateMe, uploadFile } from './lib/handlers.js';
 import { handleResource } from './lib/crud.js';
 import { createMeeting, listMeetings } from './lib/meetings.js';
+import { readInsights } from './lib/insights.js';
 import {
   createReport,
   deleteReport,
@@ -158,6 +159,11 @@ export default {
         if (!id && request.method === 'POST') return createReport(request, env, user);
         if (id && !verb && request.method === 'PATCH') return updateReport(request, env, user, id);
         if (id && !verb && request.method === 'DELETE') return deleteReport(env, user, id);
+      }
+      /* استبصارات التحليلات — Workers AI داخل الـWorker. وما يُمرَّر إليه
+         أرقامٌ مجمَّعة وحدها، والتفصيل في `lib/insights.js`. */
+      if (name === 'insights' && !id && request.method === 'GET') {
+        return readInsights(request, env, user, url);
       }
       if (name === 'export' && !id && request.method === 'GET') {
         return exportAll(env, user);

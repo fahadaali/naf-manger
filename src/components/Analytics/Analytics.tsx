@@ -11,6 +11,7 @@ import { formatDateTime, formatMonth, formatNumber } from '@/registry/naf/lib/fo
 import { Select } from '@/registry/naf/ui/select';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
+import AiInsights from './AiInsights';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
@@ -356,6 +357,9 @@ export default function Analytics() {
           </div>
         </div>
       </div>
+
+      {/* قراءةٌ في الأرقام — Workers AI. تسبق المؤشّرات لأنها خلاصتُها. */}
+      <AiInsights />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

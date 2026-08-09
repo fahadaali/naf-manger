@@ -119,6 +119,29 @@ export interface ReportResult {
   grouped: boolean;
 }
 
+/** ملاحظةٌ واحدة من استبصارات التحليلات. */
+export interface ApiInsight {
+  title: string;
+  body: string;
+  tone: 'info' | 'warning' | 'opportunity';
+  action: string;
+}
+
+/**
+ * ناتجُ `‎/api/insights‎`.
+ *
+ * `digest` هو ما مُرِّر إلى الطراز فعلاً — يُردّ ليُقرأ ما بُني عليه الرأي،
+ * فلا يُقرأ استنتاجٌ بلا الأرقام التي أنتجته.
+ */
+export interface AiInsightsResult {
+  insights: ApiInsight[];
+  digest: Record<string, unknown>;
+  model: string;
+  /** ثوانٍ. */
+  generatedAt: number;
+  cached: boolean;
+}
+
 /** اجتماعٌ أُنشئ عند المزوّد وحُفظ في D1 — `migrations/0006`. */
 export interface Meeting {
   id: string;

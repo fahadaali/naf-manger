@@ -6,7 +6,7 @@
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
 import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats } from '../types';
-import { Meeting, ReportResult } from '../types';
+import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
 /* ═══ التواريخ ═══
@@ -279,6 +279,15 @@ export class LocalDatabase {
     paymentData: Omit<CommissionPayment, 'id'>,
   ): Promise<CommissionPayment | null> {
     return asPayment(await api.create<any>('commissions', paymentData));
+  }
+
+  /* ═══ استبصارات التحليلات ═══
+     الاستدلال على Workers AI داخل الـWorker، وما يُمرَّر إليه أرقامٌ
+     مجمَّعة وحدها — التفصيل في `worker/lib/insights.js`.
+     ولا `listOr` هنا: سقوطُه يجب أن يبلغ الشاشة لتقول سببَه — «غير مربوط»
+     غيرُ «تعذّر الاستدلال»، والصمتُ يخلطهما. */
+  async getInsights(refresh = false): Promise<AiInsightsResult> {
+    return await api.read<AiInsightsResult>(`/insights${refresh ? '?refresh=1' : ''}`);
   }
 
   /* ═══ رموز شاشات العرض ═══
