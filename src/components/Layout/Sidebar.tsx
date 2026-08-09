@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChartColumn, FileText, LayoutDashboard, Settings, Sparkles, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';

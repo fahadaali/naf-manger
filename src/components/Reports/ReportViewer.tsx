@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChartColumn, FileOutput, Pencil, Table2, TriangleAlert, X } from 'lucide-react';
 import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport, ReportResult } from '../../types';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CircleCheck, FileOutput, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { formatDate, formatNumber, formatTime } from '@/registry/naf/lib/format';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, ChartColumn, Eye, Funnel, Pencil, Plus, Share2, Table2, Trash2 } from 'lucide-react';
 import { CustomReport } from '../../types';
 import ReportBuilder from './ReportBuilder';

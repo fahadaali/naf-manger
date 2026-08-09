@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useEffect } from 'react';
 import { Archive, ChartColumn, CircleCheck, CircleSlash, Mail, Pencil, Phone } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';

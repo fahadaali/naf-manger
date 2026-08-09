@@ -1,4 +1,3 @@
-import React from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import { Card } from '@/registry/naf/ui/card';

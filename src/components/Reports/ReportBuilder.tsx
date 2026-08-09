@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, TriangleAlert, X } from 'lucide-react';
 import { CustomReport, ReportField, ReportFilter, ReportResult, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ClipboardList, FileText, User, Users } from 'lucide-react';
 import { ActivityLog } from '../../types';
 import { db } from '../../data/database';

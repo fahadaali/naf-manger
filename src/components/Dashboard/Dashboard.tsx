@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Award, FileText, TrendingUp, UserPlus, Users } from 'lucide-react';
 import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowRight, CircleSlash, CircleX, Clock, FileCheck, Info, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Prospect } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';

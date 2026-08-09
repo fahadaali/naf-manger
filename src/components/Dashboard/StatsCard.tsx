@@ -1,4 +1,3 @@
-import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Card } from '@/registry/naf/ui/card';
 import { formatNumber } from '@/registry/naf/lib/format';

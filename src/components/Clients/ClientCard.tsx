@@ -1,4 +1,3 @@
-import React from 'react';
 import { Archive, CircleCheck, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Client } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Calendar, Copy, ExternalLink, Plus, Trash2, TriangleAlert, User, Users, Video } from 'lucide-react';
 import { Client, Meeting, Prospect } from '../../types';
 import { ApiError, api } from '../../data/api';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
 import { Case } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { CircleCheck, CircleHelp, Gavel, ShieldCheck, Trash2, TriangleAlert, UserCog } from 'lucide-react';
 import { User, UserPermissions } from '../../types';
 import { db } from '../../data/database';
