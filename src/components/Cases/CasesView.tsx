@@ -4,6 +4,8 @@ import { Case } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import { db } from '../../data/database';
+import { useSettingList } from '../../lib/use-settings';
+import { caseStatusLabel } from '../../lib/labels';
 import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
@@ -23,6 +25,10 @@ export default function CasesView() {
   const [isEditing, setIsEditing] = useState(false);
   const { hasPermission } = useAuth();
   const [showCompletedCases, setShowCompletedCases] = useState(false);
+
+  // المرشّحات من «تكوين النظام» لا من نصوصٍ في التصيير.
+  const caseTypes = useSettingList('caseTypes');
+  const caseStatuses = useSettingList('caseStatuses');
 
   // تحميل القضايا عند تحميل المكون
   useEffect(() => {
@@ -200,20 +206,18 @@ export default function CasesView() {
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option value="all">كل الحالات</option>
-              <option value="pending">منظورة</option>
-              <option value="in-progress">قيد المعالجة</option>
-              <option value="completed">مكتملة</option>
-              <option value="postponed">مؤجلة</option>
+              {caseStatuses.map((status) => (
+                <option key={status} value={status}>{caseStatusLabel(status)}</option>
+              ))}
             </Select>
             <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
               <option value="all">كل الأنواع</option>
-              <option value="قضية تجارية">تجارية</option>
-              <option value="قضية عمالية">عمالية</option>
-              <option value="قضية مدنية">مدنية</option>
-              <option value="قضية جزائية">جزائية</option>
+              {caseTypes.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
             </Select>
           </div>
         </div>

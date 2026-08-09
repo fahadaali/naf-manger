@@ -92,6 +92,54 @@ export const api = {
   read: <T>(path: string) => call<T>(path),
 };
 
+/* ═══ الملفّات ═══
+ *
+ * الرفع `multipart/form-data` لا JSON، فلا يمرّ بـ`call` — تلك تضع
+ * `content-type: application/json` مع كل جسم، و`FormData` تحتاج أن يضع
+ * المتصفّح ترويستَها بنفسه ومعها `boundary`.
+ *
+ * والعائد مفتاحٌ في الحاوية لا بايتات: يُحفظ في الصفّ ويُعرض عبر
+ * `fileUrl` — فلا تُنقل الصورة مع كل قراءة صفّ.
+ */
+export interface UploadedFile {
+  key: string;
+  type: string;
+  size: number;
+}
+
+export async function uploadFile(file: File, kind: 'avatar' | 'attachment'): Promise<UploadedFile> {
+  const form = new FormData();
+  form.set('kind', kind);
+  form.set('file', file);
+
+  const response = await fetch('/api/files', {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: form,
+  });
+
+  if (response.status === 401) {
+    const body = await response.json().catch(() => null);
+    goToLogin(body?.login);
+    throw new ApiError('unauthorized', 401);
+  }
+
+  const body = (await response.json().catch(() => null)) as
+    | (ApiEnvelope<never> & UploadedFile)
+    | null;
+
+  if (!response.ok || !body?.ok) {
+    throw new ApiError(body?.error ?? 'upload_failed', response.status);
+  }
+
+  return { key: body.key, type: body.type, size: body.size };
+}
+
+/** عنوان قراءة ملفّ من مفتاحه. والمسار محروس، فلا يُقرأ بلا جلسة. */
+export function fileUrl(key: string | null | undefined): string | undefined {
+  return key ? `/api/files/${key}` : undefined;
+}
+
 /* التواريخ تصل نصّاً — لا يحمل JSON نوعَ `Date`. والشاشات تنتظر `Date`،
    فتُحوَّل هنا مرّةً واحدة لا في كل مكوّن. */
 export function toDate(value: unknown): Date {

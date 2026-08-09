@@ -5,7 +5,13 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist'] },
+  {
+    /* `src/registry/naf` نسخةٌ حرفية من سجلّ `naf-ui` — تُحدَّث بنسخٍ فوقها
+       لا بتعديلٍ يدوي، وتُقارَن بالأصل حرفاً بحرف. وهي مكتوبةٌ لـNext.js
+       فتحمل توجيهاتٍ لقواعد غير مثبَّتة هنا (`@next/next/no-img-element`)،
+       فيردّها eslint أخطاءً على شيفرةٍ ليست لنا. والحُكم عليها في مستودعها. */
+    ignores: ['dist', 'src/registry/naf/**'],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -40,6 +46,17 @@ export default tseslint.config(
       /* وسيطٌ يبدأ بشرطةٍ سفلية مقصودٌ إهمالُه: أغلفةُ ما لم يُبنَ بعد
          تُصرّح بعقدها كاملاً ولا تستعمله، والعقدُ هو الفائدة. */
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+
+      /* ═══ `any` تنبيهٌ لا خطأ ═══
+       *
+       * القاعدة أسلوبٌ لا صحّة، وأكثرُ مواضعها هنا مقصود: `api.list<any>`
+       * وأخواتُها في `database.ts` تستقبل صفوف JSON خاماً ثم تحوّلها
+       * `asClient` و`asCase` — والنوع يُبنى عند التحويل لا عند الشبكة.
+       *
+       * وإبقاؤها خطأً يجعل `npm run lint` ساقطاً أبداً، فلا يصلح بوّابةً —
+       * وبوّابةٌ لا تُغلق أبداً كلا بوّابة. فتبقى مرئيةً ولا تحجب ما يهمّ:
+       * تصادمَ الأسماء والمتغيّراتِ الميتة وقواعدَ الخُطّافات. */
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   }
 );

@@ -20,7 +20,6 @@ export default function EmailSettings() {
   
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [testEmail, setTestEmail] = useState('');
@@ -276,18 +275,11 @@ export default function EmailSettings() {
           </div>
         </div>
 
-        <Button onClick={testEmailConnection} disabled={isTesting || !settings?.host || !settings?.user || !settings?.password || !testEmail.trim()} variant="success">
-          {isTesting ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
-              جارٍ إرسال البريد التجريبي
-            </>
-          ) : (
-            <>
-              <CircleCheck className="h-4 w-4" />
-              إرسال بريد تجريبي
-            </>
-          )}
+        {/* لا حالةَ «جارٍ الإرسال»: الفحص معطَّل ويردّ «غير مربوط» في الحال،
+            فدوّارٌ لا يدور شيءٌ تحته يَعِد بعملٍ لا يقع. */}
+        <Button onClick={testEmailConnection} disabled={!settings?.host || !settings?.user || !settings?.password || !testEmail.trim()} variant="success">
+          <CircleCheck className="h-4 w-4" />
+          إرسال بريد تجريبي
         </Button>
       </div>
 

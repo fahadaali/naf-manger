@@ -61,6 +61,26 @@ export interface Case {
   basecampUrl?: string;
   createdDate: Date;
   updatedDate: Date;
+
+  /* ═══ المسوّق والماليّة ═══
+   *
+   * كانت هذه الحقول في نوعٍ ثانٍ اسمُه `EnhancedCase extends Case` لا
+   * يستعمله أحد — وهي في المخطَّط (`cases.marketer_id` وأخواتها) وفي
+   * خريطة الأعمدة في `worker/lib/resources.js`، وتقرؤها الشاشات وتكتبها.
+   *
+   * فكان كلُّ وصولٍ إليها يلتفّ بـ`(case_ as any)`: ثلاثةَ عشرَ التفافاً في
+   * `CaseModal` وستّةً في `MarketerModal`. والالتفاف يُسقط الفحص عن ماليّة
+   * القضايا كلِّها — وهي أكثر ما فيه أرقام.
+   *
+   * والنوعان صارا واحداً: `db.getCases()` يردّ هذا، والشاشات تقرؤه مفحوصاً. */
+  marketerId?: string;
+  marketerName?: string;
+  feeStructure?: FeeStructure;
+  paymentStatus?: PaymentStatus;
+  commissionStructure?: CommissionStructure;
+  commissionPayments?: CommissionPayment[];
+  totalCommissionPaid?: number;
+  remainingCommission?: number;
 }
 
 export interface Attachment {
@@ -71,17 +91,36 @@ export interface Attachment {
   uploadDate: Date;
 }
 
+/** تفضيلاتُ إشعارات العضو — مفاتيحُها عقدٌ مع `updateMe` في الخادم. */
+export interface NotificationPrefs {
+  newClients: boolean;
+  newCases: boolean;
+  caseUpdates: boolean;
+  newProspects: boolean;
+  followUps: boolean;
+  payments: boolean;
+  userLogin: boolean;
+  backups: boolean;
+  updates: boolean;
+  errors: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  password?: string; // For local storage demo purposes
   role: 'admin' | 'lawyer' | 'staff';
-  avatar?: string;
   permissions: UserPermissions;
   createdDate: Date;
   lastLogin?: Date;
-  profilePicture?: string; // Base64 encoded image or URL
+  isActive?: boolean;
+  /* `password` و`avatar` كانا هنا من عهد التخزين المحلي: لا كلمةَ مرورٍ
+     في هذه المنصة أصلاً — الهوية في المركز — ولا حقلَ `avatar` يقرؤه أحد. */
+  /** مفتاح الصورة في حاوية R2 — `avatar/<uuid>`. */
+  avatarKey?: string;
+  /** عنوانُ قراءة الصورة، مشتقٌّ من المفتاح. لا بايتات فيه. */
+  profilePicture?: string;
+  notificationPrefs?: NotificationPrefs;
 }
 
 export interface UserPermissions {
@@ -252,45 +291,10 @@ export interface CustomReport {
   };
 }
 
-export interface PredictiveModel {
-  id: string;
-  name: string;
-  type: 'case_outcome' | 'case_duration' | 'prospect_conversion' | 'client_satisfaction';
-  accuracy: number;
-  lastTrained: Date;
-  features: string[];
-  parameters: Record<string, any>;
-}
-
-export interface Prediction {
-  id: string;
-  modelId: string;
-  entityId: string;
-  entityType: 'case' | 'prospect' | 'client';
-  prediction: any;
-  confidence: number;
-  factors: Array<{
-    factor: string;
-    impact: number;
-    description: string;
-  }>;
-  createdDate: Date;
-  isActive: boolean;
-}
-
-export interface AnalyticsInsight {
-  id: string;
-  type: 'trend' | 'anomaly' | 'recommendation' | 'prediction';
-  title: string;
-  description: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  category: 'performance' | 'efficiency' | 'revenue' | 'client_satisfaction';
-  data: any;
-  actionable: boolean;
-  suggestedActions?: string[];
-  createdDate: Date;
-  isRead: boolean;
-}
+/* كان هنا `PredictiveModel` و`Prediction` و`AnalyticsInsight` — ثلاثةُ
+   أنواعٍ لنمذجةٍ تنبؤية لم تُبنَ: لا جدول لها في D1 ولا مسار، وأغلفتُها في
+   `database.ts` كانت تُرجع فراغاً ولا يناديها مكوّن. وبناؤها عملٌ جديد
+   يبدأ من قرارٍ لا من نوعٍ متروك. */
 
 // Marketers Management Types
 export interface Marketer {
@@ -344,18 +348,6 @@ export interface CommissionPayment {
   paymentDate: Date;
   notes?: string;
   createdBy: string;
-}
-
-// تحديث نوع Case لإضافة معلومات المسوّق والأتعاب
-export interface EnhancedCase extends Case {
-  marketerId?: string;
-  marketerName?: string;
-  feeStructure?: FeeStructure;
-  paymentStatus?: PaymentStatus;
-  commissionStructure?: CommissionStructure;
-  commissionPayments?: CommissionPayment[];
-  totalCommissionPaid?: number;
-  remainingCommission?: number;
 }
 
 export interface MarketerStats {

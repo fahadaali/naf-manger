@@ -7,7 +7,6 @@ import ClientsView from './components/Clients/ClientsView';
 import ProspectsView from './components/Prospects/ProspectsView';
 import CasesView from './components/Cases/CasesView';
 import Analytics from './components/Analytics/Analytics';
-import AIAssistant from './components/AIAssistant/AIAssistant';
 import Settings from './components/Settings/Settings';
 import ReportsView from './components/Reports/ReportsView';
 import SmartLawyer from './components/SmartLawyer/SmartLawyer';

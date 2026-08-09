@@ -10,6 +10,8 @@ import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
+import { useSettingList } from '../../lib/use-settings';
+import { marketerStatusLabel, relationshipTypeLabel } from '../../lib/labels';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -39,6 +41,10 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // من «تكوين النظام» لا من نصوصٍ في التصيير.
+  const relationshipTypes = useSettingList('relationshipTypes', formData.relationshipType);
+  const marketerStatuses = useSettingList('marketerStatuses', formData.status);
 
   /* ═══ الأداء والقضايا يُجلبان، ولا يُقرآن من وعد ═══
    *
@@ -83,7 +89,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
         ]);
         if (!alive) return;
         setStats(marketerStats);
-        setMarketerCases(allCases.filter((c) => (c as any).marketerId === marketerId));
+        setMarketerCases(allCases.filter((c) => c.marketerId === marketerId));
       } catch (error) {
         console.error('Error loading marketer details:', error);
         if (alive) setMarketerCases([]);
@@ -322,7 +328,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                           <TableCell className="text-foreground">{case_.clientName}</TableCell>
                           <TableCell>
                             {(() => {
-                          const s = (case_ as any).status;
+                          const s = case_.status;
                           const map = {
                             completed: { variant: 'success' as const, Icon: CircleCheck, label: 'مكتملة' },
                             'in-progress': { variant: 'primary' as const, Icon: LoaderCircle, label: 'قيد المعالجة' },
@@ -339,16 +345,16 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                         })()}
                           </TableCell>
                           <TableCell className="text-foreground">
-                            <Money value={(case_ as any).paymentStatus?.totalAmount ?? 0} />
+                            <Money value={case_.paymentStatus?.totalAmount ?? 0} />
                           </TableCell>
                           <TableCell className="text-success">
-                            <Money value={(case_ as any).paymentStatus?.collectedAmount ?? 0} />
+                            <Money value={case_.paymentStatus?.collectedAmount ?? 0} />
                           </TableCell>
                           <TableCell className="text-info">
-                            <Money value={(case_ as any).totalCommissionPaid ?? 0} />
+                            <Money value={case_.totalCommissionPaid ?? 0} />
                           </TableCell>
                           <TableCell className="text-warning">
-                            <Money value={(case_ as any).remainingCommission ?? 0} />
+                            <Money value={case_.remainingCommission ?? 0} />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -450,9 +456,9 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 value={formData.relationshipType}
                 onChange={(e) => handleInputChange('relationshipType', e.target.value)}
               >
-                <option value="employee">موظف</option>
-                <option value="freelancer">مستقل</option>
-                <option value="external_company">شركة خارجية</option>
+                {relationshipTypes.map((type) => (
+                  <option key={type} value={type}>{relationshipTypeLabel(type)}</option>
+                ))}
               </Select>
             </div>
 
@@ -464,9 +470,9 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
               >
-                <option value="active">نشط</option>
-                <option value="suspended">معطّل</option>
-                <option value="former">سابق</option>
+                {marketerStatuses.map((status) => (
+                  <option key={status} value={status}>{marketerStatusLabel(status)}</option>
+                ))}
               </Select>
             </div>
 

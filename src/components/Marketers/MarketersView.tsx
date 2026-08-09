@@ -5,6 +5,8 @@ import MarketerCard from './MarketerCard';
 import MarketerModal from './MarketerModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { useSettingList } from '../../lib/use-settings';
+import { marketerStatusLabel, relationshipTypeLabel } from '../../lib/labels';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { Button } from '@/registry/naf/ui/button';
 import { Select } from '@/registry/naf/ui/select';
@@ -21,6 +23,10 @@ export default function MarketersView() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const { hasPermission } = useAuth();
+
+  // المرشّحات من «تكوين النظام».
+  const marketerStatuses = useSettingList('marketerStatuses');
+  const relationshipTypes = useSettingList('relationshipTypes');
 
   useEffect(() => {
     loadMarketers();
@@ -143,18 +149,18 @@ export default function MarketersView() {
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option value="all">كل الحالات</option>
-              <option value="active">نشط</option>
-              <option value="suspended">معطّل</option>
-              <option value="former">سابق</option>
+              {marketerStatuses.map((status) => (
+                <option key={status} value={status}>{marketerStatusLabel(status)}</option>
+              ))}
             </Select>
             <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
               <option value="all">كل الأنواع</option>
-              <option value="employee">موظف</option>
-              <option value="freelancer">مستقل</option>
-              <option value="external_company">شركة خارجية</option>
+              {relationshipTypes.map((type) => (
+                <option key={type} value={type}>{relationshipTypeLabel(type)}</option>
+              ))}
             </Select>
           </div>
         </div>

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CircleCheck, Clock, LoaderCircle } from 'lucide-react';
-import { Client } from '../../types';
-import { mockCases } from '../../data/mockData';
+import { Case, Client } from '../../types';
+import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
+import { useSettingList } from '../../lib/use-settings';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -37,6 +38,35 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // من «تكوين النظام» لا من نصوصٍ في التصيير.
+  const clientTypes = useSettingList('clientTypes', formData.clientType);
+
+  /* ═══ قضايا العميل من القاعدة لا من ملفّ العيّنات ═══
+   *
+   * كان هنا `mockCases.filter(c => c.clientId === client.id)` — قضايا
+   * مفبركة في `src/data/mockData.ts` تُعرض قضايا هذا العميل، ومنها تُحسب
+   * «رابحة» و«خاسرة» و«منظورة» وتُعرض أرقاماً في شاشة تفاصيله.
+   *
+   * فإن لم يصادف معرّفُ عميلٍ حقيقيّ معرّفَ عيّنة ظهرت الشاشةُ فارغةً أبداً؛
+   * وإن صادفه عُرضت عليه قضايا ليست له. */
+  const [clientCases, setClientCases] = useState<Case[]>([]);
+  const clientId = client?.id;
+  const viewing = !isEditing && Boolean(clientId);
+
+  useEffect(() => {
+    if (!viewing || !clientId) return;
+    let alive = true;
+
+    db.getCasesByClient(clientId)
+      .then((rows) => { if (alive) setClientCases(rows); })
+      .catch((error) => {
+        console.error('تعذّر جلب قضايا العميل:', error);
+        if (alive) setClientCases([]);
+      });
+
+    return () => { alive = false; };
+  }, [viewing, clientId]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -109,8 +139,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
   };
 
   if (!isEditing && client) {
-    // View mode
-    const clientCases = mockCases.filter(c => c.clientId === client.id);
+    // View mode — `clientCases` من التأثير أعلاه.
     const wonCases = clientCases.filter(c => c.outcome === 'won').length;
     const lostCases = clientCases.filter(c => c.outcome === 'lost').length;
     const pendingCases = clientCases.filter(c => c.status === 'pending' || c.status === 'in-progress').length;
@@ -352,10 +381,9 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 value={formData.clientType}
                 onChange={(e) => handleInputChange('clientType', e.target.value)}
               >
-                <option value="individual">فرد</option>
-                <option value="company">شركة</option>
-                <option value="association">جمعية</option>
-                <option value="government">جهة حكومية</option>
+                {clientTypes.map((type) => (
+                  <option key={type} value={type}>{clientTypeLabel(type)}</option>
+                ))}
               </Select>
             </div>
 

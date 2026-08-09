@@ -5,9 +5,9 @@
 
 import { authenticate, handleBackchannelLogout, handleCallback, handleLogout } from 'naf-auth';
 
-import { platformConfig } from '../functions/_lib/config.js';
-import { readMember, serveFile, uploadFile } from '../functions/_lib/handlers.js';
-import { handleResource } from '../functions/_lib/crud.js';
+import { platformConfig } from './lib/config.js';
+import { readMember, serveFile, updateMe, uploadFile } from './lib/handlers.js';
+import { handleResource } from './lib/crud.js';
 import {
   convertProspect,
   exportAll,
@@ -17,7 +17,7 @@ import {
   readStats,
   updateMember,
   writeSettings,
-} from '../functions/_lib/queries.js';
+} from './lib/queries.js';
 
 const FILES_PREFIX = '/api/files/';
 
@@ -64,8 +64,12 @@ export default {
 
     const user = result.user;
 
-    if (url.pathname === '/api/me' && request.method === 'GET') {
-      return readMember(env, user);
+    if (url.pathname === '/api/me') {
+      if (request.method === 'GET') return readMember(env, user);
+      /* والكتابة على النفس لا تحتاج تصريحاً: العضو يملك صورتَه وتفضيلاتِ
+         إشعاراته. وما لا يملكه — دورَه وحالةَ تفعيله — لا يقبله المعالج
+         أصلاً، ومسارُه `‎/api/members/:id‎` وهو محروس. */
+      if (request.method === 'PATCH') return updateMe(request, env, user);
     }
     if (url.pathname === '/api/files' && request.method === 'POST') {
       return uploadFile(request, env, user);

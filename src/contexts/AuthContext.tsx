@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthState, LoginCredentials } from '../types';
-import { goToLogin } from '../data/api';
+import { User, AuthState, LoginCredentials, NotificationPrefs } from '../types';
+import { ApiError, fileUrl, goToLogin } from '../data/api';
 
 /* ═══ الدخول صار مركزياً ═══
  *
@@ -19,8 +19,10 @@ interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
   hasPermission: (resource: string, action: string) => boolean;
-  updateUser: (userData: Partial<User>) => void;
-  migrateData: () => Promise<void>;
+  /** يحفظ في `‎/api/me‎` ثم يُحدِّث الحالة بما ردّه الخادم. يرمي إن سقط. */
+  updateUser: (patch: { avatarKey?: string | null; notificationPrefs?: NotificationPrefs }) => Promise<void>;
+  /** عنوان المركز — موضعُ الهوية وكلمة المرور والمصادقة الثنائية. */
+  center: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +30,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 /** ما يعيده `‎/api/me` — أوقاتُه ثوانٍ لا مللي ثانية، كأعمدة جدول الأعضاء. */
 interface MeResponse {
   ok: boolean;
+  /** عنوان المركز. الهويةُ وكلمةُ المرور والمصادقةُ الثنائية تعيش هناك. */
+  center: string | null;
   user: {
     id: string;
     role: User['role'];
@@ -36,6 +40,8 @@ interface MeResponse {
     permissions: User['permissions'];
     createdAt: number | null;
     lastSeenAt: number | null;
+    avatarKey: string | null;
+    notificationPrefs: NotificationPrefs;
   };
 }
 
@@ -48,6 +54,11 @@ function toUser(payload: MeResponse['user']): User {
     permissions: payload.permissions,
     createdDate: payload.createdAt ? new Date(payload.createdAt * 1000) : new Date(),
     lastLogin: payload.lastSeenAt ? new Date(payload.lastSeenAt * 1000) : undefined,
+    avatarKey: payload.avatarKey ?? undefined,
+    /* الصورة تُعرض من مسارها لا من عمودها: العمود مفتاحٌ في الحاوية،
+       والبايتات لا تمرّ بالصفّ. */
+    profilePicture: fileUrl(payload.avatarKey),
+    notificationPrefs: payload.notificationPrefs,
   };
 }
 
@@ -57,33 +68,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: null,
     loading: true
   });
+  const [center, setCenter] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthState();
   }, []);
 
+  /* القراءة والكتابة تمرّان بهذا وحده: `‎/api/me‎` يردّ الشكل نفسه في
+     الحالتين — `{ ok, center, user }` لا مغلَّف `data` — فيُقرأ في موضعٍ
+     واحد ولا ينحرف أحدُهما عن الآخر.
+
+     ولا يمرّ بـ`api.call`: تلك تفكّ `body.data` وهذا المسار لا يغلّف. */
+  const requestMe = async (init?: RequestInit): Promise<MeResponse | null> => {
+    const response = await fetch('/api/me', { credentials: 'same-origin', ...init });
+
+    /* ٤٠١ ليست عطلاً: الرمز يعيش خمس عشرة دقيقة، فلوحةٌ مفتوحة أطول من
+       ذلك تبلغها في كل مرة. والردّ يحمل عنوان الباب، فنمضي إليه بأنفسنا —
+       `fetch` لا يتبع تحويلةً إلى أصل آخر بلا `CORS`، فلو انتظرنا تحويلةً
+       لسقط الطلب بخطأ شبكة وبقيت اللوحة مكانها وقد أُغلقت جلستها تحتها. */
+    if (response.status === 401) {
+      const body = await response.json().catch(() => null);
+      goToLogin(body?.login);
+      return null;
+    }
+
+    const body = (await response.json().catch(() => null)) as MeResponse | null;
+    if (!response.ok || !body?.ok) {
+      throw new ApiError((body as { error?: string } | null)?.error ?? 'me_failed', response.status);
+    }
+    return body;
+  };
+
+  const apply = (body: MeResponse) => {
+    setCenter(body.center ?? null);
+    setAuthState({ isAuthenticated: true, user: toUser(body.user), loading: false });
+  };
+
   const checkAuthState = async () => {
     try {
-      const response = await fetch('/api/me', { credentials: 'same-origin' });
-
-      /* ٤٠١ ليست عطلاً: الرمز يعيش خمس عشرة دقيقة، فلوحةٌ مفتوحة أطول من
-         ذلك تبلغها في كل مرة. والردّ يحمل عنوان الباب، فنمضي إليه بأنفسنا —
-         `fetch` لا يتبع تحويلةً إلى أصل آخر بلا `CORS`، فلو انتظرنا تحويلةً
-         لسقط الطلب بخطأ شبكة وبقيت اللوحة مكانها وقد أُغلقت جلستها تحتها. */
-      if (response.status === 401) {
-        const body = await response.json().catch(() => null);
-        goToLogin(body?.login);
-        return;
-      }
-
-      if (!response.ok) throw new Error(`‎/api/me ردّ ${response.status}`);
-
-      const body: MeResponse = await response.json();
-      setAuthState({
-        isAuthenticated: true,
-        user: toUser(body.user),
-        loading: false
-      });
+      const body = await requestMe();
+      if (body) apply(body);
     } catch (error) {
       console.error('Error checking auth state:', error);
       setAuthState({
@@ -120,20 +144,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  /* ملفُّ العضو الشخصي لم ينتقل بعد.
-     الاسم والبريد يأتيان من المركز ويُكتبان في جدول الأعضاء عند كل دخول،
-     فتعديلُهما محلياً يُدهس في الدخول التالي — وموضعُ تغييرهما هو المركز.
-     والصورة الشخصية تخصّ هذه المنصة، ومكانها حاوية R2 لا عمودٌ في صفّ —
-     وذلك في دفعة طبقة البيانات. فتُحدَّث الحالة في الذاكرة ولا يُدّعى حفظ. */
-  const updateUser = async (userData: Partial<User>) => {
-    setAuthState(prev => ({
-      ...prev,
-      user: prev.user ? { ...prev.user, ...userData } : prev.user
-    }));
-  };
-
-  const migrateData = async () => {
-    throw new Error('نقل البيانات إلى D1 لم يبدأ بعد');
+  /* ═══ الحفظ يقع فعلاً، والحالةُ من ردّ الخادم ═══
+   *
+   * كانت هذه الدالّة تكتب في الذاكرة وحدها وتعود، والشاشة تقول «تم الحفظ» —
+   * فيُدهس ما «حُفظ» عند أول تحديثٍ للصفحة.
+   *
+   * والآن `PATCH /api/me`، وحقلان لا ثالث: مفتاحُ الصورة وتفضيلاتُ
+   * الإشعارات. أمّا الاسم والبريد فيأتيان من المركز ويُكتبان عند كل دخول،
+   * فقبولُهما هنا وعدٌ يُدهس في الدخول التالي — وموضعُ تغييرهما المركز.
+   *
+   * والحالةُ تُبنى مما ردّه الخادم لا مما أُرسل: لو ردّ الخادم غيرَ ما
+   * طُلب — لأنه نظّف قيمةً أو رفض مفتاحاً — لكانت الشاشة تعرض ما لم يُحفظ.
+   *
+   * ولا تُبلَع الأخطاء: من ضغط «حفظ» يجب أن يعرف. والرمي هنا يبلغ الشاشة. */
+  const updateUser = async (patch: {
+    avatarKey?: string | null;
+    notificationPrefs?: NotificationPrefs;
+  }) => {
+    const body = await requestMe({
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (body) apply(body);
   };
 
   const hasPermission = (resource: string, action: string): boolean => {
@@ -152,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       hasPermission,
       updateUser,
-      migrateData
+      center
     }}>
       {children}
     </AuthContext.Provider>

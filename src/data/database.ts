@@ -5,8 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CustomReport, Prediction, AnalyticsInsight, PredictiveModel } from '../types';
-import { Marketer, CommissionPayment, MarketerStats } from '../types';
+import { CustomReport, Marketer, CommissionPayment, MarketerStats } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
 /* ═══ التواريخ ═══
@@ -174,16 +173,6 @@ export class LocalDatabase {
     }
   }
 
-  /* الاسم والبريد يأتيان من المركز ويُكتبان عند كل دخول، فتعديلُهما محلياً
-     يُدهس في الدخول التالي. وموضعُ تغييرهما هو المركز. */
-  async updateCurrentUser(_updates: Partial<User>): Promise<User | null> {
-    throw new ApiError('managed_by_center', 409);
-  }
-
-  async createUser(_userData: Partial<User>): Promise<User | null> {
-    throw new ApiError('managed_by_center', 409);
-  }
-
   async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
     await api.patch(`/members/${encodeURIComponent(id)}`, updates);
     return (await this.getUser(id)) ?? null;
@@ -317,21 +306,6 @@ export class LocalDatabase {
     return Promise.resolve([]);
   }
 
-  getPredictions(): Prediction[] {
-    return [];
-  }
-
-  savePrediction(): void {}
-
-  getAnalyticsInsights(): AnalyticsInsight[] {
-    return [];
-  }
-
-  saveAnalyticsInsight(): void {}
-
-  getPredictiveModels(): PredictiveModel[] {
-    return [];
-  }
 }
 
 // إنشاء مثيل واحد من قاعدة البيانات

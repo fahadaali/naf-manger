@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "preview": "wrangler pages dev",
+    "preview": "wrangler dev",
     "migrate:local": "wrangler d1 migrations apply naf-manger --local",
     "migrate:remote": "wrangler d1 migrations apply naf-manger --remote"
   },

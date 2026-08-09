@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CircleCheck, CircleHelp, Gavel, Plus, ShieldCheck, Trash2, TriangleAlert, UserCog } from 'lucide-react';
+import { CircleCheck, CircleHelp, Gavel, ShieldCheck, Trash2, TriangleAlert, UserCog } from 'lucide-react';
 import { User, UserPermissions } from '../../types';
 import { db } from '../../data/database';
 import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
-import { Select } from '@/registry/naf/ui/select';
-import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { messageTone } from '../../lib/status-message';
@@ -15,14 +13,7 @@ import { Card } from '@/registry/naf/ui/card';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [newUserData, setNewUserData] = useState({
-    name: '',
-    email: '',
-    role: 'staff',
-    password: ''
-  });
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
@@ -81,83 +72,21 @@ export default function UserManagement() {
     }
   };
 
-  const handleCreateUser = async () => {
-    if (!newUserData.name || !newUserData.email || !newUserData.password) {
-      setSaveMessage('جميع الحقول مطلوبة');
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveMessage('');
-
-    try {
-      const userData: Omit<User, 'id'> = {
-        name: newUserData.name,
-        email: newUserData.email,
-        role: newUserData.role as User['role'],
-        createdDate: new Date(),
-        permissions: getDefaultPermissions(newUserData.role as User['role'])
-      };
-
-      await db.createUser(userData);
-      await loadUsers();
-      setShowCreateModal(false);
-      setNewUserData({ name: '', email: '', role: 'staff', password: '' });
-      setSaveMessage('تمت إضافة المستخدم');
-
-      setTimeout(() => setSaveMessage(''), 3000);
-    } catch (error) {
-      console.error('Error creating user:', error);
-      setSaveMessage('حدث خطأ أثناء إنشاء المستخدم');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const getDefaultPermissions = (role: User['role']): UserPermissions => {
-    switch (role) {
-      case 'admin':
-        return {
-          clients: { create: true, read: true, update: true, delete: true },
-          prospects: { create: true, read: true, update: true, delete: true, convert: true },
-          cases: { create: true, read: true, update: true, delete: true },
-          analytics: { read: true },
-          settings: { read: true, update: true },
-          users: { create: true, read: true, update: true, delete: true },
-          marketers: { create: true, read: true, update: true, delete: true }
-        };
-      case 'lawyer':
-        return {
-          clients: { create: true, read: true, update: true, delete: false },
-          prospects: { create: true, read: true, update: true, delete: false, convert: true },
-          cases: { create: true, read: true, update: true, delete: false },
-          analytics: { read: true },
-          settings: { read: false, update: false },
-          users: { create: false, read: false, update: false, delete: false },
-          marketers: { create: false, read: true, update: false, delete: false }
-        };
-      case 'staff':
-        return {
-          clients: { create: false, read: true, update: false, delete: false },
-          prospects: { create: true, read: true, update: true, delete: false, convert: false },
-          cases: { create: false, read: true, update: false, delete: false },
-          analytics: { read: false },
-          settings: { read: false, update: false },
-          users: { create: false, read: false, update: false, delete: false },
-          marketers: { create: false, read: false, update: false, delete: false }
-        };
-      default:
-        return {
-          clients: { create: false, read: false, update: false, delete: false },
-          prospects: { create: false, read: false, update: false, delete: false, convert: false },
-          cases: { create: false, read: false, update: false, delete: false },
-          analytics: { read: false },
-          settings: { read: false, update: false },
-          users: { create: false, read: false, update: false, delete: false },
-          marketers: { create: false, read: false, update: false, delete: false }
-        };
-    }
-  };
+  /* ═══ العضوية تبدأ من المركز لا من هنا ═══
+   *
+   * كان هنا `handleCreateUser` ينادي `db.createUser` — وهي ترمي
+   * `managed_by_center` دائماً — فكلُّ ضغطةٍ تنتهي بـ«حدث خطأ أثناء إنشاء
+   * المستخدم» بلا سببٍ ظاهر. ونموذجُه يطلب كلمةَ مرورٍ لنظامٍ لا كلمةَ
+   * مرورٍ محليةً فيه أصلاً.
+   *
+   * والسبب بنيويّ لا عابر: العضو صفٌّ في `members` مفتاحُه `sub` القادم من
+   * المركز، ويُنشأ بأول دخول. وصفٌّ يُدرَج هنا بلا هويةٍ هناك لا يستطيع
+   * صاحبُه الدخول — فالإنشاء المحلي لا يعطي أحداً وصولاً.
+   *
+   * وكان هنا كذلك `getDefaultPermissions` — نسخةٌ ثانية من جدول
+   * `worker/lib/roles.js`، وهو الحاكم في كل طلبٍ محروس. ومصدران لقرارٍ
+   * واحد انحرافٌ مؤجَّل، فسقطت النسخة مع مُستعمِلها الوحيد.
+   */
 
   const handleUpdatePermissions = async (user: User, newPermissions: UserPermissions) => {
     setIsSaving(true);
@@ -201,13 +130,17 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-foreground">إدارة المستخدمين</h3>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-5 w-5" />
-          إضافة مستخدم جديد
-        </Button>
-      </div>
+      <h3 className="text-lg font-semibold text-foreground">إدارة المستخدمين</h3>
+
+      {/* كان هنا زرُّ «إضافة مستخدم جديد» ونموذجُه — ومسارُه ينتهي دائماً
+          بخطأ. والعضوية تبدأ من المركز، وهذه الشاشة ترقّي وتوقف. */}
+      <Alert variant="info">
+        <CircleHelp aria-hidden="true" />
+        <span>
+          يُضاف العضو من المركز، ويظهر هنا بعد أول دخولٍ له بدور «إداري». ومن هذه
+          الشاشة تُغيَّر صلاحياتُه أو يُوقف وصولُه.
+        </span>
+      </Alert>
 
       {saveMessage && (() => {
         const tone = messageTone(saveMessage);
@@ -284,60 +217,6 @@ export default function UserManagement() {
           </TableBody>
         </Table>
       </Card>
-
-      {/* Create User Modal */}
-      {showCreateModal && (
-        <Dialog open onOpenChange={(next) => { if (!next) setShowCreateModal(false); }}>
-        <DialogContent className="max-w-md p-6 p-0">
-            <DialogTitle className="text-lg font-semibold mb-4">إضافة مستخدم جديد</DialogTitle>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">الاسم الكامل</label>
-                <Input
-                  type="text"
-                  value={newUserData.name}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">البريد الإلكتروني</label>
-                <Input
-                  type="email"
-                  value={newUserData.email}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">الدور</label>
-                <Select 
-                  value={newUserData.role}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, role: e.target.value }))}
-                >
-                  <option value="staff">إداري</option>
-                  <option value="lawyer">محامٍ</option>
-                  <option value="admin">مسؤول النظام</option>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">كلمة المرور المؤقتة</label>
-                <Input
-                  type="password"
-                  value={newUserData.password}
-                  onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button onClick={() => { setShowCreateModal(false); setNewUserData({ name: '', email: '', role: 'staff', password: '' }); }} variant="ghost">
-                إلغاء
-              </Button>
-              <Button onClick={handleCreateUser} disabled={isSaving}>
-                {isSaving ? 'جارٍ الإنشاء' : 'إنشاء المستخدم'}
-              </Button>
-            </div>
-          </DialogContent>
-      </Dialog>
-      )}
 
       {/* Edit Permissions Modal */}
       {editingUser && (

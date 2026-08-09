@@ -1,47 +1,72 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 /* ‎Settings‎ اسمُ هذه الشاشة نفسِها، ولا يجتمع اسمان في مجالٍ واحد: كان
    الاستيراد يُدهَس بتعريف الدالة أدناه، فتصير كلُّ ‎<Settings />‎ في هذا
    الملفّ نداءً للشاشة لا رسماً لأيقونة — تستدعي نفسَها بلا قرار توقّف،
    فتنمو شجرةُ التصيير حتى يعلق المتصفّح والجهاز معه.
    فالأيقونة تُستعار باسمٍ صريح، ويبقى الاسم الأصلي للشاشة وحدها. */
-import { Bell, Check, ChevronDown, CircleCheck, FileOutput, FileText, Globe, Import, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
+import { Bell, Check, ChevronDown, CircleCheck, ExternalLink, FileOutput, Globe, Import, Info, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
+import DataImport from './DataImport';
 import EmailSettings from './EmailSettings';
 import { useAuth } from '../../contexts/AuthContext';
 import GeneralSettings from './GeneralSettings';
 import DashboardDisplay from './DashboardDisplay';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
-import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { messageTone } from '../../lib/status-message';
 import { Alert } from '@/registry/naf/ui/alert';
+import { NotificationPrefs } from '../../types';
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'مسؤول النظام',
+  lawyer: 'محامٍ',
+  staff: 'إداري'
+};
+
+/* بنودُ الإشعارات — المفاتيح عقدٌ مع `NotificationPrefs` وبـ`updateMe` في
+   الخادم. وكانت هذه القوائم مكتوبةً في التصيير بصناديق `defaultChecked`
+   لا تُقرأ، وزرُّ حفظها بلا مُعالِج. */
+const EMAIL_NOTICES: { key: keyof NotificationPrefs; label: string; desc: string }[] = [
+  { key: 'newClients', label: 'العملاء الجدد', desc: 'إشعار عند إضافة عميل جديد' },
+  { key: 'newCases', label: 'القضايا الجديدة', desc: 'إشعار عند إضافة قضية جديدة' },
+  { key: 'caseUpdates', label: 'تحديث حالة القضايا', desc: 'إشعار عند تغيير حالة القضية' },
+  { key: 'newProspects', label: 'العملاء المحتملين', desc: 'إشعار عند إضافة عميل محتمل جديد' },
+  { key: 'followUps', label: 'مواعيد المتابعة', desc: 'تذكير بمواعيد متابعة العملاء المحتملين' },
+  { key: 'payments', label: 'المدفوعات', desc: 'إشعار عند استلام مدفوعات جديدة' }
+];
+
+const SYSTEM_NOTICES: { key: keyof NotificationPrefs; label: string; desc: string }[] = [
+  { key: 'userLogin', label: 'تسجيل دخول المستخدمين', desc: 'إشعار عند تسجيل دخول المستخدمين' },
+  { key: 'backups', label: 'النسخ الاحتياطية', desc: 'إشعار عند إنشاء النسخ الاحتياطية' },
+  { key: 'updates', label: 'تحديثات النظام', desc: 'إشعار عند توفر تحديثات جديدة' },
+  { key: 'errors', label: 'أخطاء النظام', desc: 'تنبيه عند حدوث أخطاء في النظام' }
+];
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
   const [expandedCategory, setExpandedCategory] = useState<string | null>('personal');
-  const { user, hasPermission, updateUser } = useAuth();
-  
-  // Profile form state
-  const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '+966501234567',
-    jobTitle: user?.role === 'admin' ? 'مسؤول النظام' : user?.role === 'lawyer' ? 'محامٍ' : 'إداري',
-    profilePicture: user?.profilePicture || ''
-  });
+  const { user, hasPermission, updateUser, center } = useAuth();
 
-  // Security form state
-  const [securityData, setSecurityData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+  /* الصورة وحدها حالةٌ محلّية هنا: الاسم والبريد والمسمّى تُقرأ من المركز
+     ولا تُحرَّر، فحملُها في نموذجٍ يوهم أنها تُحفظ. */
+  const [avatarKey, setAvatarKey] = useState<string | undefined>(user?.avatarKey);
+  const [prefs, setPrefs] = useState<NotificationPrefs | undefined>(user?.notificationPrefs);
+
+  /* الحالةُ تتبع العضو: أوّلُ تصييرٍ قد يسبق وصول `‎/api/me‎`، فتبدأ
+     القيمتان فارغتين ثم تصلان — وبلا هذا يبقى النموذج على فراغه. */
+  useEffect(() => {
+    setAvatarKey(user?.avatarKey);
+    setPrefs(user?.notificationPrefs);
+  }, [user?.avatarKey, user?.notificationPrefs]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+
+  /** عنوان حساب المركز — موضعُ الاسم والبريد وكلمة المرور والمصادقة الثنائية. */
+  const accountUrl = center ?? undefined;
 
   const tabCategories = [
     {
@@ -160,59 +185,64 @@ export default function Settings() {
     setActiveTab(tabId);
   };
 
-  const handleProfileSave = async () => {
+  /* ═══ الحفظ يقع، والرسالة تتبعه ═══
+   *
+   * كان هنا `await new Promise(r => setTimeout(r, 1000))` ثم «تم الحفظ» —
+   * انتظارٌ يُشبه العمل ولا يعمل. والآن `updateUser` تنادي `‎/api/me‎`
+   * وترمي إن سقطت، فالرسالة لا تُقال إلا بعد أن يردّ الخادم.
+   */
+  const save = async (
+    patch: { avatarKey?: string | null; notificationPrefs?: NotificationPrefs },
+    failure: string
+  ) => {
     setIsSaving(true);
     setSaveMessage('');
-    
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      await updateUser({
-        name: profileData.name,
-        email: profileData.email,
-        profilePicture: profileData.profilePicture || undefined
-      });
-      
+      await updateUser(patch);
       setSaveMessage('تم الحفظ');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
-      setSaveMessage('حدث خطأ أثناء حفظ التغييرات');
+      console.error(failure, error);
+      setSaveMessage(failure);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSecuritySave = async () => {
-    if (securityData.newPassword !== securityData.confirmPassword) {
-      setSaveMessage('كلمة المرور الجديدة وتأكيدها غير متطابقين');
-      return;
-    }
+  const handleProfileSave = () =>
+    save({ avatarKey: avatarKey ?? null }, 'حدث خطأ أثناء حفظ التغييرات');
 
-    if (securityData.newPassword.length < 8) {
-      setSaveMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveMessage('');
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setSaveMessage('تم تغيير كلمة المرور');
-      setSecurityData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-      
-      setTimeout(() => setSaveMessage(''), 3000);
-    } catch (error) {
-      setSaveMessage('حدث خطأ أثناء تغيير كلمة المرور');
-    } finally {
-      setIsSaving(false);
-    }
+  const handleNotificationsSave = () => {
+    if (!prefs) return;
+    return save({ notificationPrefs: prefs }, 'حدث خطأ أثناء حفظ الإشعارات');
   };
+
+  const togglePref = (key: keyof NotificationPrefs) =>
+    setPrefs(prev => (prev ? { ...prev, [key]: !prev[key] } : prev));
+
+  /* ═══ ما ليس في هذا المستودع لا يُدَّعى هنا ═══
+   *
+   * كانت شاشة الأمان تتحقّق من تطابق كلمتين وطولهما ثم تقول «تم تغيير
+   * كلمة المرور» — بلا نداءٍ لأي مسار. وكلمةُ المرور والمصادقةُ الثنائية
+   * والهويةُ نفسها تعيش في المركز `naf-id`؛ وحزمة `naf-auth` لا تُصدِّر
+   * لهما شيئاً، فلا سبيل لربطهما من هنا أصلاً.
+   *
+   * فالشاشة تقود إلى موضعهما بدل أن تَعِد بما لا تملك. وادّعاءُ تغييرٍ
+   * لم يقع أسوأ من غيابه: من قرأ «تم» يمضي واثقاً بكلمةٍ لم تتغيّر. */
+  const CenterLink = ({ children }: { children: React.ReactNode }) =>
+    accountUrl ? (
+      <a
+        href={accountUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-2 text-primary underline underline-offset-4 hover:text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+      >
+        {children}
+        <ExternalLink className="h-4 w-4" aria-hidden="true" />
+      </a>
+    ) : (
+      <span className="text-muted-foreground">{children}</span>
+    );
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -226,49 +256,47 @@ export default function Settings() {
             
             <div className="flex justify-center">
               <ProfilePictureUpload
-                currentPicture={profileData.profilePicture}
-                onPictureChange={(picture) => setProfileData(prev => ({ ...prev, profilePicture: picture || '' }))}
+                currentPicture={avatarKey}
+                onPictureChange={setAvatarKey}
                 size="xl"
               />
             </div>
-            
-            <div className="max-w-2xl mx-auto">
+
+            <div className="max-w-2xl mx-auto space-y-6">
+              {/* ما تملكه المنصة: الصورة وحدها، وهي أعلاه. */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">الاسم الكامل</label>
-                  <Input
-                    type="text"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                  />
+                  <Input type="text" value={user?.name ?? ''} readOnly className="bg-muted text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">البريد الإلكتروني</label>
-                  <Input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-foreground">رقم الجوال</label>
-                  <Input
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                  />
+                  <Input type="email" value={user?.email ?? ''} readOnly className="bg-muted text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">المسمى الوظيفي</label>
                   <Input
                     type="text"
-                    value={profileData.jobTitle}
-                    disabled className="bg-muted text-muted-foreground"
+                    value={ROLE_LABEL[user?.role ?? ''] ?? ''}
+                    readOnly className="bg-muted text-muted-foreground"
                   />
                 </div>
               </div>
+
+              {/* كان «الاسم» و«البريد» و«رقم الجوال» حقولاً تُحرَّر وتُحفظ ظاهرياً.
+                  والاسم والبريد يكتبهما المركز في صفّ العضو عند كل دخول، فتحريرُهما
+                  هنا يُدهس في الدخول التالي. ورقمُ الجوال لم يكن له عمودٌ أصلاً —
+                  كانت قيمتُه ثابتةً مكتوبةً في الشيفرة: ‎+966501234567‎. */}
+              <Alert variant="info">
+                <Info aria-hidden="true" />
+                <span>
+                  الاسم والبريد والمسمّى تأتي من حسابك في المركز وتُحدَّث عند كل دخول.
+                  لتغييرها انتقل إلى <CenterLink>حسابك في المركز</CenterLink>.
+                </span>
+              </Alert>
             </div>
-            
+
+
             {saveMessage && (() => {
               const tone = messageTone(saveMessage);
               const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
@@ -282,10 +310,10 @@ export default function Settings() {
 
             <div className="max-w-2xl mx-auto border-t border-border pt-6">
               <div className="flex justify-end gap-4">
-                <Button onClick={() => setProfileData({ name: user?.name || '', email: user?.email || '', phone: '+966501234567', jobTitle: user?.role === 'admin' ? 'مسؤول النظام' : user?.role === 'lawyer' ? 'محامٍ' : 'إداري', profilePicture: user?.profilePicture || '' })} variant="ghost" size="lg">
+                <Button onClick={() => setAvatarKey(user?.avatarKey)} variant="ghost" size="lg" disabled={isSaving}>
                   إلغاء
                 </Button>
-                <Button onClick={handleProfileSave} disabled={isSaving} size="lg">
+                <Button onClick={handleProfileSave} disabled={isSaving || avatarKey === user?.avatarKey} size="lg">
                   {isSaving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-card"></div>
@@ -319,63 +347,8 @@ export default function Settings() {
         return <DataExport />;
       
       case 'import':
-        return (
-          <div className="space-y-8">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-foreground mb-2">استيراد البيانات</h3>
-              <p className="text-muted-foreground">رفع ملفات Excel لاستيراد بيانات العملاء والقضايا</p>
-            </div>
-            
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Users className="h-8 w-8 text-primary-foreground" />
-                    </div>
-                    <h4 className="text-xl font-bold text-primary-strong mb-2">استيراد العملاء</h4>
-                    <p className="text-primary">رفع ملف Excel يحتوي على بيانات العملاء</p>
-                  </div>
-                  <div className="space-y-4">
-                    <Button className="w-full" size="lg">
-                      تنزيل نموذج Excel
-                    </Button>
-                    <Input
-                      type="file"
-                      accept=".xlsx,.xls" className="border-primary/30"
-                    />
-                    <Button className="w-full" variant="success" size="lg">
-                      رفع الملف
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="bg-success-soft rounded-2xl p-8 border border-success/30">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-success rounded-full flex items-center justify-center mx-auto mb-4">
-                      <FileText className="h-8 w-8 text-success-foreground" />
-                    </div>
-                    <h4 className="text-xl font-bold text-success-strong mb-2">استيراد القضايا</h4>
-                    <p className="text-success">رفع ملف Excel يحتوي على بيانات القضايا</p>
-                  </div>
-                  <div className="space-y-4">
-                    <Button className="w-full" variant="success" size="lg">
-                      تنزيل نموذج Excel
-                    </Button>
-                    <Input
-                      type="file"
-                      accept=".xlsx,.xls" className="border-success/30"
-                    />
-                    <Button className="w-full" size="lg">
-                      رفع الملف
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      
+        return <DataImport />;
+
       case 'security':
         return (
           <div className="space-y-8">
@@ -384,69 +357,35 @@ export default function Settings() {
               <p className="text-muted-foreground">إدارة كلمة المرور والمصادقة الثنائية</p>
             </div>
             
-            <div className="max-w-2xl mx-auto space-y-8">
-              <div className="bg-muted rounded-2xl p-8 border border-border">
-                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
+            {/* كانت هنا ثلاثةُ حقولِ كلمةِ مرور وزرٌّ ينتظر ثانيةً ثم يقول
+                «تم تغيير كلمة المرور» بلا نداءٍ لأي مسار، وزرُّ «تفعيل»
+                للمصادقة الثنائية بلا مُعالِج أصلاً.
+
+                والاثنان يخصّان الهوية، والهويةُ في المركز `naf-id` لا في هذه
+                المنصة: لا كلمةَ مرورٍ في مخطَّطها ولا مسارَ لها، و`naf-auth`
+                لا تُصدِّر لهما شيئاً. فلا سبيل لربطهما من هنا، والشاشة تقود
+                إلى موضعهما. */}
+            <div className="max-w-2xl mx-auto space-y-6">
+              <div className="bg-muted rounded-2xl p-8 border border-border space-y-4">
+                <h4 className="text-lg font-bold text-foreground flex items-center gap-3">
                   <ShieldCheck className="h-6 w-6 text-primary" />
-                  تغيير كلمة المرور
+                  كلمة المرور والمصادقة الثنائية
                 </h4>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">كلمة المرور الحالية</label>
-                    <Input
-                      type="password"
-                      value={securityData.currentPassword}
-                      onChange={(e) => setSecurityData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                      placeholder="أدخل كلمة المرور الحالية"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">كلمة المرور الجديدة</label>
-                    <Input
-                      type="password"
-                      value={securityData.newPassword}
-                      onChange={(e) => setSecurityData(prev => ({ ...prev, newPassword: e.target.value }))}
-                      placeholder="أدخل كلمة المرور الجديدة"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">تأكيد كلمة المرور الجديدة</label>
-                    <Input
-                      type="password"
-                      value={securityData.confirmPassword}
-                      onChange={(e) => setSecurityData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      placeholder="أعد إدخال كلمة المرور الجديدة"
-                    />
-                  </div>
-                  <Button onClick={handleSecuritySave} disabled={isSaving || !securityData.currentPassword || !securityData.newPassword} className="w-full" size="lg">
-                    {isSaving ? 'جارٍ الحفظ' : 'تغيير كلمة المرور'}
-                  </Button>
-                </div>
+                <p className="text-muted-foreground">
+                  دخولك إلى ناف مركزيّ: كلمةُ مرورك والمصادقةُ الثنائية تخصّان حسابك في
+                  المركز، لا هذه المنصة وحدها. وتغييرُهما هناك يسري على منصات ناف جميعاً.
+                </p>
+                <CenterLink>إدارة الأمان في المركز</CenterLink>
               </div>
-              
+
               <div className="bg-info-soft rounded-2xl p-8 border border-info/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-bold text-foreground mb-2">المصادقة الثنائية</h4>
-                    <p className="text-muted-foreground">تفعيل المصادقة الثنائية لحماية إضافية لحسابك</p>
-                  </div>
-                  <Button className="bg-info hover:bg-info/90 text-info-foreground" size="lg">
-                    تفعيل
-                  </Button>
-                </div>
+                <h4 className="text-lg font-bold text-foreground mb-2">جلستك في هذه المنصة</h4>
+                <p className="text-muted-foreground">
+                  تُغلَق بالخروج من الشريط الجانبي. وإن خرجتَ من المركز أُنهيت جلساتُك في
+                  منصات ناف كلِّها.
+                </p>
               </div>
             </div>
-            
-            {saveMessage && (() => {
-              const tone = messageTone(saveMessage);
-              const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
-              return (
-                <Alert variant={tone} className="max-w-2xl mx-auto">
-                  <Icon aria-hidden="true" />
-                  <span>{saveMessage}</span>
-                </Alert>
-              );
-            })()}
           </div>
         );
       
@@ -457,117 +396,69 @@ export default function Settings() {
               <h3 className="text-2xl font-bold text-foreground mb-2">إعدادات الإشعارات</h3>
               <p className="text-muted-foreground">تخصيص تفضيلات الإشعارات والتنبيهات</p>
             </div>
-            
+
+            {/* كانت الصناديق `defaultChecked` غير مضبوطة — لا حالة تحملها ولا شيء
+                يقرؤها — وزرُّ الحفظ بلا `onClick`. والآن كلٌّ منها مضبوط بتفضيلِ
+                العضو من `‎/api/me‎`، والحفظ يكتب في صفّه. */}
             <div className="max-w-4xl mx-auto space-y-8">
-              {/* Email Notifications */}
-              <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
-                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <Mail className="h-6 w-6 text-primary" />
-                  إشعارات البريد الإلكتروني
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { key: 'newClients', label: 'العملاء الجدد', desc: 'إشعار عند إضافة عميل جديد' },
-                    { key: 'newCases', label: 'القضايا الجديدة', desc: 'إشعار عند إضافة قضية جديدة' },
-                    { key: 'caseUpdates', label: 'تحديث حالة القضايا', desc: 'إشعار عند تغيير حالة القضية' },
-                    { key: 'newProspects', label: 'العملاء المحتملين', desc: 'إشعار عند إضافة عميل محتمل جديد' },
-                    { key: 'followUps', label: 'مواعيد المتابعة', desc: 'تذكير بمواعيد متابعة العملاء المحتملين' },
-                    { key: 'payments', label: 'المدفوعات', desc: 'إشعار عند استلام مدفوعات جديدة' }
-                  ].map((item) => (
-                    <div key={item.key} className="flex items-center justify-between p-4 bg-muted rounded-xl">
-                      <div>
-                        <label className="text-sm font-semibold text-foreground">{item.label}</label>
-                        <p className="text-xs text-muted-foreground">{item.desc}</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        defaultChecked
-                        className="w-5 h-5 rounded border-border text-primary focus-visible:ring-ring"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* System Notifications */}
-              <div className="bg-card rounded-2xl p-8 border border-border shadow-sm">
-                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <SettingsIcon className="h-6 w-6 text-info" />
-                  إشعارات النظام
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    { key: 'userLogin', label: 'تسجيل دخول المستخدمين', desc: 'إشعار عند تسجيل دخول المستخدمين' },
-                    { key: 'backups', label: 'النسخ الاحتياطية', desc: 'إشعار عند إنشاء النسخ الاحتياطية' },
-                    { key: 'updates', label: 'تحديثات النظام', desc: 'إشعار عند توفر تحديثات جديدة' },
-                    { key: 'errors', label: 'أخطاء النظام', desc: 'تنبيه عند حدوث أخطاء في النظام' }
-                  ].map((item) => (
-                    <div key={item.key} className="flex items-center justify-between p-4 bg-muted rounded-xl">
-                      <div>
-                        <label className="text-sm font-semibold text-foreground">{item.label}</label>
-                        <p className="text-xs text-muted-foreground">{item.desc}</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        defaultChecked={item.key !== 'userLogin'}
-                        className="w-5 h-5 rounded border-border text-info focus-visible:ring-ring"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Notification Schedule */}
-              <div className="bg-primary-soft rounded-2xl p-8 border border-primary/30">
-                <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
-                  <Bell className="h-6 w-6 text-primary-strong" />
-                  جدولة التقارير
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-foreground">تقرير يومي</label>
-                    <Select>
-                      <option value="disabled">معطّل</option>
-                      <option value="8am" selected>8:00 صباحاً</option>
-                      <option value="9am">9:00 صباحاً</option>
-                      <option value="10am">10:00 صباحاً</option>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-foreground">تقرير أسبوعي</label>
-                    <Select>
-                      <option value="disabled">معطّل</option>
-                      <option value="sunday" selected>الأحد</option>
-                      <option value="monday">الاثنين</option>
-                      <option value="saturday">السبت</option>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-foreground">تقرير شهري</label>
-                    <Select>
-                      <option value="disabled">معطّل</option>
-                      <option value="1st" selected>أول الشهر</option>
-                      <option value="15th">منتصف الشهر</option>
-                      <option value="last">آخر الشهر</option>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-foreground">طريقة الإرسال</label>
-                    <Select>
-                      <option value="email" selected>البريد الإلكتروني</option>
-                      <option value="sms">رسائل نصية</option>
-                      <option value="both">كلاهما</option>
-                    </Select>
+              <Alert variant="warning">
+                <TriangleAlert aria-hidden="true" />
+                <span>
+                  تُحفظ تفضيلاتك الآن، ولا تُرسَل رسائل بعد: إرسالُ البريد غير مربوط —
+                  انظر تبويب «البريد الإلكتروني».
+                </span>
+              </Alert>
+
+              {([
+                { title: 'إشعارات البريد الإلكتروني', Icon: Mail, tone: 'text-primary', items: EMAIL_NOTICES },
+                { title: 'إشعارات النظام', Icon: SettingsIcon, tone: 'text-info', items: SYSTEM_NOTICES }
+              ] as const).map(({ title, Icon, tone, items }) => (
+                <div key={title} className="bg-card rounded-2xl p-8 border border-border shadow-sm">
+                  <h4 className="text-lg font-bold text-foreground mb-6 flex items-center gap-3">
+                    <Icon className={`h-6 w-6 ${tone}`} />
+                    {title}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {items.map((item) => (
+                      <label
+                        key={item.key}
+                        className="flex items-center justify-between gap-4 p-4 bg-muted rounded-xl cursor-pointer"
+                      >
+                        <span>
+                          <span className="block text-sm font-semibold text-foreground">{item.label}</span>
+                          <span className="block text-xs text-muted-foreground">{item.desc}</span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={prefs?.[item.key] ?? false}
+                          onChange={() => togglePref(item.key)}
+                          disabled={!prefs}
+                          className="w-5 h-5 flex-none rounded border-border text-primary focus-visible:ring-ring"
+                        />
+                      </label>
+                    ))}
                   </div>
                 </div>
-              </div>
-              
+              ))}
+
+              {/* كانت هنا «جدولة التقارير»: أربعُ قوائم بـ`selected` غير مضبوطة لا
+                  تُقرأ ولا تُحفظ، لجدولةٍ لا مُجدوِل لها. وموضعُها حين تُبنى هو
+                  `Cron Triggers` في `wrangler.toml` لا حالةٌ في متصفّح. */}
+
+              {saveMessage && (() => {
+                const tone = messageTone(saveMessage);
+                const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+                return (
+                  <Alert variant={tone}>
+                    <Icon aria-hidden="true" />
+                    <span>{saveMessage}</span>
+                  </Alert>
+                );
+              })()}
+
               <div className="flex justify-center">
-                <Button  size="lg">
-                  حفظ إعدادات الإشعارات
+                <Button onClick={handleNotificationsSave} disabled={isSaving || !prefs} size="lg">
+                  {isSaving ? 'جارٍ الحفظ' : 'حفظ إعدادات الإشعارات'}
                 </Button>
               </div>
             </div>

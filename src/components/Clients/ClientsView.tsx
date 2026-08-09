@@ -6,6 +6,8 @@ import ClientModal from './ClientModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { useSettingList } from '../../lib/use-settings';
+import { clientStatusLabel, clientTypeLabel } from '../../lib/labels';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
@@ -24,6 +26,10 @@ export default function ClientsView() {
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const { hasPermission } = useAuth();
+
+  // المرشّحات من «تكوين النظام».
+  const clientTypes = useSettingList('clientTypes');
+  const clientStatuses = useSettingList('clientStatuses');
 
   // تحميل العملاء عند تحميل المكون
   useEffect(() => {
@@ -154,18 +160,18 @@ export default function ClientsView() {
               onChange={(e) => setFilterType(e.target.value)}
             >
               <option value="all">كل الأنواع</option>
-              <option value="individual">أفراد</option>
-              <option value="company">شركات</option>
-              <option value="association">جمعيات</option>
-              <option value="government">جهات حكومية</option>
+              {clientTypes.map((type) => (
+                <option key={type} value={type}>{clientTypeLabel(type)}</option>
+              ))}
             </Select>
             <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option value="all">كل الحالات</option>
-              <option value="current">حالي</option>
-              <option value="former">سابق</option>
+              {clientStatuses.map((status) => (
+                <option key={status} value={status}>{clientStatusLabel(status)}</option>
+              ))}
             </Select>
           </div>
         </div>

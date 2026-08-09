@@ -5,7 +5,7 @@ import { Prospect } from '../../types';
    ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
    يمرّ بـ formatDate من naf-format. */
 import { format } from 'date-fns';
-import { mockSystemSettings } from '../../data/mockData';
+import { useSettingList } from '../../lib/use-settings';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { Money } from '@/registry/naf/currency/money';
@@ -46,6 +46,12 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /* من «تكوين النظام» لا من `mockSystemSettings` — ملفّ العيّنات. فحالةٌ
+     أو مصدرٌ يُضاف من الإعدادات يظهر هنا، وهو الموضع الوحيد لاستعماله. */
+  const clientTypes = useSettingList('clientTypes', formData.clientType);
+  const prospectStatuses = useSettingList('prospectStatuses', formData.prospectStatus);
+  const prospectSources = useSettingList('prospectSources', formData.source);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -337,10 +343,9 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 value={formData.clientType}
                 onChange={(e) => handleInputChange('clientType', e.target.value)}
               >
-                <option value="individual">فرد</option>
-                <option value="company">شركة</option>
-                <option value="association">جمعية</option>
-                <option value="government">جهة حكومية</option>
+                {clientTypes.map((type) => (
+                  <option key={type} value={type}>{clientTypeLabel(type)}</option>
+                ))}
               </Select>
             </div>
 
@@ -352,7 +357,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 value={formData.prospectStatus}
                 onChange={(e) => handleInputChange('prospectStatus', e.target.value)}
               >
-                {mockSystemSettings.prospectStatuses.map(status => (
+                {prospectStatuses.map((status) => (
                   <option key={status} value={status}>{status}</option>
                 ))}
               </Select>
@@ -367,7 +372,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 onChange={(e) => handleInputChange('source', e.target.value)}
               >
                 <option value="">اختر المصدر</option>
-                {mockSystemSettings.prospectSources.map(source => (
+                {prospectSources.map((source) => (
                   <option key={source} value={source}>{source}</option>
                 ))}
               </Select>

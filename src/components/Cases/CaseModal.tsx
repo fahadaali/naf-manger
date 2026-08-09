@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { CircleCheck, CircleX, ExternalLink, Handshake } from 'lucide-react';
 import { Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import { db } from '../../data/database';
+import { useSettingList } from '../../lib/use-settings';
+import { caseStatusLabel } from '../../lib/labels';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
@@ -30,25 +32,30 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     basecampUrl: existingCase?.basecampUrl || '',
     outcome: existingCase?.outcome || '',
     // Marketer fields
-    marketerId: (existingCase as any)?.marketerId || '',
+    marketerId: existingCase?.marketerId || '',
     // Fee structure fields
-    feeType: (existingCase as any)?.feeStructure?.type || 'advance_only',
-    advanceFeeType: (existingCase as any)?.feeStructure?.advance?.feeType || 'fixed_amount',
-    advanceFeeValue: (existingCase as any)?.feeStructure?.advance?.value?.toString() || '',
-    advanceBaseAmount: (existingCase as any)?.feeStructure?.advance?.baseAmount?.toString() || '',
-    deferredFeeType: (existingCase as any)?.feeStructure?.deferred?.feeType || 'fixed_amount',
-    deferredFeeValue: (existingCase as any)?.feeStructure?.deferred?.value?.toString() || '',
-    deferredBaseAmount: (existingCase as any)?.feeStructure?.deferred?.baseAmount?.toString() || '',
+    feeType: existingCase?.feeStructure?.type || 'advance_only',
+    advanceFeeType: existingCase?.feeStructure?.advance?.feeType || 'fixed_amount',
+    advanceFeeValue: existingCase?.feeStructure?.advance?.value?.toString() || '',
+    advanceBaseAmount: existingCase?.feeStructure?.advance?.baseAmount?.toString() || '',
+    deferredFeeType: existingCase?.feeStructure?.deferred?.feeType || 'fixed_amount',
+    deferredFeeValue: existingCase?.feeStructure?.deferred?.value?.toString() || '',
+    deferredBaseAmount: existingCase?.feeStructure?.deferred?.baseAmount?.toString() || '',
     // Payment status fields
-    totalAmount: (existingCase as any)?.paymentStatus?.totalAmount?.toString() || '',
-    collectedAmount: (existingCase as any)?.paymentStatus?.collectedAmount?.toString() || '',
-    collectionStatus: (existingCase as any)?.paymentStatus?.collectionStatus || 'unpaid',
+    totalAmount: existingCase?.paymentStatus?.totalAmount?.toString() || '',
+    collectedAmount: existingCase?.paymentStatus?.collectedAmount?.toString() || '',
+    collectionStatus: existingCase?.paymentStatus?.collectionStatus || 'unpaid',
     // Commission fields
-    commissionType: (existingCase as any)?.commissionStructure?.type || 'percentage',
-    commissionValue: (existingCase as any)?.commissionStructure?.value?.toString() || ''
+    commissionType: existingCase?.commissionStructure?.type || 'percentage',
+    commissionValue: existingCase?.commissionStructure?.value?.toString() || ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /* المنسدلات من «تكوين النظام» لا من نصوصٍ في التصيير. والقيمةُ المحفوظة
+     تُمرَّر فتبقى ظاهرةً حتى لو حُذفت من التكوين بعد حفظها. */
+  const caseTypes = useSettingList('caseTypes', formData.caseType);
+  const caseStatuses = useSettingList('caseStatuses', formData.status);
 
   useEffect(() => {
     // تحميل قائمة العملاء
@@ -311,10 +318,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 value={formData.caseType}
                 onChange={(e) => handleInputChange('caseType', e.target.value)}
               >
-                <option value="قضية تجارية">قضية تجارية</option>
-                <option value="قضية عمالية">قضية عمالية</option>
-                <option value="قضية مدنية">قضية مدنية</option>
-                <option value="قضية جزائية">قضية جزائية</option>
+                {caseTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
               </Select>
             </div>
 
@@ -346,10 +352,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
               >
-                <option value="pending">منظورة</option>
-                <option value="in-progress">قيد المعالجة</option>
-                <option value="completed">مكتملة</option>
-                <option value="postponed">مؤجلة</option>
+                {caseStatuses.map((status) => (
+                  <option key={status} value={status}>{caseStatusLabel(status)}</option>
+                ))}
               </Select>
             </div>
 

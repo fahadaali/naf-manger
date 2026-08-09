@@ -1,10 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { Image, User } from 'lucide-react';
 import { Input } from '@/registry/naf/ui/input';
+import { fileUrl, uploadFile } from '../../data/api';
+
+/* الحدّان مرآةُ `AVATAR` في `worker/lib/files.js` — والخادم هو الحاكم.
+   وSVG مستثنًى هناك قصداً: يحمل نصّاً يُنفَّذ حين يُفتح على أصلنا. */
+const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const MAX_BYTES = 2 * 1024 * 1024;
 
 interface ProfilePictureUploadProps {
+  /** مفتاح الصورة في الحاوية — لا بايتات ولا data URL. */
   currentPicture?: string;
-  onPictureChange: (picture: string | undefined) => void;
+  onPictureChange: (pictureKey: string | undefined) => void;
   /* ‎xl‎ مقاسٌ مطلوب: شاشة الملفّ الشخصي تمرّره، وكان خارج الخريطة فيسقط
      صنفُ المقاس كلُّه ويظهر الإطار بلا حجم. */
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -35,41 +42,50 @@ export default function ProfilePictureUpload({
     xl: 'h-16 w-16'
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  /* ═══ الصورة تُرفع إلى الحاوية، ولا تُقرأ نصّاً ═══
+   *
+   * كان هنا `readAsDataURL`: يقرأ الملفّ سلسلةَ base64 ويسلّمها للشاشة،
+   * فتُحشر في عمودٍ في القاعدة — حتى ٢٫٧ ميغابايت نصّاً للصورة الواحدة،
+   * تُنقل مع كل قراءةِ صفّ ومع كل قائمة.
+   *
+   * والحاوية R2 كانت مربوطةً في `wrangler.toml` ومسارُها `‎/api/files‎`
+   * مبنيّاً في الـWorker وصفرُ نداءات إليه. فالآن يُرفع الملفّ إليها
+   * ويعود مفتاحُه، والمفتاحُ وحده هو ما يُحفظ.
+   *
+   * والحدّان — النوع والحجم — يفحصهما الخادم كذلك في `files.js`، وهذا
+   * الفحص هنا ليقول للرافع قبل أن ينتظر الرفع. لا ليقوم مقامه. */
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setError('');
-    setIsUploading(true);
 
-    // التحقق من نوع الملف
-    if (!file.type.startsWith('image/')) {
-      setError('يرجى اختيار ملف صورة صحيح');
-      setIsUploading(false);
+    if (!ACCEPTED.includes(file.type)) {
+      setError('الصيغ المقبولة: PNG أو JPEG أو WebP أو GIF');
       return;
     }
 
-    // التحقق من حجم الملف (أقل من 2MB)
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > MAX_BYTES) {
       setError('حجم الصورة يجب أن يكون أقل من 2 ميجابايت');
-      setIsUploading(false);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      onPictureChange(result);
+    setIsUploading(true);
+    try {
+      const { key } = await uploadFile(file, 'avatar');
+      onPictureChange(key);
+    } catch (uploadError) {
+      console.error('تعذّر رفع الصورة:', uploadError);
+      setError('تعذّر رفع الصورة. أعد المحاولة');
+    } finally {
       setIsUploading(false);
-    };
-    reader.onerror = () => {
-      setError('حدث خطأ أثناء قراءة الملف');
-      setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
+      // يُفرَّغ الحقل ليقبل الملفّ نفسه ثانيةً لو أُعيدت المحاولة.
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleRemovePicture = () => {
+    setError('');
     onPictureChange(undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -89,7 +105,7 @@ export default function ProfilePictureUpload({
         >
           {currentPicture ? (
             <img
-              src={currentPicture}
+              src={fileUrl(currentPicture)}
               alt="الصورة الشخصية"
               className="w-full h-full object-cover"
             />
@@ -117,7 +133,7 @@ export default function ProfilePictureUpload({
       <Input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={ACCEPTED.join(',')}
         onChange={handleFileSelect} className="hidden"
       />
 
@@ -149,7 +165,7 @@ export default function ProfilePictureUpload({
 
       {/* Help text */}
       <p className="text-xs text-muted-foreground text-center">
-        PNG, JPG أو GIF (أقل من 2MB)
+        PNG أو JPEG أو WebP أو GIF (أقل من 2 ميجابايت)
       </p>
     </div>
   );

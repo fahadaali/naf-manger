@@ -6,6 +6,8 @@ import ProspectModal from './ProspectModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { useSettingList } from '../../lib/use-settings';
+import { clientTypeLabel } from '../../lib/labels';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
@@ -149,7 +151,12 @@ export default function ProspectsView() {
     console.log('Meeting created:', meetingData);
     // يمكن إضافة منطق إضافي هنا مثل تحديث قاعدة البيانات
   };
-  const uniqueStatuses = [...new Set(prospects.map(p => p.prospectStatus))];
+  /* المسجَّلة في التكوين ومعها ما وقع في الصفوف فعلاً: حالةٌ أُضيفت ولم
+     تُستعمل بعد تظهر للترشيح، وحالةٌ حُذفت من التكوين وبقيت في صفوف قديمة
+     لا تختفي من المرشّح فتصير صفوفُها غير قابلة للوصول. */
+  const clientTypes = useSettingList('clientTypes');
+  const configured = useSettingList('prospectStatuses');
+  const statuses = [...new Set([...configured, ...prospects.map((p) => p.prospectStatus)])];
   const [totalClients, setTotalClients] = useState(0);
   
   useEffect(() => {
@@ -202,17 +209,16 @@ export default function ProspectsView() {
               onChange={(e) => setFilterType(e.target.value)}
             >
               <option value="all">كل الأنواع</option>
-              <option value="individual">أفراد</option>
-              <option value="company">شركات</option>
-              <option value="association">جمعيات</option>
-              <option value="government">جهات حكومية</option>
+              {clientTypes.map((type) => (
+                <option key={type} value={type}>{clientTypeLabel(type)}</option>
+              ))}
             </Select>
             <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option value="all">كل الحالات</option>
-              {uniqueStatuses.map(status => (
+              {statuses.map((status) => (
                 <option key={status} value={status}>{status}</option>
               ))}
             </Select>

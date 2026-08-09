@@ -31,10 +31,23 @@ const DEFAULT_SETTINGS = {
   ],
   caseTypes: ['قضية تجارية', 'قضية عمالية', 'قضية مدنية', 'قضية جزائية'],
   caseStatuses: ['pending', 'in-progress', 'completed', 'postponed'],
-  marketerStatuses: ['active', 'inactive'],
-  relationshipTypes: ['freelancer', 'employee', 'partner'],
+
+  /* ═══ ثلاثُ قوائم كانت تخالف ما تكتبه الشاشات ═══
+   *
+   * `marketerStatuses` كانت `['active', 'inactive']` والنماذج تكتب
+   * `suspended` و`former`؛ و`relationshipTypes` كانت تحمل `partner`
+   * والنماذج تكتب `external_company`؛ و`collectionStatuses` كانت
+   * `pending, partial, collected` والنوع `PaymentStatus` يقول
+   * `unpaid, partially_paid, fully_paid`.
+   *
+   * ولم يظهر الخلاف لأن لا أحد كان يقرأ هذه القوائم أصلاً: شاشة «تكوين
+   * النظام» تحرّرها وتحفظها، والمنسدلات كلُّها مكتوبةٌ بأيديها. فعطلان
+   * يُخفي أحدُهما الآخر — وقد رُبطت المنسدلات بهذه القوائم، فصار الخلافُ
+   * يظهر في أول فتحةِ نموذج. */
+  marketerStatuses: ['active', 'suspended', 'former'],
+  relationshipTypes: ['employee', 'freelancer', 'external_company'],
   commissionTypes: ['percentage', 'fixed_amount'],
-  collectionStatuses: ['pending', 'partial', 'collected'],
+  collectionStatuses: ['unpaid', 'partially_paid', 'fully_paid'],
   feeTypes: ['fixed_amount', 'percentage'],
   companyName: 'شركة ناف',
   companyDescription: 'نظام إدارة العملاء',

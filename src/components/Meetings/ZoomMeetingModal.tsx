@@ -142,20 +142,12 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
   };
 
   const sendMeetingInvitations = async (meetingDetails: any) => {
-    const emailContent = generateEmailContent(meetingDetails);
-    
-    try {
-      // التحقق من توفر الخادم أولاً
-      /* إرسال الدعوة بالبريد معطَّل: خادم Express سقط، وWorkers لا تتكلّم
-         SMTP. والرابط يبقى قابلاً للنسخ واليدِ تُرسله. */
-      throw new Error('غير مربوط');
-    } catch (error) {
-      console.error('تعذّر إرسال الدعوات:', error);
-      throw error;
-    }
-    
-    // تأخير قصير للمعالجة
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    /* إرسال الدعوة بالبريد معطَّل: خادم Express سقط، وWorkers لا تتكلّم
+       SMTP. والرابط يبقى قابلاً للنسخ واليدِ تُرسله — و`generateEmailContent`
+       أدناه هو نصُّه، فيُطبع ليُنسخ بدل أن يُبنى في متغيّرٍ لا يقرؤه أحد
+       ثم يُرمى مع الاستثناء. */
+    console.info('نصّ الدعوة — يُنسخ ويُرسل باليد:\n' + generateEmailContent(meetingDetails));
+    throw new Error('غير مربوط');
   };
 
   /* ═══ نصّ الدعوة — مرآةُ القالب المُرسَل ═══
