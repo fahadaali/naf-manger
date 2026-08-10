@@ -171,7 +171,12 @@ wrangler secret put ZOOM_CLIENT_SECRET
 
 يلزمه تطبيق OAuth يُسجَّل مرّةً في
 [launchpad.37signals.com/integrations](https://launchpad.37signals.com/integrations)
-برابط عودة `https://<النطاق>/api/basecamp/callback`، ثم ثلاثةُ أسرار:
+برابط عودة `https://<النطاق>/api/basecamp/callback`، ثم ثلاثةُ أسرار.
+
+**ورابطُ العودة يُطابَق حرفاً.** والمنصة تشتقّه من العنوان الذي فُتحت منه
+(`url.origin` في `basecamp/oauth.js`) — فمن يربط من `crm.naflaw.sa` يلزمه
+`https://crm.naflaw.sa/api/basecamp/callback` مسجَّلاً هناك. والربطُ من
+عنوان `workers.dev` أصلٌ آخر، فيحتاج تسجيلَ رابطه هو.
 
 ```bash
 wrangler secret put BASECAMP_CLIENT_ID
@@ -182,6 +187,18 @@ wrangler secret put BASECAMP_TOKEN_KEY   # مفتاحٌ من عندك، تُعم
 وغيابُ أحدها غيابُ الربط: الشاشة تقول «لم يُسجَّل التطبيق» وتسمّي الناقص، ولا
 يُستورد شيء. وتبديلُ `BASECAMP_TOKEN_KEY` يُبطل الربط القائم فيُطلب ربطٌ
 جديد — ولا يُفقد شيءٌ ممّا استُورد.
+
+#### أو من لوحة Cloudflare، بلا طرفيّة
+
+`dash.cloudflare.com ← Compute (Workers) ← naf-manger ← Settings ←
+Variables and Secrets ← Add`
+
+ولكلٍّ من الثلاثة: النوع **Secret**، ثم الاسم، ثم القيمة، ثم **Deploy**.
+واختيارُ `Secret` لا `Text` هو ما يمنع ظهور القيمة بعدها في اللوحة أو في
+`wrangler` — وسرُّ التطبيق يُعرض مرّةً عند بيسكامب ولا يُعرض بعدها.
+
+والأسرارُ تبقى عبر النشرات: سيرُ النشر يُحدِّث الشيفرة ولا يمسّها. ولو
+مُحيت يوماً فالعَرَض ظاهر — الشاشة تعود تقول «لم يُسجَّل التطبيق».
 
 ورمزا الوصول والتجديد يُحفظان في D1 معمَّيَين بـ AES-GCM. وذلك يحمي من تسرّب
 نسخةٍ من القاعدة، لا من Workerٍ مخترَق — من ملك تنفيذ الشيفرة ملك المفتاح معها.
