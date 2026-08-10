@@ -47,6 +47,23 @@ const ERRORS: Record<string, string> = {
   no_summary: 'لا ملفّ «ملخص القضية» في هذا المشروع',
 };
 
+/**
+ * تفصيلُ سقوط المبادلة — حالةٌ ورمزٌ من 37signals.
+ *
+ * وهما ما يفرّق بين خطأين يبدوان واحداً: سرٌّ خاطئ، ورابطُ عودةٍ لا يطابق
+ * المسجَّل عندهم. والأول يُصلَح في لوحة Cloudflare والثاني في بيسكامب.
+ */
+const EXCHANGE_HINT = (detail: string): string => {
+  if (detail.includes('invalid_grant') || detail.includes('invalid_request')) {
+    return 'الأرجح أنّ رابط العودة المسجَّل في بيسكامب لا يطابق نطاق المنصة';
+  }
+  if (detail.startsWith('401') || detail.includes('invalid_client')) {
+    return 'الأرجح أنّ المعرّف أو السرّ خاطئ';
+  }
+  if (detail.startsWith('403')) return 'رفض بيسكامب الطلب';
+  return `ردّ بيسكامب: ${detail}`;
+};
+
 const readError = (error: unknown, fallback: string) => {
   const code = (error as ApiError)?.code;
   return (code && ERRORS[code]) || fallback;
@@ -79,7 +96,16 @@ export default function BasecampSync() {
   useEffect(() => {
     const result = new URLSearchParams(window.location.search).get('basecamp');
     if (!result) return;
-    setNotice(RETURN[result] ?? { tone: 'warning', text: 'تعذّر إتمام الربط' });
+    /* الرمز قد يحمل تفصيلاً بعد نقطة: `exchange_failed.401-invalid_grant`.
+       فيُقرأ أصلُه من الجدول ويُلحق به التفصيل — فيصل السببُ إلى من يربط
+       بدل أن يبقى في سجلّ Cloudflare لا يفتحه. */
+    const [base, detail] = result.split('.');
+    const known = RETURN[base];
+    setNotice(
+      known
+        ? { tone: known.tone, text: detail ? `${known.text} — ${EXCHANGE_HINT(detail)}` : known.text }
+        : { tone: 'warning', text: 'تعذّر إتمام الربط' },
+    );
     const url = new URL(window.location.href);
     url.searchParams.delete('basecamp');
     window.history.replaceState({}, '', url.toString());

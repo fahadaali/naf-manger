@@ -116,9 +116,17 @@ export async function finishConnect(request, env, user, url) {
   const starter = await consumeState(env, url.searchParams.get('state'));
   if (!starter || starter !== user.id) return back('bad_state');
 
-  const tokens = await exchangeCode(env, url, code);
-  if (!tokens?.access_token) return back('exchange_failed');
+  /* وسببُ السقوط يُنقل إلى الشاشة لا يُترك في سجلّ Cloudflare: من يربط
+     حسابَه ليس من يفتح لوحةَ السجلّات، و«تعذّرت المبادلة» وحدها لا تُعين
+     على شيء. والمنقول رمزٌ وحالةٌ لا جسمُ ردّ. */
+  const exchange = await exchangeCode(env, url, code);
+  if (exchange.error || !exchange.tokens?.access_token) {
+    const { status, code: reason } = exchange.error ?? {};
+    const detail = [status, reason].filter(Boolean).join('-');
+    return back(detail ? `exchange_failed.${detail}` : 'exchange_failed');
+  }
 
+  const tokens = exchange.tokens;
   const account = await identify(tokens.access_token);
   if (!account) return back('no_account');
 

@@ -221,5 +221,51 @@ check('العدّ يفصل العملاء عن الداخلي',
   r.body.data.projects.total === 3 && r.body.data.projects.client === 2,
   JSON.stringify(r.body.data.projects));
 
+// ═══ ١٢) مبادلةُ الرمز — الترويسة والسبب ═══
+//
+// 37signals تشترط `User-Agent`، وكانت ساقطةً من المبادلة والتجديد وحدهما —
+// فيقع التصريحُ عندهم ثم تسقط المبادلة، والشاشةُ تقول «تعذّرت» ولا تقول لِمَ.
+{
+  const seenHeaders = [];
+  globalThis.fetch = async (input, init) => {
+    seenHeaders.push({ url: String(input), headers: init?.headers ?? {} });
+    return { ok: true, status: 200, json: async () => ({ access_token: 'a', refresh_token: 'r', expires_in: 100 }) };
+  };
+
+  const { exchangeCode } = await import('../worker/lib/basecamp/oauth.js');
+  const cfg = { BASECAMP_CLIENT_ID: 'id', BASECAMP_CLIENT_SECRET: 'sec', BASECAMP_TOKEN_KEY: 'k' };
+  const site = new URL('https://crm.naflaw.sa/api/basecamp/callback?code=abc');
+
+  let out = await exchangeCode(cfg, site, 'abc');
+  check('المبادلة تنجح', out.tokens?.access_token === 'a', JSON.stringify(out));
+  const sent = seenHeaders[0];
+  check('وتحمل User-Agent', String(sent.headers['user-agent'] ?? '').includes('NAF Manager'), JSON.stringify(sent.headers));
+  check('وتطلب JSON', sent.headers.accept === 'application/json');
+  check('والعنوان سلسلةٌ لا كائن', typeof sent.url === 'string' && sent.url.startsWith('https://launchpad'));
+  check('ورابطُ العودة يُشتقّ من أصل الطلب',
+    sent.url.includes(encodeURIComponent('https://crm.naflaw.sa/api/basecamp/callback')), sent.url);
+
+  /* والسقوط يحمل سببَه: الحالة ورمزُ 37signals — بهما يُفرَّق بين سرٍّ
+     خاطئ ورابطِ عودةٍ لا يطابق، وهما يُصلَحان في مكانين مختلفين. */
+  globalThis.fetch = async () => ({
+    ok: false, status: 401, json: async () => ({ error: 'invalid_client' }),
+  });
+  out = await exchangeCode(cfg, site, 'abc');
+  check('السقوط يحمل الحالة', out.error?.status === 401, JSON.stringify(out));
+  check('ويحمل رمز 37signals', out.error?.code === 'invalid_client', JSON.stringify(out));
+
+  /* ورمزٌ لا يطابق الشكل المسجَّل يُسقَط: جسمُ الردّ قد يحمل صدى ما أُرسل،
+     ونقلُه إلى شريط العنوان تسريب. */
+  globalThis.fetch = async () => ({
+    ok: false, status: 400, json: async () => ({ error: 'secret=abc123 leaked <script>' }),
+  });
+  out = await exchangeCode(cfg, site, 'abc');
+  check('رمزٌ حرٌّ لا يُنقل', out.error?.code === null && out.error?.status === 400, JSON.stringify(out));
+
+  globalThis.fetch = async () => ({ ok: false, status: 500, json: async () => { throw new Error('html'); } });
+  out = await exchangeCode(cfg, site, 'abc');
+  check('ردٌّ ليس JSON لا يُسقط المبادلة', out.error?.status === 500 && out.error?.code === null, JSON.stringify(out));
+}
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

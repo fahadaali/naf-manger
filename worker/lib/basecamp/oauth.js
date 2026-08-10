@@ -68,10 +68,45 @@ export async function consumeState(env, state) {
   return userId;
 }
 
-/** مبادلةُ رمز التصريح برمزَي وصولٍ وتجديد. */
+/* ═══ ترويسةُ الهوية تلزم هنا كما تلزم في الواجهة ═══
+
+   37signals تشترط `User-Agent` يعرّف المنادي، وتردّ الطلبَ الخالي منها.
+   وكانت مضبوطةً في نداءات الواجهة (`api.js`) وفي قراءة الهوية، وساقطةً من
+   مبادلة الرمز والتجديد وحدهما — فكان التصريحُ يقع عند بيسكامب ثم تسقط
+   المبادلةُ بعده، والشاشةُ تقول «تعذّرت المبادلة» ولا تقول لِمَ. */
+const LAUNCHPAD_HEADERS = {
+  'user-agent': 'NAF Manager (support@naflaw.sa)',
+  accept: 'application/json',
+};
+
+/* رمزُ الخطأ من ردّ 37signals يُنقل إلى الشاشة ليُقرأ سببُه — بشرط أن يكون
+   رمزاً مسجَّلاً لا نصّاً حرّاً: جسمُ الردّ قد يحمل صدى ما أُرسل، ونقلُه
+   كما هو إلى شريط العنوان يُسرّب. */
+const SAFE_CODE = /^[a-z_]{1,40}$/;
+
+async function readFailure(response, what) {
+  let code = null;
+  try {
+    const body = await response.json();
+    const raw = String(body?.error ?? '');
+    if (SAFE_CODE.test(raw)) code = raw;
+  } catch {
+    code = null;
+  }
+  console.error(`Basecamp: ${what} —`, response.status, code ?? '');
+  return { status: response.status, code };
+}
+
+/**
+ * مبادلةُ رمز التصريح برمزَي وصولٍ وتجديد.
+ *
+ * يردّ `{ tokens }` أو `{ error }` — والثاني يحمل الحالة ورمزَ 37signals
+ * ليبلغا الشاشة. و«تعذّرت المبادلة» وحدها لا تُعين على شيء: ٤٠١ يعني
+ * سرّاً خاطئاً، و«invalid_grant» يعني رابطَ عودةٍ لا يطابق المسجَّل.
+ */
 export async function exchangeCode(env, url, code) {
   const config = credentials(env);
-  if (!config) return null;
+  if (!config) return { error: { status: 0, code: 'not_configured' } };
 
   const target = new URL(`${LAUNCHPAD}/authorization/token`);
   target.searchParams.set('type', 'web_server');
@@ -80,13 +115,13 @@ export async function exchangeCode(env, url, code) {
   target.searchParams.set('redirect_uri', redirectUri(url));
   target.searchParams.set('code', code);
 
-  const response = await fetch(target, { method: 'POST' });
-  if (!response.ok) {
-    /* لا يُسجَّل الجسم: قد يحمل صدى السرّ أو الرمز. والحالة تكفي للتشخيص. */
-    console.error('Basecamp: تعذّرت مبادلة الرمز —', response.status);
-    return null;
-  }
-  return response.json();
+  const response = await fetch(target.toString(), {
+    method: 'POST',
+    headers: LAUNCHPAD_HEADERS,
+  });
+
+  if (!response.ok) return { error: await readFailure(response, 'تعذّرت مبادلة الرمز') };
+  return { tokens: await response.json() };
 }
 
 /** رمزٌ جديد برمز التجديد. */
@@ -100,9 +135,13 @@ async function refresh(env, refreshToken) {
   target.searchParams.set('client_id', config.clientId);
   target.searchParams.set('client_secret', config.clientSecret);
 
-  const response = await fetch(target, { method: 'POST' });
+  const response = await fetch(target.toString(), {
+    method: 'POST',
+    headers: LAUNCHPAD_HEADERS,
+  });
+
   if (!response.ok) {
-    console.error('Basecamp: تعذّر تجديد الرمز —', response.status);
+    await readFailure(response, 'تعذّر تجديد الرمز');
     return null;
   }
   return response.json();
