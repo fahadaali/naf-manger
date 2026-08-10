@@ -1,18 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Client } from '../../types';
+import { Archive, ExternalLink, Plus, Search } from 'lucide-react';
+import { BulkAction, Client } from '../../types';
 import ClientCard from './ClientCard';
 import ClientModal from './ClientModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
+import ProfileAvatar from '../Common/ProfileAvatar';
+import RowCheckbox from '../Common/RowCheckbox';
+import SelectionBar from '../Common/SelectionBar';
+import ViewToggle, { useViewMode } from '../Common/ViewToggle';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSelection } from '../../lib/use-selection';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { clientStatusLabel, clientTypeLabel } from '../../lib/labels';
-import { formatNumber } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Alert } from '@/registry/naf/ui/alert';
 import { Card } from '@/registry/naf/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 
 export default function ClientsView() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -25,6 +33,12 @@ export default function ClientsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  /* المؤرشفُ مخفيٌّ افتراضاً — وهو الغرضُ منه. و«المؤرشفة» تُظهرها وحدها
+     ليُرجَع منها أو يُحذف. */
+  const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
+  const [viewMode, setViewMode] = useViewMode('clients');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
   const { hasPermission } = useAuth();
 
   // المرشّحات من «تكوين النظام».
@@ -54,12 +68,41 @@ export default function ClientsView() {
     const matchesSearch = client.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.phone.includes(searchTerm);
-    
+
     const matchesType = filterType === 'all' || client.clientType === filterType;
     const matchesStatus = filterStatus === 'all' || client.status === filterStatus;
-    
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesArchive = archiveView === 'archived' ? Boolean(client.archivedAt) : !client.archivedAt;
+
+    return matchesSearch && matchesType && matchesStatus && matchesArchive;
   });
+
+  /** الحاضرون — غيرُ المؤرشفين. تُبنى عليهم البطاقاتُ الأربع أعلى الشاشة. */
+  const present = clients.filter((client) => !client.archivedAt);
+
+  const selection = useSelection(filteredClients);
+
+  /* ═══ الفعلُ على المحدَّد ═══
+     الحصيلةُ تُقال بعددها لا بـ«تمّ»: من أرشف اثني عشر يريد أن يعرف أنّ
+     اثني عشر أُرشفوا — ونقصانُ العدد يعني أنّ صفّاً حذفه غيرُه قبله. */
+  const runBulk = async (action: BulkAction) => {
+    const ids = selection.ids;
+    if (!ids.length) return;
+
+    setBusy(true);
+    setNotice('');
+    try {
+      const outcome = await db.bulkClients(action, ids);
+      const verb = action === 'delete' ? 'حُذف' : action === 'archive' ? 'أُرشف' : 'أُرجع';
+      setNotice(`${verb} ${formatNumber(outcome.affected)} من ${formatNumber(outcome.requested)}`);
+      selection.clear();
+      loadClients();
+    } catch (error) {
+      console.error('تعذّر تنفيذ الفعل الجماعي:', error);
+      setNotice('تعذّر التنفيذ. حدّث الصفحة وأعد المحاولة.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleCreateClient = () => {
     setEditingClient(null);
@@ -134,12 +177,15 @@ export default function ClientsView() {
           <h1 className="text-2xl font-bold text-foreground">إدارة العملاء</h1>
           <p className="text-muted-foreground">إدارة بيانات العملاء الفعليين والمعلومات المرتبطة بهم</p>
         </div>
-        {hasPermission('clients', 'create') && (
-          <Button onClick={handleCreateClient}>
-            <Plus className="h-5 w-5" />
-            إضافة عميل جديد
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <ViewToggle mode={viewMode} onChange={setViewMode} />
+          {hasPermission('clients', 'create') && (
+            <Button onClick={handleCreateClient}>
+              <Plus className="h-5 w-5" />
+              إضافة عميل جديد
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -173,53 +219,187 @@ export default function ClientsView() {
                 <option key={status} value={status}>{clientStatusLabel(status)}</option>
               ))}
             </Select>
+            <Select
+              value={archiveView}
+              onChange={(e) => {
+                setArchiveView(e.target.value as 'active' | 'archived');
+                selection.clear();
+              }}
+            >
+              <option value="active">الحاضرون</option>
+              <option value="archived">المؤرشفون</option>
+            </Select>
           </div>
         </div>
       </Card>
 
-      {/* Stats */}
+      {notice && <Alert variant="info"><span>{notice}</span></Alert>}
+
+      {(hasPermission('clients', 'update') || hasPermission('clients', 'delete')) && (
+        <SelectionBar
+          count={selection.count}
+          onClear={selection.clear}
+          onAction={runBulk}
+          busy={busy}
+          showRestore={archiveView === 'archived'}
+          deleteWarning="وتسقط معه قضاياه — فهي مرتبطةٌ به في القاعدة."
+          noun="عميلاً"
+        />
+      )}
+
+      {/* الإحصاء على الحاضرين: المؤرشفُ خرج من القائمة، فعدُّه فيها يناقضها. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي العملاء</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(clients.length)}</bdi></p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(present.length)}</bdi></p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">العملاء الحاليين</p>
           <p className="text-xl sm:text-2xl font-bold text-success">
-            <bdi>{formatNumber(clients.filter(c => c.status === 'current').length)}</bdi>
+            <bdi>{formatNumber(present.filter(c => c.status === 'current').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الشركات</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground">
-            <bdi>{formatNumber(clients.filter(c => c.clientType === 'company').length)}</bdi>
+            <bdi>{formatNumber(present.filter(c => c.clientType === 'company').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">الأفراد</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground">
-            <bdi>{formatNumber(clients.filter(c => c.clientType === 'individual').length)}</bdi>
+            <bdi>{formatNumber(present.filter(c => c.clientType === 'individual').length)}</bdi>
           </p>
         </Card>
       </div>
 
-      {/* Clients Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {filteredClients.map((client) => (
-          <ClientCard
-            key={client.id}
-            client={client}
-            onViewDetails={handleViewDetails}
-            onEdit={handleEditClient}
-            onCreateMeeting={handleCreateMeeting}
-            canEdit={hasPermission('clients', 'update')}
-          />
-        ))}
-      </div>
+      {/* البطاقات — تُري الواحد */}
+      {viewMode === 'cards' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {filteredClients.map((client) => (
+            <ClientCard
+              key={client.id}
+              client={client}
+              onViewDetails={handleViewDetails}
+              onEdit={handleEditClient}
+              onCreateMeeting={handleCreateMeeting}
+              canEdit={hasPermission('clients', 'update')}
+              selected={selection.has(client.id)}
+              onSelect={() => selection.toggle(client.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* والصفوف — تُري الجملة */}
+      {viewMode === 'rows' && filteredClients.length > 0 && (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <RowCheckbox
+                      checked={selection.allChosen}
+                      indeterminate={selection.someChosen}
+                      onChange={selection.toggleAll}
+                      label="حدّد كلَّ المعروض"
+                    />
+                  </TableHead>
+                  <TableHead>العميل</TableHead>
+                  <TableHead className="hidden md:table-cell">رقم الهوية</TableHead>
+                  <TableHead className="hidden sm:table-cell">الجوال</TableHead>
+                  <TableHead className="hidden lg:table-cell">عميل منذ</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>‏</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow
+                    key={client.id}
+                    className={selection.has(client.id) ? 'bg-primary-soft' : undefined}
+                  >
+                    <TableCell>
+                      <RowCheckbox
+                        checked={selection.has(client.id)}
+                        onChange={() => selection.toggle(client.id)}
+                        label={`حدّد ${client.fullName}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <ProfileAvatar src={client.profilePicture} name={client.fullName} size="sm" />
+                        <div className="min-w-0">
+                          <Button
+                            onClick={() => handleViewDetails(client)}
+                            className="justify-start text-start"
+                            variant="link"
+                          >
+                            {client.fullName}
+                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            {clientTypeLabel(client.clientType)}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">
+                      <bdi>{client.idNumber || '—'}</bdi>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">
+                      <bdi>{client.phone ? formatPhone(client.phone) : '—'}</bdi>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm">
+                      <bdi>{formatDate(client.joinDate)}</bdi>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Badge variant={client.status === 'current' ? 'success' : 'default'}>
+                          {clientStatusLabel(client.status)}
+                        </Badge>
+                        {client.archivedAt && (
+                          <Badge variant="default">
+                            <Archive aria-hidden="true" />
+                            مؤرشف
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {hasPermission('clients', 'update') && (
+                          <button
+                            onClick={() => handleEditClient(client)}
+                            className="text-primary hover:text-primary-strong text-sm"
+                          >
+                            تعديل
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleViewDetails(client)}
+                          className="text-muted-foreground hover:text-foreground text-sm inline-flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          الملفّ
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
 
       {filteredClients.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
+          <p className="text-muted-foreground">
+            {archiveView === 'archived'
+              ? 'لا مؤرشفين. ما يُؤرشف يظهر هنا ويُرجع منه.'
+              : 'لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.'}
+          </p>
         </div>
       )}
 

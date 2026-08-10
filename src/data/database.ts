@@ -9,6 +9,7 @@ import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats 
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampPreview, BasecampSummary } from '../types';
+import { BulkAction, BulkOutcome } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
 /* ═══ التواريخ ═══
@@ -98,6 +99,22 @@ export class LocalDatabase {
   async deleteClient(id: string): Promise<boolean> {
     await api.remove('clients', id);
     return true;
+  }
+
+  /* ═══ عملياتٌ على المحدَّد ═══
+     الأرشفةُ تُخرج الصفَّ من القائمة ولا تتلفه، والحذفُ يتلفه — وقضايا
+     العميل تسقط معه بقيد `ON DELETE CASCADE`. والشاشة تقول ذلك قبل أن
+     تسأل التأكيد. */
+  async bulkClients(action: BulkAction, ids: string[]): Promise<BulkOutcome> {
+    return api.bulk('clients', action, ids);
+  }
+
+  async bulkProspects(action: BulkAction, ids: string[]): Promise<BulkOutcome> {
+    return api.bulk('prospects', action, ids);
+  }
+
+  async bulkCases(action: BulkAction, ids: string[]): Promise<BulkOutcome> {
+    return api.bulk('cases', action, ids);
   }
 
   // ── العملاء المحتملون ──

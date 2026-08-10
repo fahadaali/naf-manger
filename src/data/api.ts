@@ -83,6 +83,14 @@ export const api = {
   remove: (resource: string, id: string) =>
     call<{ ok: true }>(`/${resource}/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
+  /* دفعةٌ واحدة لجملةِ صفوف — لا نداءٌ لكلّ صفّ. والانقطاعُ في المنتصف
+     لا يترك نصفَها مؤرشفاً: الدفعةُ عند D1 معاملة. */
+  bulk: (resource: string, action: 'delete' | 'archive' | 'restore', ids: string[]) =>
+    call<{ affected: number; requested: number }>(`/${resource}/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ action, ids }),
+    }),
+
   post: <T>(path: string, body?: unknown) =>
     call<T>(path, { method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}) }),
 

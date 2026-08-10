@@ -1,6 +1,7 @@
 import { Archive, CircleCheck, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Client } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import RowCheckbox from '../Common/RowCheckbox';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
 import { Button } from '@/registry/naf/ui/button';
@@ -13,9 +14,21 @@ interface ClientCardProps {
   onEdit: (client: Client) => void;
   onCreateMeeting?: (client: Client) => void;
   canEdit: boolean;
+  /* التحديدُ اختياريّ: البطاقة تُستعمل في شاشةٍ فيها تحديدٌ جماعي وفي
+     غيرها. وحين يغيب `onSelect` لا يُعرض مربّعٌ أصلاً. */
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
-export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeeting, canEdit }: ClientCardProps) {
+export default function ClientCard({
+  client,
+  onViewDetails,
+  onEdit,
+  onCreateMeeting,
+  canEdit,
+  selected,
+  onSelect,
+}: ClientCardProps) {
   /* الحالة أيقونةٌ ونصٌّ ولون معاً — §٦ تُلزم بالثلاثة، وكان اللون
      والنصّ وحدهما. المقابلات مسجَّلة في naf-icons.md. */
   const STATUS = {
@@ -27,13 +40,24 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
     STATUS[status as keyof typeof STATUS] ?? STATUS.former;
 
   return (
-    <Card className="p-6 hover:shadow-md transition-shadow">
+    <Card
+      className={`p-6 hover:shadow-md transition-shadow ${
+        selected ? 'ring-2 ring-primary' : ''
+      } ${client.archivedAt ? 'opacity-70' : ''}`}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <ProfileAvatar 
-            src={client.profilePicture} 
-            name={client.fullName} 
-            size="lg" 
+          {onSelect && (
+            <RowCheckbox
+              checked={Boolean(selected)}
+              onChange={onSelect}
+              label={`حدّد ${client.fullName}`}
+            />
+          )}
+          <ProfileAvatar
+            src={client.profilePicture}
+            name={client.fullName}
+            size="lg"
           />
           <div>
             <Button onClick={() => onViewDetails(client)} className="justify-start text-start" variant="link" size="lg">
@@ -43,6 +67,13 @@ export default function ClientCard({ client, onViewDetails, onEdit, onCreateMeet
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* المؤرشفُ يُقال صراحةً: بطاقةٌ باهتةٌ وحدها تُقرأ خطأً في العرض. */}
+          {client.archivedAt && (
+            <Badge variant="default">
+              <Archive aria-hidden="true" />
+              مؤرشف
+            </Badge>
+          )}
           {(() => {
             const { variant, Icon, label } = statusOf(client.status);
             return (

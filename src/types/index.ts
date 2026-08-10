@@ -12,6 +12,22 @@ export interface ContactNumber {
   name?: string;
 }
 
+/**
+ * فعلٌ على جملةِ صفوفٍ محدَّدة.
+ *
+ * و«الأرشفة» ليست حذفاً مؤجَّلاً: الصفُّ يبقى بمعرّفه وإشاراته، فقضيةٌ
+ * لا تنقطع عن عميلها المؤرشف. إنّما يخرج من القائمة على من يبحث في
+ * الحاضر — ويعود بـ`restore`.
+ */
+export type BulkAction = 'delete' | 'archive' | 'restore';
+
+export interface BulkOutcome {
+  /** كم صفّاً أصابه الفعل فعلاً. */
+  affected: number;
+  /** وكم طُلب — والفرقُ صفوفٌ حذفها غيرُك قبلك. */
+  requested: number;
+}
+
 export interface Client {
   id: string;
   fullName: string;
@@ -27,6 +43,8 @@ export interface Client {
   clientType: 'individual' | 'company' | 'association' | 'government';
   status: 'current' | 'former';
   notes: string;
+  /** لحظةُ الأرشفة نصّاً ISO — وغيابُها يعني «حاضر». */
+  archivedAt?: string | null;
   attachments: Attachment[];
   /* الحقل قائمٌ في المخطَّط (`clients.profile_picture`) وفي خريطة الأعمدة
      في `resources.js`، وتقرؤه الشاشات وتكتبه — وكان ساقطاً من النوع وحده،
@@ -53,6 +71,7 @@ export interface Prospect {
   clientType: 'individual' | 'company' | 'association' | 'government';
   prospectStatus: string; // Dynamic status from system settings
   notes: string;
+  archivedAt?: string | null;
   attachments: Attachment[];
   profilePicture?: string; // `prospects.profile_picture`
   // Company specific fields
@@ -81,6 +100,8 @@ export interface Case {
   basecampUrl?: string;
   /** أوراق القضية في حاوية R2 — `migrations/0004`. */
   attachments?: Attachment[];
+  /** لحظةُ الأرشفة نصّاً ISO — وغيابُها يعني «حاضرة». */
+  archivedAt?: string | null;
   createdDate: Date;
   updatedDate: Date;
 

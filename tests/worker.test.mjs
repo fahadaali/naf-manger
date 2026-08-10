@@ -409,6 +409,67 @@ check('مسارٌ مجهول تحت ‎/api‎ يردّ JSON ٤٠٤ لا صفح�
 check('ومسارُ واجهةٍ يردّ الصفحة', (await hit('GET', '/clients')).status === 200);
 
 // ═══════════════════════════════════════════════════════════
+group('الأرشفةُ والفعلُ على جملةِ صفوف');
+setUser(ADMIN);
+
+const batch = [];
+for (const name of ['دفعةٌ أولى', 'دفعةٌ ثانية', 'دفعةٌ ثالثة']) {
+  const made = await hit('POST', '/api/clients', { fullName: name, phone: '0500000000' });
+  batch.push(made.body?.data?.id);
+}
+check('تُهيَّأ ثلاثةُ صفوف', batch.every(Boolean), batch);
+
+r = await hit('POST', '/api/clients/bulk', { action: 'archive', ids: batch });
+check('تُؤرشف الثلاثة بنداءٍ واحد', r.body.ok && r.body.data.affected === 3, r.body);
+
+let listed = (await hit('GET', '/api/clients')).body.data;
+check('والأرشفةُ لا تحذف — الصفوف قائمة',
+  batch.every((id) => listed.some((row) => row.id === id)), listed.length);
+check('ولحظتُها محفوظة نصّاً',
+  listed.filter((row) => batch.includes(row.id)).every((row) => typeof row.archivedAt === 'string'),
+  listed.find((row) => batch.includes(row.id))?.archivedAt);
+
+r = await hit('POST', '/api/clients/bulk', { action: 'restore', ids: [batch[0]] });
+check('ويُرجَع واحدٌ منها', r.body.ok && r.body.data.affected === 1, r.body);
+listed = (await hit('GET', '/api/clients')).body.data;
+check('فيعود غيابُ اللحظة', !listed.find((row) => row.id === batch[0])?.archivedAt);
+
+/* ═══ الصفُّ المؤرشف يبقى موصولاً ═══
+   لو كانت الأرشفةُ حذفاً مؤجَّلاً لانقطعت قضيةٌ عن عميلها. وهي ليست كذلك. */
+r = await hit('POST', '/api/cases', {
+  caseNumber: 'ق-2026-777', caseType: 'قضية تجارية', clientId: batch[1],
+  clientName: 'دفعةٌ ثانية', status: 'pending',
+});
+check('تُقبل قضيةٌ لعميلٍ مؤرشف', r.status === 201 && r.body.ok, r.body);
+const archivedCaseId = r.body?.data?.id;
+
+/* ═══ التصريح يُسأل عن فعل الدفعة لا عن `POST` ═══
+   وهذا هو موضع الزلل: المسار `POST`، ففعلُه في الظاهر «إنشاء». ولو حُرس
+   به لطُلب تصريحُ الإنشاء لمن يؤرشف — ولمُنع من يحذف ولا يُنشئ. */
+setUser(STAFF);
+r = await hit('POST', '/api/clients/bulk', { action: 'archive', ids: batch });
+check('الموظّفُ القارئُ لا يؤرشف', r.status === 403 && r.body.error === 'forbidden', r.body);
+r = await hit('POST', '/api/clients/bulk', { action: 'delete', ids: batch });
+check('ولا يحذف دفعةً', r.status === 403, r.body);
+listed = (await hit('GET', '/api/clients')).body.data;
+check('ولم يقع شيء', batch.every((id) => listed.some((row) => row.id === id)), listed.length);
+
+setUser(ADMIN);
+r = await hit('POST', '/api/clients/bulk', { action: 'drop-database', ids: batch });
+check('وفعلٌ مجهولٌ يُردّ', r.status === 400 && r.body.error === 'unknown_action', r.body);
+r = await hit('POST', '/api/clients/bulk', { action: 'archive', ids: [] });
+check('وقائمةٌ فارغة تُردّ', r.status === 400 && r.body.error === 'no_rows', r.body);
+r = await hit('POST', '/api/marketers/bulk', { action: 'archive', ids: ['x'] });
+check('ومَوردٌ بلا عمود أرشفة يُردّ', r.status === 400 && r.body.error === 'not_archivable', r.body);
+
+r = await hit('POST', '/api/cases/bulk', { action: 'delete', ids: [archivedCaseId] });
+check('ويُحذف دفعةً ما طُلب', r.body.ok && r.body.data.affected === 1, r.body);
+r = await hit('POST', '/api/clients/bulk', { action: 'delete', ids: batch });
+check('وتُحذف الثلاثة', r.body.ok && r.body.data.affected === 3, r.body);
+r = await hit('POST', '/api/clients/bulk', { action: 'delete', ids: batch });
+check('وإعادةُ الحذف تقول صفراً ولا تسقط', r.body.ok && r.body.data.affected === 0, r.body);
+
+// ═══════════════════════════════════════════════════════════
 group('الحذف — آخرَ ما يُختبر');
 r = await hit('DELETE', `/api/cases/${caseId}`);
 check('تُحذف القضية', r.body.ok, r.body);

@@ -137,6 +137,70 @@ export async function deleteRow(env, resource, id) {
   return { data: { ok: true } };
 }
 
+/* ═══ عملياتٌ على جملةِ صفوف ═══
+ *
+ * خمسون عميلاً يُؤرشفون بخمسين نداءً: بطيءٌ على من ينتظر، وأسوأُ منه أنّ
+ * انقطاعاً في المنتصف يترك نصفَهم مؤرشفاً ونصفَهم لا — ولا أحد يعرف أين
+ * وقف. فبيانٌ واحد لكلّ فعل، والدفعةُ في معاملةٍ عند D1: تقع كلُّها أو
+ * لا يقع منها شيء.
+ *
+ * والحدُّ خمسُمئة: أطولُ من ذلك يبني نصَّ استعلامٍ بخمسمئة علامة، وليس في
+ * شاشةٍ يُحدَّد فيها باليد ما يبلغه.
+ */
+const BULK_LIMIT = 500;
+
+/** الفعلُ الجماعي وتصريحُه: الحذفُ حذفٌ، والأرشفةُ تعديل. */
+const BULK_ACTIONS = {
+  delete: 'delete',
+  archive: 'update',
+  restore: 'update',
+};
+
+export async function bulkRows(env, resource, body, user) {
+  const action = String(body?.action ?? '');
+  const permission = BULK_ACTIONS[action];
+  if (!permission) return { error: 'unknown_action', status: 400 };
+  if (!may(user, resource, permission)) return { error: 'forbidden', status: 403 };
+
+  /* والأرشفةُ لا تُطلب من موردٍ بلا عمودها — المسوّقون والعمولات. ولولا
+     هذا لبنى الاستعلامُ عموداً غيرَ موجود فسقط بخطأ SQL خام. */
+  if (action !== 'delete' && !resource.fields.archivedAt) {
+    return { error: 'not_archivable', status: 400 };
+  }
+
+  /* ما ليس نصّاً يُطرح قبل أن يبلغ الاستعلام: قائمةٌ فيها `null` تبني
+     `IN (?, ?)` بربطٍ فارغ فتصيب ما لم يُقصد. */
+  const ids = [...new Set((Array.isArray(body?.ids) ? body.ids : []).filter(
+    (id) => typeof id === 'string' && id,
+  ))];
+  if (!ids.length) return { error: 'no_rows', status: 400 };
+  if (ids.length > BULK_LIMIT) return { error: 'too_many_rows', status: 400 };
+
+  const holes = ids.map(() => '?').join(', ');
+  const now = nowSeconds();
+
+  let statement;
+  if (action === 'delete') {
+    statement = env.DB.prepare(`DELETE FROM ${resource.table} WHERE id IN (${holes})`).bind(...ids);
+  } else {
+    const stamp = action === 'archive' ? now : null;
+    statement = env.DB.prepare(
+      `UPDATE ${resource.table} SET archived_at = ?, updated_at = ? WHERE id IN (${holes})`,
+    ).bind(stamp, now, ...ids);
+  }
+
+  let result;
+  try {
+    [result] = await env.DB.batch([statement]);
+  } catch (err) {
+    return constraintError(err);
+  }
+
+  /* ولا ٤٠٤ حين لا يُصاب شيء: الشاشةُ حدّدت صفوفاً حذفها غيرُها قبلها،
+     وهذا ليس خطأً — الحالةُ المطلوبة قائمة. يُقال العددُ ويُترك الحكم. */
+  return { data: { affected: result?.meta?.changes ?? 0, requested: ids.length } };
+}
+
 /* تفرّدُ `id_number` و`case_number` مضمونٌ في المخطّط. ورسالةُ SQLite
    تُترجم رمزاً معروفاً، فتقول الشاشةُ «مسجَّل من قبل» بدل «خطأ في النظام». */
 function constraintError(err) {
@@ -159,6 +223,20 @@ export async function handleResource(request, env, user, name, id) {
 
   const action = ACTION[request.method];
   if (!action) return fail('method_not_allowed', 405);
+
+  /* ═══ الدفعةُ تُلتقط قبل الحارس العام ═══
+     فعلُها ليس `create` وإن كانت `POST`: أرشفةٌ تعديل، وحذفٌ حذف. ولو مرّت
+     على الحارس العام لطُلب لمن يؤرشف تصريحُ الإنشاء — ولمنعتْ من يحذف
+     ولا يُنشئ. و`bulkRows` تسأل عن تصريح فعلِها بعينه. */
+  if (request.method === 'POST' && id === 'bulk') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return fail('invalid_body', 400);
+    }
+    return respond(await bulkRows(env, resource, body, user));
+  }
 
   if (!may(user, resource, action)) return fail('forbidden', 403);
 

@@ -45,6 +45,7 @@ export const RESOURCES = {
       commercialRegister: ['commercial_register'],
       legalRepresentative: ['legal_representative', 'json'],
       attachments: ['attachments', 'json'],
+      archivedAt: ['archived_at', 'epoch'],
     },
     /* ═══ رقمُ الهوية لم يعد لازماً ═══
        ملفٌّ قديم بلا رقم، وموكّلٌ يُفتح ملفُّه قبل أن يُرسل هويته. وكان
@@ -76,6 +77,7 @@ export const RESOURCES = {
       expectedValue: ['expected_value', 'money'],
       followUpDate: ['follow_up_date', 'date'],
       assignedTo: ['assigned_to'],
+      archivedAt: ['archived_at', 'epoch'],
     },
     required: ['full_name'],
     defaults: { phone: '', email: '', notes: '', attachments: '[]', contacts: '[]' },
@@ -99,6 +101,7 @@ export const RESOURCES = {
       paymentStatus: ['payment_status', 'json'],
       commissionStructure: ['commission_structure', 'json'],
       attachments: ['attachments', 'json'],
+      archivedAt: ['archived_at', 'epoch'],
       /* الشاشات تقرأ `createdDate` و`updatedDate` لا `createdAt`. والاسمان
          مكشوفان معاً أدناه، فلا يُمسّ مكوّن منها. */
     },
@@ -188,6 +191,7 @@ export function toClient(resource, row) {
     if (type === 'money') out[name] = Number(value) / 100;
     else if (type === 'json') out[name] = parseJson(value);
     else if (type === 'date') out[name] = value;
+    else if (type === 'epoch') out[name] = toIso(value);
     else out[name] = value;
   }
 
@@ -244,6 +248,7 @@ export function toRow(resource, body) {
     if (type === 'money') row[column] = Math.round(Number(value) * 100);
     else if (type === 'json') row[column] = JSON.stringify(value);
     else if (type === 'date') row[column] = toDateOnly(value);
+    else if (type === 'epoch') row[column] = toEpoch(value);
     else row[column] = String(value);
 
     if (NUMERIC_COLUMNS.has(column)) row[column] = toLatinDigits(row[column]);
@@ -266,6 +271,14 @@ function parseJson(raw) {
 
 function toIso(seconds) {
   return new Date(Number(seconds) * 1000).toISOString();
+}
+
+/* اللحظةُ تُخزَّن ثوانيَ عدداً صحيحاً كبقية أوقات المخطَّط. وتقبل الرقمَ
+   كما هو ونصَّ ISO — فالشاشة ترسل الثاني والمزامنةُ ترسل الأول. */
+function toEpoch(value) {
+  if (typeof value === 'number') return Math.floor(value);
+  const at = new Date(value).getTime();
+  return Number.isNaN(at) ? null : Math.floor(at / 1000);
 }
 
 /* التاريخ المجرّد يُقتطع من أول عشرة محارف: الواجهة ترسل `Date` فيصل

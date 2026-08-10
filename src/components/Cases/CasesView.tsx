@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
-import { Case } from '../../types';
+import { Archive, CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
+import { BulkAction, Case } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
+import RowCheckbox from '../Common/RowCheckbox';
+import SelectionBar from '../Common/SelectionBar';
+import ViewToggle, { useViewMode } from '../Common/ViewToggle';
+import { useSelection } from '../../lib/use-selection';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel } from '../../lib/labels';
@@ -11,6 +15,7 @@ import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
+import { Alert } from '@/registry/naf/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 import { Card } from '@/registry/naf/ui/card';
 
@@ -25,6 +30,12 @@ export default function CasesView() {
   const [isEditing, setIsEditing] = useState(false);
   const { hasPermission } = useAuth();
   const [showCompletedCases, setShowCompletedCases] = useState(false);
+  const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
+  /* القضايا تُقرأ جدولاً في الغالب — ففيها رقمٌ وعميلٌ وحالةٌ وتاريخ،
+     والمقارنةُ بينها أكثرُ من قراءة الواحدة. فالافتراضُ صفوف. */
+  const [viewMode, setViewMode] = useViewMode('cases', 'rows');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
 
   // المرشّحات من «تكوين النظام» لا من نصوصٍ في التصيير.
   const caseTypes = useSettingList('caseTypes');
@@ -49,9 +60,15 @@ export default function CasesView() {
     loadCasesAsync();
   };
 
+  /* الأرشفةُ تسبق كلَّ تقسيمٍ آخر: قضيةٌ مؤرشفة لا تُعدّ نشطةً ولا مكتملة
+     ولا تدخل في معدّل الربح — أُخرجت من الحساب كلِّه بقصد. */
+  const visibleCases = cases.filter(case_ =>
+    archiveView === 'archived' ? Boolean(case_.archivedAt) : !case_.archivedAt,
+  );
+
   // فصل القضايا المكتملة عن الباقي
-  const activeCases = cases.filter(case_ => case_.status !== 'completed');
-  const completedCases = cases.filter(case_ => case_.status === 'completed');
+  const activeCases = visibleCases.filter(case_ => case_.status !== 'completed');
+  const completedCases = visibleCases.filter(case_ => case_.status === 'completed');
 
   const filteredActiveCases = activeCases.filter(case_ => {
     const matchesSearch = case_.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,6 +91,31 @@ export default function CasesView() {
     
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  /* التحديدُ يشمل النشطةَ والمكتملةَ المعروضتين معاً: من فتح الجدولين
+     وحدَّد منهما يقصد ما حدَّد، ولوحان منفصلان يجعلان «حدّد الكلّ» يكذب. */
+  const shownCases = [...filteredActiveCases, ...(showCompletedCases ? filteredCompletedCases : [])];
+  const selection = useSelection(shownCases);
+
+  const runBulk = async (action: BulkAction) => {
+    const ids = selection.ids;
+    if (!ids.length) return;
+
+    setBusy(true);
+    setNotice('');
+    try {
+      const outcome = await db.bulkCases(action, ids);
+      const verb = action === 'delete' ? 'حُذفت' : action === 'archive' ? 'أُرشفت' : 'أُرجعت';
+      setNotice(`${verb} ${formatNumber(outcome.affected)} من ${formatNumber(outcome.requested)}`);
+      selection.clear();
+      loadCases();
+    } catch (error) {
+      console.error('تعذّر تنفيذ الفعل الجماعي:', error);
+      setNotice('تعذّر التنفيذ. حدّث الصفحة وأعد المحاولة.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleCreateCase = () => {
     setEditingCase(null);
@@ -180,12 +222,15 @@ export default function CasesView() {
           <h1 className="text-2xl font-bold text-foreground">إدارة القضايا</h1>
           <p className="text-muted-foreground">إدارة القضايا والأعمال القانونية</p>
         </div>
-        {hasPermission('cases', 'create') && (
-          <Button onClick={handleCreateCase}>
-            <Plus className="h-5 w-5" />
-            إضافة قضية جديدة
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <ViewToggle mode={viewMode} onChange={setViewMode} />
+          {hasPermission('cases', 'create') && (
+            <Button onClick={handleCreateCase}>
+              <Plus className="h-5 w-5" />
+              إضافة قضية جديدة
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -219,15 +264,38 @@ export default function CasesView() {
                 <option key={type} value={type}>{type}</option>
               ))}
             </Select>
+            <Select
+              value={archiveView}
+              onChange={(e) => {
+                setArchiveView(e.target.value as 'active' | 'archived');
+                selection.clear();
+              }}
+            >
+              <option value="active">الحاضرة</option>
+              <option value="archived">المؤرشفة</option>
+            </Select>
           </div>
         </div>
       </Card>
+
+      {notice && <Alert variant="info"><span>{notice}</span></Alert>}
+
+      {(hasPermission('cases', 'update') || hasPermission('cases', 'delete')) && (
+        <SelectionBar
+          count={selection.count}
+          onClear={selection.clear}
+          onAction={runBulk}
+          busy={busy}
+          showRestore={archiveView === 'archived'}
+          noun="قضيةً"
+        />
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي القضايا</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(cases.length)}</bdi></p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(visibleCases.length)}</bdi></p>
         </Card>
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">قيد المعالجة</p>
@@ -247,7 +315,100 @@ export default function CasesView() {
         </Card>
       </div>
 
+      {/* ═══ بطاقات ═══
+          القضيةُ الواحدة تُقرأ كاملةً هنا: رقمُها ونوعُها وعميلُها وملخّصُها
+          في موضعٍ واحد بلا تمريرٍ أفقيّ — وهو ما يلزم على شاشةٍ ضيّقة. */}
+      {viewMode === 'cards' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {shownCases.map((case_) => {
+            const { variant, Icon } = statusOf(case_.status);
+            return (
+              <Card
+                key={case_.id}
+                className={`p-5 space-y-3 hover:shadow-md transition-shadow ${
+                  selection.has(case_.id) ? 'ring-2 ring-primary' : ''
+                } ${case_.archivedAt ? 'opacity-70' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <RowCheckbox
+                      checked={selection.has(case_.id)}
+                      onChange={() => selection.toggle(case_.id)}
+                      label={`حدّد ${case_.caseNumber}`}
+                    />
+                    <div className="min-w-0">
+                      <button
+                        onClick={() => handleViewCase(case_)}
+                        className="text-sm font-semibold text-primary hover:text-primary-strong hover:underline"
+                      >
+                        <bdi>{case_.caseNumber}</bdi>
+                      </button>
+                      <p className="text-xs text-muted-foreground">{case_.caseType}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {case_.archivedAt && (
+                      <Badge variant="default">
+                        <Archive aria-hidden="true" />
+                        مؤرشفة
+                      </Badge>
+                    )}
+                    <Badge variant={variant}>
+                      <Icon aria-hidden="true" />
+                      {getStatusLabel(case_.status)}
+                    </Badge>
+                  </div>
+                </div>
+
+                <p className="text-sm text-foreground">{case_.clientName}</p>
+                {case_.summary && (
+                  <p className="text-sm text-muted-foreground line-clamp-3">{case_.summary}</p>
+                )}
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-xs text-muted-foreground">
+                    <bdi>{formatDate(case_.createdDate)}</bdi>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {case_.outcome && (() => {
+                      const outcome = outcomeOf(case_.outcome);
+                      return (
+                        <Badge variant={outcome.variant}>
+                          <outcome.Icon aria-hidden="true" />
+                          {getOutcomeLabel(case_.outcome)}
+                        </Badge>
+                      );
+                    })()}
+                    {hasPermission('cases', 'update') && (
+                      <button
+                        onClick={() => handleEditCase(case_)}
+                        className="text-primary hover:text-primary-strong text-sm"
+                      >
+                        تعديل
+                      </button>
+                    )}
+                    {case_.basecampUrl && (
+                      <a
+                        href={case_.basecampUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-warning-foreground bg-warning hover:bg-warning/90 px-2 py-1 rounded text-xs font-medium transition-colors"
+                        title="فتح في Basecamp"
+                      >
+                        <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                        Basecamp
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
       {/* Active Cases Table */}
+      {viewMode === 'rows' && (
       <Card className="overflow-hidden">
         <div className="px-6 py-4 border-b border-border">
           <h3 className="text-lg font-semibold text-foreground">القضايا النشطة</h3>
@@ -256,6 +417,14 @@ export default function CasesView() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10 sm:px-6">
+                  <RowCheckbox
+                    checked={selection.allChosen}
+                    indeterminate={selection.someChosen}
+                    onChange={selection.toggleAll}
+                    label="حدّد كلَّ المعروض"
+                  />
+                </TableHead>
                 <TableHead className="sm:px-6 tracking-wider">
                   رقم القضية
                 </TableHead>
@@ -281,7 +450,17 @@ export default function CasesView() {
             </TableHeader>
             <TableBody>
               {filteredActiveCases.map((case_) => (
-                <TableRow key={case_.id}>
+                <TableRow
+                  key={case_.id}
+                  className={selection.has(case_.id) ? 'bg-primary-soft' : undefined}
+                >
+                  <TableCell className="sm:px-6">
+                    <RowCheckbox
+                      checked={selection.has(case_.id)}
+                      onChange={() => selection.toggle(case_.id)}
+                      label={`حدّد ${case_.caseNumber}`}
+                    />
+                  </TableCell>
                   <TableCell className="sm:px-6">
                     <button 
                       onClick={() => handleViewCase(case_)}
@@ -354,15 +533,20 @@ export default function CasesView() {
           </Table>
         </div>
       </Card>
+      )}
 
-      {filteredActiveCases.length === 0 && (
+      {shownCases.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
+          <p className="text-muted-foreground">
+            {archiveView === 'archived'
+              ? 'لا قضايا مؤرشفة. ما يُؤرشف يظهر هنا ويُرجع منه.'
+              : 'لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.'}
+          </p>
         </div>
       )}
 
       {/* Completed Cases Section */}
-      {completedCases.length > 0 && (
+      {viewMode === 'rows' && completedCases.length > 0 && (
         <Card className="overflow-hidden">
           <button
             onClick={() => setShowCompletedCases(!showCompletedCases)}
@@ -384,6 +568,7 @@ export default function CasesView() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10" />
                     <TableHead className="tracking-wider">
                       رقم القضية
                     </TableHead>
@@ -409,7 +594,17 @@ export default function CasesView() {
                 </TableHeader>
                 <TableBody>
                   {filteredCompletedCases.map((case_) => (
-                    <TableRow key={case_.id}>
+                    <TableRow
+                      key={case_.id}
+                      className={selection.has(case_.id) ? 'bg-primary-soft' : undefined}
+                    >
+                      <TableCell>
+                        <RowCheckbox
+                          checked={selection.has(case_.id)}
+                          onChange={() => selection.toggle(case_.id)}
+                          label={`حدّد ${case_.caseNumber}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <button 
                           onClick={() => handleViewCase(case_)}

@@ -30,10 +30,15 @@ export function freshDatabase() {
  * علاقة له بالمنتج. فالبديل يحاكي D1 لا يبسّطها.
  */
 export function d1(db) {
+  /* أهذا استعلامُ قراءة؟ يُقرَّر من نصّه: `node:sqlite` يفرّق بين `all`
+     و`run`، وD1 لا تفرّق — بيانُها الواحد يردّ الصفوفَ والإحصاء معاً. */
+  const reads = (sql) => /^\s*(select|with|pragma)\b/i.test(sql);
+
   return {
     prepare(sql) {
       let bound = [];
       const statement = {
+        sql,
         bind(...params) { bound = params; return statement; },
         async all() {
           return { results: db.prepare(sql).all(...bound), success: true };
@@ -55,9 +60,19 @@ export function d1(db) {
       };
       return statement;
     },
+
+    /* ═══ الدفعةُ تردّ `meta` كما تردّها D1 ═══
+       كانت تنادي `all()` على كل بيان — فحذفٌ في دفعةٍ يعود بلا `changes`،
+       وكلُّ من يقرأ عددَ ما أصابه يقرأ صفراً. والبديلُ يحاكي D1 لا يبسّطها:
+       بيانُ القراءة يردّ صفوفَه، وبيانُ الكتابة يردّ إحصاءه. */
     async batch(statements) {
-      return Promise.all(statements.map((statement) => statement.all()));
+      const out = [];
+      for (const statement of statements) {
+        out.push(reads(statement.sql) ? await statement.all() : await statement.run());
+      }
+      return out;
     },
+
     async exec(sql) { db.exec(sql); return { count: 1 }; },
   };
 }
