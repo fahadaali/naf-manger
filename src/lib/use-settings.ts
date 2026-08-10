@@ -28,6 +28,8 @@ export type SettingList =
   | 'prospectSources'
   | 'caseTypes'
   | 'caseStatuses'
+  | 'contactRelations'
+  | 'idTypes'
   | 'marketerStatuses'
   | 'relationshipTypes'
   | 'commissionTypes'

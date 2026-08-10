@@ -8,6 +8,7 @@ import { Alert } from '@/registry/naf/ui/alert';
 import { downloadText, toCsv } from '../../lib/csv';
 import { Sheet, downloadXlsx } from '../../lib/xlsx';
 import { useSettings } from '../../lib/use-settings';
+import { ContactNumber } from '../../types';
 
 /** يحمي النصّ داخل HTML نافذة الطباعة — بياناتُ العملاء نصٌّ لا وسوم. */
 const escapeHtml = (value: unknown): string =>
@@ -16,6 +17,14 @@ const escapeHtml = (value: unknown): string =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+
+/* الأرقامُ الإضافية في خلية — بالصيغة التي يقرؤها `DataImport` نفسُها،
+   فما خرج من المنصة يعود إليها بأرقامه وصفاتها بلا تحرير. */
+const joinContacts = (contacts?: ContactNumber[]): string =>
+  (contacts ?? [])
+    .filter((entry) => entry.number)
+    .map((entry) => (entry.relation ? `${entry.number} - ${entry.relation}` : entry.number))
+    .join(' ؛ ');
 
 export default function DataExport() {
   const settings = useSettings();
@@ -88,14 +97,16 @@ export default function DataExport() {
         
         if (selectedFields.clients.basicInfo) {
           row['الاسم الكامل'] = client.fullName;
-          row['رقم الهوية'] = client.idNumber;
+          row['رقم الهوية'] = client.idNumber ?? '';
+          row['نوع الهوية'] = client.idType ?? '';
           row['نوع العميل'] = client.clientType;
           row['حالة العميل'] = client.status;
           row['تاريخ الانضمام'] = formatDate(client.joinDate);
         }
-        
+
         if (selectedFields.clients.contactInfo) {
           row['رقم الجوال'] = client.phone;
+          row['أرقام أخرى'] = joinContacts(client.contacts);
           row['البريد الإلكتروني'] = client.email;
         }
         
@@ -119,13 +130,15 @@ export default function DataExport() {
         
         if (selectedFields.prospects.basicInfo) {
           row['الاسم الكامل'] = prospect.fullName;
-          row['رقم الهوية'] = prospect.idNumber;
+          row['رقم الهوية'] = prospect.idNumber ?? '';
+          row['نوع الهوية'] = prospect.idType ?? '';
           row['نوع العميل'] = prospect.clientType;
           row['تاريخ الإضافة'] = formatDate(prospect.joinDate);
         }
-        
+
         if (selectedFields.prospects.contactInfo) {
           row['رقم الجوال'] = prospect.phone;
+          row['أرقام أخرى'] = joinContacts(prospect.contacts);
           row['البريد الإلكتروني'] = prospect.email;
         }
         

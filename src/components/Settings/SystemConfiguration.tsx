@@ -22,6 +22,8 @@ const EMPTY_LISTS: Pick<SystemSettings, ListCategory> = {
   prospectSources: [],
   caseTypes: [],
   caseStatuses: [],
+  contactRelations: [],
+  idTypes: [],
   marketerStatuses: [],
   relationshipTypes: [],
   commissionTypes: [],
@@ -61,6 +63,8 @@ export default function SystemConfiguration() {
       case 'prospectSources': return 'مصادر العملاء المحتملين';
       case 'caseTypes': return 'أنواع القضايا';
       case 'caseStatuses': return 'حالات القضايا';
+      case 'contactRelations': return 'صفات أصحاب الأرقام';
+      case 'idTypes': return 'أنواع الهوية';
       case 'marketerStatuses': return 'حالات المسوّقين';
       case 'relationshipTypes': return 'أنواع العلاقة مع المسوّقين';
       case 'commissionTypes': return 'أنواع العمولات';

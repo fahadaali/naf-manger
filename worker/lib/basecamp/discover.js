@@ -139,8 +139,8 @@ export async function scanProjects(env, connection) {
     await env.DB.prepare(
       `INSERT INTO basecamp_projects
          (project_id, name, app_url, status, vault_id, doc_id, doc_updated_at,
-          kind, last_error, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          kind, last_error, created_on, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(project_id) DO UPDATE SET name           = excluded.name,
                                              app_url        = excluded.app_url,
                                              status         = excluded.status,
@@ -149,6 +149,7 @@ export async function scanProjects(env, connection) {
                                              doc_updated_at = excluded.doc_updated_at,
                                              kind           = excluded.kind,
                                              last_error     = excluded.last_error,
+                                             created_on     = excluded.created_on,
                                              updated_at     = excluded.updated_at`,
     )
       /* و`created_at` يُمرَّر في الإدراج ولا يُذكر في `DO UPDATE SET` —
@@ -163,6 +164,9 @@ export async function scanProjects(env, connection) {
         document?.updated_at ?? null,
         kind,
         error,
+        /* تاريخُ إنشاء المشروع عندهم — يصير «عميلاً منذ». وكان يُكتب تاريخَ
+           الاستيراد، فيظهر موكّلٌ منذ سنين عميلاً منذ اليوم. */
+        project.created_at ?? null,
         now,
         now,
       )

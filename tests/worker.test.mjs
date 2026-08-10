@@ -131,9 +131,38 @@ check('المحتمل يُنشأ بتاريخٍ ومبلغٍ فارغين', r.st
 check('والتاريخ الفارغ غيابٌ لا نصّ', !r.body.data?.followUpDate, r.body.data?.followUpDate);
 
 // ═══════════════════════════════════════════════════════════
+group('الأرقام الهندية والهويةُ الغائبة');
+
+/* من يكتب «٠٥٠…» بلوحةٍ عربية يقصد الرقمَ نفسَه الذي يكتبه غيرُه «050…».
+   وحفظُهما كما وردا يجعل البحثَ عن أحدهما لا يجد الآخر. */
+r = await hit('POST', '/api/clients', {
+  fullName: 'من يكتب بالهندية', idNumber: '١٠٢٣٤٥٦٧٨٩', phone: '٠٥٠١٢٣٤٥٦٧',
+  contacts: [{ number: '٠٥٥٧٦٥٤٣٢١', relation: 'أخ' }],
+});
+check('تُطبَّع أرقامُ الجوّال الهندية', r.body.data?.phone === '0501234567', r.body.data?.phone);
+check('ورقمُ الهوية كذلك', r.body.data?.idNumber === '1023456789', r.body.data?.idNumber);
+check('وما في الأرقام الإضافية',
+  r.body.data?.contacts?.[0]?.number === '0557654321', r.body.data?.contacts);
+
+/* والملاحظاتُ لا تُمسّ: من كتب فيها «٥٠٠٠ ريال» قصد ما كتب. */
+r = await hit('POST', '/api/clients', {
+  fullName: 'صاحبُ ملاحظة', idNumber: '9000000003', notes: 'المبلغ ٥٠٠٠ ريال',
+});
+check('ولا تُطبَّع الملاحظات', r.body.data?.notes === 'المبلغ ٥٠٠٠ ريال', r.body.data?.notes);
+
+/* ورقمُ الهوية لم يعد لازماً: ملفٌّ قديم بلا رقم يُفتح كما هو، ولا يُفبرك
+   له رقمٌ ليمرّ القيد. و`UNIQUE` يقبل غياباً متكرّراً. */
+r = await hit('POST', '/api/clients', { fullName: 'موكّلٌ بلا هوية', phone: '0500000001' });
+check('يُنشأ عميلٌ بلا رقم هوية', r.status === 201 && r.body.ok, r.body);
+check('وهويتُه غيابٌ لا نصّ', !r.body.data?.idNumber, r.body.data?.idNumber);
+r = await hit('POST', '/api/clients', { fullName: 'وآخرُ بلا هوية', phone: '0500000002' });
+check('واثنان بلا هويةٍ لا يتصادمان', r.status === 201 && r.body.ok, r.body);
+
+// ═══════════════════════════════════════════════════════════
 group('العملاء المحتملون والتحويل');
 r = await hit('POST', '/api/prospects', {
   fullName: 'سارة العتيبي', idNumber: '1098765432', phone: '0533333333',
+  idType: 'هوية وطنية', contacts: [{ number: '0561112222', relation: 'وكيل' }],
   prospectStatus: 'مهتم', expectedValue: 50000, followUpDate: '2020-01-01',
 });
 check('يُنشأ المحتمل', r.status === 201 && r.body.ok, r.body);
@@ -141,9 +170,24 @@ const prospectId = r.body?.data?.id;
 
 r = await hit('POST', `/api/prospects/${prospectId}/convert`);
 check('يُحوَّل إلى عميل', r.body.ok, r.body);
+
+/* ═══ والتحويل ينقل ما استُجدّ ═══
+   محتملٌ سُجّل له نوعُ هويته ورقمُ وكيله ثم صار عميلاً — كان يصل ملفُّه
+   بالرقم الأول وحده، لأنّ الإدراج بقي على أعمدته القديمة. */
+const converted = (await hit('GET', '/api/clients')).body.data
+  .find((entry) => entry.fullName === 'سارة العتيبي');
+check('ونوعُ هويته ينتقل معه', converted?.idType === 'هوية وطنية', converted?.idType);
+check('ورقمُ وكيله بصفته',
+  converted?.contacts?.[0]?.number === '0561112222' && converted?.contacts?.[0]?.relation === 'وكيل',
+  converted?.contacts);
 /* بقي «محتملٌ بلا متابعة» من الفقرة السابقة — فالمحوَّل وحده هو الذي سقط. */
 check('وسقط المحوَّل من المحتملين', (await hit('GET', '/api/prospects')).body.data.length === 1);
-check('وصار عميلاً', (await hit('GET', '/api/clients')).body.data.length === 3);
+check('وصار عميلاً', Boolean(converted), converted);
+
+/* عددُ العملاء يُقرأ ولا يُكتب رقماً في الاختبار: كلُّ صفٍّ جديد في فقرةٍ
+   سابقة كان يُسقط ثلاثةَ تحقّقاتٍ لا علاقةَ لها به. والمقصودُ أن يتّفق
+   المجموعُ مع الجدول لا أن يساوي عدداً محفوظاً. */
+const clientCount = (await hit('GET', '/api/clients')).body.data.length;
 
 // ═══════════════════════════════════════════════════════════
 group('القضايا والمرفقات ورابط بيسكامب');
@@ -185,7 +229,8 @@ check('تُسجَّل عمولة', r.status === 201 && r.body.ok, r.body);
 // ═══════════════════════════════════════════════════════════
 group('الإحصاءات والإعدادات والأنشطة');
 r = await hit('GET', '/api/stats');
-check('الإحصاءات تُحسب', r.body.ok && r.body.data.totalClients === 3 && r.body.data.totalCases === 2, r.body.data);
+check('الإحصاءات تُحسب',
+  r.body.ok && r.body.data.totalClients === clientCount && r.body.data.totalCases === 2, r.body.data);
 
 r = await hit('GET', '/api/settings');
 check('الإعدادات تُقرأ بافتراضاتها', r.body.ok && Array.isArray(r.body.data.caseTypes), r.body.data);
@@ -322,7 +367,9 @@ setUser(ADMIN);
 // ═══════════════════════════════════════════════════════════
 group('التصدير');
 r = await hit('GET', '/api/export');
-check('التصدير يجمع كلَّ الجداول', r.body.ok && r.body.data.clients.length === 3 && r.body.data.cases.length === 2, Object.keys(r.body.data ?? {}));
+check('التصدير يجمع كلَّ الجداول',
+  r.body.ok && r.body.data.clients.length === clientCount && r.body.data.cases.length === 2,
+  Object.keys(r.body.data ?? {}));
 
 // ═══════════════════════════════════════════════════════════
 group('الملفّ الشخصي');

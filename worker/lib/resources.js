@@ -4,6 +4,8 @@
 // (`camelCase`) وصيغة القاعدة (`snake_case`)، والتصريحُ الذي يُسأل عنه.
 // وتفرّقُ هذه الثلاثة على ملفّات هو ما يجعل عموداً يُقرأ باسمٍ ويُكتب بآخر.
 
+import { toLatinDigits } from './digits.js';
+
 /* ═══ الأنواع ═══
  *
  * `money`  — يُخزَّن هللاتٍ عدداً صحيحاً ويُعرض ريالات. القسمة عند الحافة
@@ -14,6 +16,16 @@
  * وما عداها نصّ.
  */
 
+/* ═══ أعمدةُ الأرقام ═══
+ *
+ * هذه وحدَها تُطبَّع أرقامُها الهندية عند الكتابة — من أيّ باب: شاشةٍ يُكتب
+ * فيها «٠٥٠…»، أو ملفّ CSV رُفع، أو سحبٍ من بيسكامب.
+ *
+ * وليس النصُّ كلُّه: من كتب في الملاحظات «المبلغ ٥٠٠٠ ريال» قصد ما كتب،
+ * وتحويلُه عبثٌ بكلامه.
+ */
+const NUMERIC_COLUMNS = new Set(['phone', 'id_number', 'contacts', 'commercial_register']);
+
 export const RESOURCES = {
   clients: {
     table: 'clients',
@@ -21,7 +33,9 @@ export const RESOURCES = {
     fields: {
       fullName: ['full_name'],
       idNumber: ['id_number'],
+      idType: ['id_type'],
       phone: ['phone'],
+      contacts: ['contacts', 'json'],
       email: ['email'],
       joinDate: ['join_date', 'date'],
       clientType: ['client_type'],
@@ -32,8 +46,12 @@ export const RESOURCES = {
       legalRepresentative: ['legal_representative', 'json'],
       attachments: ['attachments', 'json'],
     },
-    required: ['full_name', 'id_number'],
-    defaults: { phone: '', email: '', notes: '', attachments: '[]' },
+    /* ═══ رقمُ الهوية لم يعد لازماً ═══
+       ملفٌّ قديم بلا رقم، وموكّلٌ يُفتح ملفُّه قبل أن يُرسل هويته. وكان
+       الاستيراد يولّد رقماً ليمرّ القيدَ — ورقمُ هويةٍ مخترَعٌ في ملفّ
+       موكّل يُقرأ حقيقياً بعد شهر. */
+    required: ['full_name'],
+    defaults: { phone: '', email: '', notes: '', attachments: '[]', contacts: '[]' },
   },
 
   prospects: {
@@ -42,7 +60,9 @@ export const RESOURCES = {
     fields: {
       fullName: ['full_name'],
       idNumber: ['id_number'],
+      idType: ['id_type'],
       phone: ['phone'],
+      contacts: ['contacts', 'json'],
       email: ['email'],
       joinDate: ['join_date', 'date'],
       clientType: ['client_type'],
@@ -57,8 +77,8 @@ export const RESOURCES = {
       followUpDate: ['follow_up_date', 'date'],
       assignedTo: ['assigned_to'],
     },
-    required: ['full_name', 'id_number'],
-    defaults: { phone: '', email: '', notes: '', attachments: '[]' },
+    required: ['full_name'],
+    defaults: { phone: '', email: '', notes: '', attachments: '[]', contacts: '[]' },
   },
 
   cases: {
@@ -225,6 +245,8 @@ export function toRow(resource, body) {
     else if (type === 'json') row[column] = JSON.stringify(value);
     else if (type === 'date') row[column] = toDateOnly(value);
     else row[column] = String(value);
+
+    if (NUMERIC_COLUMNS.has(column)) row[column] = toLatinDigits(row[column]);
   }
 
   return row;

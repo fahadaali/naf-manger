@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { CircleCheck, Clock, LoaderCircle } from 'lucide-react';
-import { Attachment, Case, Client } from '../../types';
+import { Attachment, Case, Client, ContactNumber } from '../../types';
 import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import AttachmentList from '../Common/AttachmentList';
+import ContactNumbers from '../Common/ContactNumbers';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
 import { useSettingList } from '../../lib/use-settings';
@@ -26,6 +27,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
   const [formData, setFormData] = useState({
     fullName: client?.fullName || '',
     idNumber: client?.idNumber || '',
+    idType: client?.idType || '',
     phone: client?.phone || '',
     email: client?.email || '',
     clientType: client?.clientType || 'individual',
@@ -43,9 +45,11 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
   /* المرفقات خارج `formData`: قائمةٌ لا نصّ، و`handleInputChange` يقبل
      نصّاً وحده. */
   const [attachments, setAttachments] = useState<Attachment[]>(client?.attachments ?? []);
+  const [contacts, setContacts] = useState<ContactNumber[]>(client?.contacts ?? []);
 
   // من «تكوين النظام» لا من نصوصٍ في التصيير.
   const clientTypes = useSettingList('clientTypes', formData.clientType);
+  const idTypes = useSettingList('idTypes', formData.idType);
 
   /* ═══ قضايا العميل من القاعدة لا من ملفّ العيّنات ═══
    *
@@ -80,9 +84,8 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
       newErrors.fullName = 'الاسم الكامل مطلوب';
     }
 
-    if (!formData.idNumber.trim()) {
-      newErrors.idNumber = 'رقم الهوية مطلوب';
-    }
+    /* ورقمُ الهوية لم يعد مطلوباً: ملفٌّ قديم بلا رقم، وموكّلٌ يُفتح ملفُّه
+       قبل أن يُرسل هويته. والعمود يقبل الغياب منذ الهجرة العاشرة. */
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'رقم الجوال مطلوب';
@@ -111,8 +114,10 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
     const clientData: Partial<Client> = {
       fullName: formData.fullName,
-      idNumber: formData.idNumber,
+      idNumber: formData.idNumber.trim() || undefined,
+      idType: formData.idType || undefined,
       phone: formData.phone,
+      contacts,
       email: formData.email,
       clientType: formData.clientType as Client['clientType'],
       status: formData.status as Client['status'],
@@ -183,11 +188,27 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">رقم الهوية</label>
-                  <p className="text-foreground">{client.idNumber}</p>
+                  <p className="text-foreground">
+                    <bdi>{client.idNumber || '—'}</bdi>
+                    {client.idType && (
+                      <span className="text-muted-foreground text-sm"> · {client.idType}</span>
+                    )}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">رقم الجوال</label>
                   <p className="text-foreground"><bdi>{formatPhone(client.phone)}</bdi></p>
+                  {/* وبقيةُ الأرقام بصفاتها: رقمٌ بلا صفةٍ يُتصل به ولا
+                      يُعرف من يردّ. */}
+                  {(client.contacts ?? [])
+                    .filter((entry) => entry.number && entry.number !== client.phone)
+                    .map((entry, index) => (
+                      <p key={index} className="text-sm text-muted-foreground">
+                        <bdi>{formatPhone(entry.number)}</bdi>
+                        {entry.relation && ` — ${entry.relation}`}
+                        {entry.name && ` (${entry.name})`}
+                      </p>
+                    ))}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">البريد الإلكتروني</label>
@@ -344,16 +365,33 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                رقم الهوية *
+                رقم الهوية
               </label>
               <Input
                 type="text"
+                inputMode="numeric"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value)}
+                placeholder="اختياري"
                aria-invalid={!!errors.idNumber} />
               {errors.idNumber && (
                 <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                نوع الهوية
+              </label>
+              <Select
+                value={formData.idType}
+                onChange={(e) => handleInputChange('idType', e.target.value)}
+              >
+                <option value="">غير محدّد</option>
+                {idTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </Select>
             </div>
 
             <div>
@@ -368,6 +406,10 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
               {errors.phone && (
                 <p className="text-destructive text-sm mt-1">{errors.phone}</p>
               )}
+            </div>
+
+            <div className="md:col-span-2">
+              <ContactNumbers value={contacts} onChange={setContacts} />
             </div>
 
             <div>

@@ -16,23 +16,17 @@
  *
  * التشغيل: npm test
  */
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+/* المخطَّط من `freshDatabase` لا بانتقاءِ هجراتٍ باليد: كانت ثلاثةٌ
+   منتقاةً هنا، فأُضيفت عاشرةٌ تبني عموداً جديداً ولم تُذكر — فسقط الاختبار
+   على عمودٍ غائب، والشيفرة سليمة. والتحميلُ الآن يشمل كلَّ ما في المجلَّد،
+   فهجرةٌ تُضاف تدخل هنا بلا أن يتذكّرها أحد. */
+import { freshDatabase } from './helpers/env.mjs';
 
 globalThis.Response = class {
   static json(body, init) { return { body, status: init?.status ?? 200 }; }
 };
 
-const db = new DatabaseSync(':memory:');
-const load = (file) =>
-  readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8')
-    .split('\n')
-    .filter((line) => !line.trim().startsWith('--'))
-    .join('\n');
-
-db.exec(load('0002_platform_tables.sql'));
-db.exec(load('0004_case_attachments.sql'));
-db.exec(load('0009_basecamp.sql'));
+const db = freshDatabase();
 
 const mkDb = () => ({
   prepare(sql) {

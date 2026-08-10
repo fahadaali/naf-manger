@@ -1,9 +1,27 @@
 // Core Types for the NAF client management system
+/**
+ * رقمٌ في ملفّ العميل، ومعه صفةُ صاحبه.
+ *
+ * ملفُّ الموكّل يحمل أرقاماً لغيره — لوكيله ولأبيه — وعمودٌ واحد كان
+ * يُسقطها. و`relation` من `contactRelations` في الإعدادات.
+ */
+export interface ContactNumber {
+  number: string;
+  relation: string;
+  /** اسمُ صاحب الرقم إن ذُكر — «أخوه محمد». */
+  name?: string;
+}
+
 export interface Client {
   id: string;
   fullName: string;
-  idNumber: string;
+  /** يجوز أن يغيب: لا يُفبرك رقمٌ لمن لا هوية له. */
+  idNumber?: string;
+  /** من `idTypes` — هوية وطنية | إقامة | سجل تجاري. */
+  idType?: string;
+  /** الرقم الأول. وبقيتُها في `contacts`. */
   phone: string;
+  contacts?: ContactNumber[];
   email: string;
   joinDate: Date;
   clientType: 'individual' | 'company' | 'association' | 'government';
@@ -26,8 +44,10 @@ export interface Client {
 export interface Prospect {
   id: string;
   fullName: string;
-  idNumber: string;
+  idNumber?: string;
+  idType?: string;
   phone: string;
+  contacts?: ContactNumber[];
   email: string;
   joinDate: Date;
   clientType: 'individual' | 'company' | 'association' | 'government';
@@ -400,6 +420,9 @@ export interface SystemSettings {
   prospectSources: string[];
   caseTypes: string[];
   caseStatuses: string[];
+  /** صفةُ صاحب الرقم — أوّلُها الافتراض. */
+  contactRelations: string[];
+  idTypes: string[];
   // إعدادات المسوّقين
   marketerStatuses: string[];
   relationshipTypes: string[];

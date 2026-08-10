@@ -27,10 +27,16 @@ group('من HTML إلى نصّ');
 
 check('‎<br>‎ يفصل سطراً',
   htmlToText('اسم العميل: أحمد<br>رقم الهوية: 1012') === 'اسم العميل: أحمد\nرقم الهوية: 1012');
-check('‎<div>‎ يفصل كذلك',
-  htmlToText('<div>أ: ١</div><div>ب: ٢</div>') === 'أ: ١\nب: ٢');
+/* والأرقام الهندية تصير غربية في التجريد نفسه — «٠٥٠» و«050» رقمٌ واحد،
+   وحفظُهما مختلفَين يجعل البحث عن أحدهما لا يجد الآخر. */
+check('‎<div>‎ يفصل، والرقم الهندي يُطبَّع',
+  htmlToText('<div>أ: ١</div><div>ب: ٢</div>') === 'أ: 1\nب: 2',
+  JSON.stringify(htmlToText('<div>أ: ١</div><div>ب: ٢</div>')));
 check('القوائم تُفصل',
-  htmlToText('<ul><li>أ: ١</li><li>ب: ٢</li></ul>') === 'أ: ١\nب: ٢');
+  htmlToText('<ul><li>أ: ١</li><li>ب: ٢</li></ul>') === 'أ: 1\nب: 2');
+check('والأرقام الفارسية كذلك',
+  htmlToText('<div>س: ۱۲۳</div>') === 'س: 123',
+  JSON.stringify(htmlToText('<div>س: ۱۲۳</div>')));
 check('الوسوم الداخلية تُجرَّد بلا فصل',
   htmlToText('<div>اسم العميل: <strong>شركة الأفق</strong></div>') === 'اسم العميل: شركة الأفق');
 /* المسافةُ غير الفاصلة تصير مسافةً عادية — واثنتان تبقيان اثنتين هنا،
@@ -45,7 +51,7 @@ check('رموز الكيانات تُفكّ',
 check('الرموز العددية تُفكّ',
   htmlToText('<div>x: &#1571;</div>') === 'x: أ');
 check('الأسطر الفارغة تُسقَط',
-  htmlToText('<div>أ: ١</div><div></div><div><br></div><div>ب: ٢</div>') === 'أ: ١\nب: ٢');
+  htmlToText('<div>أ: ١</div><div></div><div><br></div><div>ب: ٢</div>') === 'أ: 1\nب: 2');
 check('الجداول تُقرأ عنواناً وقيمة',
   htmlToText('<tr><td>اسم العميل</td><td>أحمد</td></tr>').includes('اسم العميل: أحمد'),
   htmlToText('<tr><td>اسم العميل</td><td>أحمد</td></tr>'));
@@ -98,9 +104,10 @@ check('«موضوع القضية» يُربط بالملخّص', parsed.case.sum
 check('وحقلٌ لا مقابل له يُعرض لا يُبتلع',
   parsed.unmapped.some((u) => u.label === 'المحامي المسؤول'), parsed.unmapped);
 
-const shaddad = parseSummary('<div>اسمُ العميلِ: أحمد</div><div>رقمُ الهويّة: 1012</div>', DEFAULT_FIELD_MAP);
+const shaddad = parseSummary(
+  '<div>اسمُ العميلِ: أحمد</div><div>رقمُ الهويّة: 1012345678</div>', DEFAULT_FIELD_MAP);
 check('العنوان المشكَّل يُطابَق موحَّداً',
-  shaddad.client.fullName === 'أحمد' && shaddad.client.idNumber === '1012', shaddad.client);
+  shaddad.client.fullName === 'أحمد' && shaddad.client.idNumber === '1012345678', shaddad.client);
 
 const custom = parseSummary('<div>الموكّل: خالد</div>', { 'الموكّل': 'client.fullName' });
 check('خريطةٌ من عند المكتب تُحترم', custom.client.fullName === 'خالد', custom.client);

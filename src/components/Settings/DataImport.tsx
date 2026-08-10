@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { CircleCheck, FileText, TriangleAlert, Users } from 'lucide-react';
 import { db } from '../../data/database';
-import { Client, Prospect } from '../../types';
+import { Client, ContactNumber, Prospect } from '../../types';
 import { downloadText, parseCsv, toCsv } from '../../lib/csv';
 import { Button } from '@/registry/naf/ui/button';
 import { Input } from '@/registry/naf/ui/input';
@@ -27,10 +27,36 @@ interface Column<T> {
   sample: string;
 }
 
+/* ═══ الأرقام الإضافية في خليةٍ واحدة ═══
+   عمودٌ لكل رقمٍ محتمل يجعل القالب عشرين عموداً أغلبُها فارغ. فتُكتب في
+   خلية: «0551234567 - أخ ؛ 0539876543 - وكيل». والفاصلُ بينها فاصلةٌ منقوطة
+   أو سطر، وبين الرقم وصفته شرطةٌ أو نقطتان — لأنّ من يكتبها بيده لن يلتزم
+   واحداً منها. */
+function parseContacts(raw: string): ContactNumber[] {
+  return raw
+    .split(/[;؛\n]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [number, ...rest] = part.split(/\s*[-–—:：]\s*/);
+      return { number: number.trim(), relation: rest.join(' ').trim() || 'أصيل' };
+    })
+    .filter((entry) => entry.number);
+}
+
 const CLIENT_COLUMNS: Column<Partial<Client>>[] = [
   { header: 'الاسم الكامل', required: true, sample: 'محمد عبدالله', apply: (t, v) => { t.fullName = v; } },
-  { header: 'رقم الهوية', required: true, sample: '1012345678', apply: (t, v) => { t.idNumber = v; } },
+  /* ═══ ورقمُ الهوية لم يعد لازماً ═══
+     ملفٌّ قديم بلا رقم يُرفع كما هو. وكان القالب يردّ صفَّه «حقلٌ ناقص»
+     بينما الشاشةُ نفسُها تقبله — والباب الواحد لا يُفتح ويُغلق. */
+  { header: 'رقم الهوية', sample: '1012345678', apply: (t, v) => { if (v) t.idNumber = v; } },
+  { header: 'نوع الهوية', sample: 'هوية وطنية', apply: (t, v) => { if (v) t.idType = v; } },
   { header: 'رقم الجوال', sample: '0501234567', apply: (t, v) => { t.phone = v; } },
+  {
+    header: 'أرقام أخرى',
+    sample: '0551234567 - أخ ؛ 0539876543 - وكيل',
+    apply: (t, v) => { if (v) t.contacts = parseContacts(v); }
+  },
   { header: 'البريد الإلكتروني', sample: 'name@example.com', apply: (t, v) => { t.email = v; } },
   {
     header: 'نوع العميل',
@@ -48,8 +74,14 @@ const CLIENT_COLUMNS: Column<Partial<Client>>[] = [
 
 const PROSPECT_COLUMNS: Column<Partial<Prospect>>[] = [
   { header: 'الاسم الكامل', required: true, sample: 'سارة أحمد', apply: (t, v) => { t.fullName = v; } },
-  { header: 'رقم الهوية', required: true, sample: '1087654321', apply: (t, v) => { t.idNumber = v; } },
+  { header: 'رقم الهوية', sample: '1087654321', apply: (t, v) => { if (v) t.idNumber = v; } },
+  { header: 'نوع الهوية', sample: 'هوية وطنية', apply: (t, v) => { if (v) t.idType = v; } },
   { header: 'رقم الجوال', sample: '0559876543', apply: (t, v) => { t.phone = v; } },
+  {
+    header: 'أرقام أخرى',
+    sample: '0561112222 - وكيل',
+    apply: (t, v) => { if (v) t.contacts = parseContacts(v); }
+  },
   { header: 'البريد الإلكتروني', sample: 'name@example.com', apply: (t, v) => { t.email = v; } },
   {
     header: 'نوع العميل',
@@ -243,7 +275,7 @@ export default function DataImport() {
       <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         <ImportPanel<Client>
           title="استيراد العملاء"
-          hint="الاسم الكامل ورقم الهوية مطلوبان"
+          hint="الاسم الكامل وحدَه لازم — ورقمُ الهوية اختياري"
           columns={CLIENT_COLUMNS}
           create={(row) => db.createClient(row as Omit<Client, 'id'>)}
           tone="primary"
@@ -251,7 +283,7 @@ export default function DataImport() {
         />
         <ImportPanel<Prospect>
           title="استيراد العملاء المحتملين"
-          hint="الاسم الكامل ورقم الهوية مطلوبان"
+          hint="الاسم الكامل وحدَه لازم — ورقمُ الهوية اختياري"
           columns={PROSPECT_COLUMNS}
           create={(row) => db.createProspect(row as Omit<Prospect, 'id'>)}
           tone="success"

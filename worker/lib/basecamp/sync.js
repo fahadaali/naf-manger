@@ -28,7 +28,9 @@ const nowSeconds = () => Math.floor(Date.now() / 1000);
 const FIELD_MAP_KEY = 'basecamp_field_map';
 
 /** الحقول التي تملكها المزامنة. وما عداها للمنصة وحدها. */
-export const CLIENT_FIELDS = ['fullName', 'idNumber', 'phone', 'email', 'clientType', 'commercialRegister'];
+export const CLIENT_FIELDS = [
+  'fullName', 'idNumber', 'idType', 'phone', 'contacts', 'email', 'clientType', 'commercialRegister',
+];
 export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome'];
 
 /* الأتعاب والعمولات والمسوّق لا تُمسّ: ليست في «ملخص القضية»، وتُدار في
@@ -60,18 +62,36 @@ export async function writeFieldMap(env, map, userId) {
     .run();
 }
 
+/**
+ * مفرداتُ «تكوين النظام» التي يقرؤها القارئ.
+ *
+ * فصفةُ صاحب الرقم ونوعُ الهوية يحرّرهما المكتب، والقارئُ يطابق ما كُتب في
+ * الملفّ بما اختاره المكتب — لا بقائمةٍ مكتوبةٍ في الشيفرة.
+ */
+async function readVocabulary(env) {
+  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = 'platform'`)
+    .first();
+  let stored = {};
+  try { stored = JSON.parse(row?.value ?? '{}') ?? {}; } catch { stored = {}; }
+  return {
+    contactRelations: Array.isArray(stored.contactRelations) ? stored.contactRelations : undefined,
+    idTypes: Array.isArray(stored.idTypes) ? stored.idTypes : undefined,
+  };
+}
+
 const safeJson = (text) => {
   try { return JSON.parse(text ?? 'null'); } catch { return null; }
 };
 
 /**
- * رقمٌ بديلٌ ثابتٌ حين لا يحمله الملفّ.
+ * رقمُ قضيةٍ بديلٌ ثابت حين لا يحمله الملفّ.
  *
  * والثباتُ شرط: مزامنةٌ ثانية يجب أن تجد الصفَّ نفسه لا أن تُنشئ ثانياً.
  * فيُشتقّ من معرّف المشروع في بيسكامب — وهو لا يتبدّل.
  *
- * ويُعلَّم في المعاينة صراحةً: رقمُ هويةٍ مولَّدٌ ليس رقمَ هوية، وصاحبُ
- * المكتب يصحّحه بعد النقل. وإسقاطُ القضية بدله يُضيع ما جيء لأجله.
+ * **ولا يُولَّد رقمُ هوية بهذا ولا بغيره.** عمودُه يقبل الغياب، ورقمٌ
+ * مخترَعٌ في ملفّ موكّل يُقرأ حقيقياً بعد شهر. أمّا رقمُ القضية فهو مفتاحٌ
+ * داخليّ لا يدّعي شيئاً عن الخارج، وإسقاطُ القضية بدله يُضيع ما جيء لأجله.
  */
 const fallbackNumber = (prefix, projectId) => `${prefix}-${projectId}`;
 
@@ -99,11 +119,12 @@ async function findClient(env, { idNumber, fullName }) {
 }
 
 /** خطّةُ مشروعٍ واحد: ماذا سيقع له ولماذا. */
-async function planProject(env, connection, row, fieldMap, seen) {
+async function planProject(env, connection, row, fieldMap, seen, vocab) {
   const plan = {
     projectId: row.project_id,
     projectName: row.name,
     appUrl: row.app_url,
+    joinDate: row.created_on ? String(row.created_on).slice(0, 10) : null,
     actions: [],       // create_client | link_client | create_case | update_case | none
     warnings: [],
     conflicts: [],
@@ -125,7 +146,7 @@ async function planProject(env, connection, row, fieldMap, seen) {
     return plan;
   }
 
-  const parsed = parseSummary(document.content, fieldMap);
+  const parsed = parseSummary(document.content, fieldMap, vocab);
   plan.unmapped = parsed.unmapped;
 
   if (!parsed.client.fullName) {
@@ -134,11 +155,11 @@ async function planProject(env, connection, row, fieldMap, seen) {
   }
 
   // ── العميل ──
+  /* ولا يُولَّد رقمُ هوية: العمود يقبل الغياب منذ الهجرة العاشرة، ورقمٌ
+     مخترَعٌ في ملفّ موكّل يُقرأ حقيقياً بعد شهر. ويُقال في المعاينة أنه
+     ناقص، ويُملأ في الشاشة. */
   const wanted = { ...parsed.client };
-  if (!wanted.idNumber) {
-    wanted.idNumber = fallbackNumber('BC', row.project_id);
-    plan.warnings.push('رقم الهوية مولَّد — يحتاج تصحيحاً');
-  }
+  if (!wanted.idNumber) plan.warnings.push('بلا رقم هوية — يُملأ في الشاشة');
 
   /* ═══ ما ستُنشئه خطّةٌ سابقة موجودٌ في حكم هذه ═══
 
@@ -245,10 +266,11 @@ export async function buildPlan(env, connection) {
     `SELECT * FROM basecamp_projects WHERE kind = 'client' ORDER BY name`,
   ).all();
 
+  const vocab = await readVocabulary(env);
   const seen = { clients: new Set(), cases: new Set() };
   const plans = [];
   for (const row of results ?? []) {
-    plans.push(await planProject(env, connection, row, fieldMap, seen));
+    plans.push(await planProject(env, connection, row, fieldMap, seen, vocab));
   }
 
   const summary = {
@@ -295,23 +317,62 @@ async function applyPlan(env, plan, actorId) {
     clientId = crypto.randomUUID();
     const values = plan.client.values;
     await env.DB.prepare(
-      `INSERT INTO clients (id, full_name, id_number, phone, email, client_type, commercial_register,
-                            status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'current', ?, ?)`,
+      `INSERT INTO clients (id, full_name, id_number, id_type, phone, contacts, email,
+                            client_type, commercial_register, join_date, status,
+                            created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?, ?)`,
     )
       .bind(
         clientId,
         values.fullName,
-        values.idNumber,
+        values.idNumber ?? null,
+        values.idType ?? null,
         values.phone ?? '',
+        JSON.stringify(values.contacts ?? []),
         values.email ?? '',
         values.clientType ?? 'individual',
         values.commercialRegister ?? null,
+        /* «عميلٌ منذ» تاريخُ إنشاء مشروعه عندهم — لا تاريخُ الاستيراد.
+           و`COALESCE` في العمود يعطي اليوم حين يغيب. */
+        plan.joinDate ?? new Date(now * 1000).toISOString().slice(0, 10),
         now,
         now,
       )
       .run();
     result.created.push('client');
+  }
+
+  /* ═══ عميلٌ قائم: يُملأ الفارغُ ولا يُدهس المكتوب ═══
+     مشروعٌ ثانٍ لعميلٍ موجود قد يحمل رقمَ هويته أو أرقامَ أهله وهي ناقصةٌ
+     عندنا. فتُملأ حين تغيب — وما فيه قيمةٌ لا يُمسّ، فقد تكون يدٌ كتبتها. */
+  if (plan.client.id) {
+    const current = await env.DB.prepare(`SELECT * FROM clients WHERE id = ?`)
+      .bind(clientId)
+      .first();
+
+    const fill = {};
+    const values = plan.client.values;
+    if (current && !current.id_number && values.idNumber) fill.id_number = values.idNumber;
+    if (current && !current.id_type && values.idType) fill.id_type = values.idType;
+    if (current && !current.phone && values.phone) fill.phone = values.phone;
+
+    const existingContacts = safeJson(current?.contacts) ?? [];
+    const incoming = values.contacts ?? [];
+    if (incoming.length) {
+      const have = new Set(existingContacts.map((entry) => entry.number));
+      const merged = [...existingContacts, ...incoming.filter((entry) => !have.has(entry.number))];
+      if (merged.length !== existingContacts.length) fill.contacts = JSON.stringify(merged);
+    }
+
+    if (Object.keys(fill).length) {
+      const columns = Object.keys(fill);
+      await env.DB.prepare(
+        `UPDATE clients SET ${columns.map((c) => `${c} = ?`).join(', ')}, updated_at = ? WHERE id = ?`,
+      )
+        .bind(...columns.map((c) => fill[c]), now, clientId)
+        .run();
+      result.updated.push(...columns);
+    }
   }
 
   // ── القضية ──

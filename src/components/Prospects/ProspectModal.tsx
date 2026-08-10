@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CircleHelp, CircleSlash, CircleX, Clock, FileCheck, Info } from 'lucide-react';
-import { Attachment, Prospect } from '../../types';
+import { Attachment, ContactNumber, Prospect } from '../../types';
 /* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
    ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
    يمرّ بـ formatDate من naf-format. */
@@ -9,6 +9,7 @@ import { useSettingList } from '../../lib/use-settings';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import AttachmentList from '../Common/AttachmentList';
+import ContactNumbers from '../Common/ContactNumbers';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
@@ -30,6 +31,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
   const [formData, setFormData] = useState({
     fullName: prospect?.fullName || '',
     idNumber: prospect?.idNumber || '',
+    idType: prospect?.idType || '',
     phone: prospect?.phone || '',
     email: prospect?.email || '',
     clientType: prospect?.clientType || 'individual',
@@ -50,12 +52,14 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
 
   // قائمةٌ لا نصّ، فخارج `formData` الذي يقبل النصّ وحده.
   const [attachments, setAttachments] = useState<Attachment[]>(prospect?.attachments ?? []);
+  const [contacts, setContacts] = useState<ContactNumber[]>(prospect?.contacts ?? []);
 
   /* من «تكوين النظام» لا من `mockSystemSettings` — ملفّ العيّنات. فحالةٌ
      أو مصدرٌ يُضاف من الإعدادات يظهر هنا، وهو الموضع الوحيد لاستعماله. */
   const clientTypes = useSettingList('clientTypes', formData.clientType);
   const prospectStatuses = useSettingList('prospectStatuses', formData.prospectStatus);
   const prospectSources = useSettingList('prospectSources', formData.source);
+  const idTypes = useSettingList('idTypes', formData.idType);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -64,9 +68,8 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
       newErrors.fullName = 'الاسم الكامل مطلوب';
     }
 
-    if (!formData.idNumber.trim()) {
-      newErrors.idNumber = 'رقم الهوية مطلوب';
-    }
+    /* ورقمُ الهوية اختياريّ كما في العملاء — والمحتمل يصير عميلاً، فشرطٌ
+       هنا وغيابُه هناك يجعل التحويل يمرّ بما لا يمرّ به الإنشاء. */
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'رقم الجوال مطلوب';
@@ -95,7 +98,9 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
 
     const prospectData: Partial<Prospect> = {
       fullName: formData.fullName,
-      idNumber: formData.idNumber,
+      idNumber: formData.idNumber.trim() || undefined,
+      idType: formData.idType || undefined,
+      contacts,
       phone: formData.phone,
       email: formData.email,
       clientType: formData.clientType as Prospect['clientType'],
@@ -304,16 +309,33 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                رقم الهوية *
+                رقم الهوية
               </label>
               <Input
                 type="text"
+                inputMode="numeric"
                 value={formData.idNumber}
                 onChange={(e) => handleInputChange('idNumber', e.target.value)}
+                placeholder="اختياري"
                aria-invalid={!!errors.idNumber} />
               {errors.idNumber && (
                 <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                نوع الهوية
+              </label>
+              <Select
+                value={formData.idType}
+                onChange={(e) => handleInputChange('idType', e.target.value)}
+              >
+                <option value="">غير محدّد</option>
+                {idTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </Select>
             </div>
 
             <div>
@@ -328,6 +350,10 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               {errors.phone && (
                 <p className="text-destructive text-sm mt-1">{errors.phone}</p>
               )}
+            </div>
+
+            <div className="md:col-span-2">
+              <ContactNumbers value={contacts} onChange={setContacts} />
             </div>
 
             <div>

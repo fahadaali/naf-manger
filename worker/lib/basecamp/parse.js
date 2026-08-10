@@ -12,11 +12,13 @@
 // `system_settings` وتُعدَّل من الشاشة — والافتراض أدناه اقتراحٌ يُبنى عليه.
 
 import { normalizeArabic } from './discover.js';
+import { extractIdentities, extractPhones, toLatinDigits } from './numbers.js';
 
 /** حقول المنصة التي يقبل الربط الكتابةَ فيها. */
 export const TARGETS = {
   'client.fullName': { label: 'اسم العميل', entity: 'client', required: true },
   'client.idNumber': { label: 'رقم الهوية', entity: 'client' },
+  'client.idType': { label: 'نوع الهوية', entity: 'client' },
   'client.phone': { label: 'رقم الجوال', entity: 'client' },
   'client.email': { label: 'البريد الإلكتروني', entity: 'client' },
   'client.clientType': { label: 'نوع العميل', entity: 'client' },
@@ -34,6 +36,8 @@ export const DEFAULT_FIELD_MAP = {
   'العميل': 'client.fullName',
   'رقم الهوية': 'client.idNumber',
   'الهوية': 'client.idNumber',
+  'رقم الإقامة': 'client.idNumber',
+  'نوع الهوية': 'client.idType',
   'السجل التجاري': 'client.commercialRegister',
   'رقم الجوال': 'client.phone',
   'الجوال': 'client.phone',
@@ -48,6 +52,10 @@ export const DEFAULT_FIELD_MAP = {
   'حالة القضية': 'case.status',
   'نتيجة القضية': 'case.outcome',
 };
+
+/** مفرداتٌ افتراضية — والمعتمَدُ ما في «تكوين النظام». */
+export const DEFAULT_RELATIONS = ['أصيل', 'وكيل', 'أب', 'أم', 'أخ', 'ابن', 'زوج', 'أخرى'];
+export const DEFAULT_ID_TYPES = ['هوية وطنية', 'إقامة', 'سجل تجاري'];
 
 const ENTITIES = {
   /* مفرداتُ المنصة كما في `roles.js` و«تكوين النظام» — والملفّ يكتبها
@@ -84,7 +92,10 @@ const ENTITY_REFS = {
  * سطراً واحداً لا يُقرأ منه حقلان.
  */
 export function htmlToText(html) {
-  return String(html ?? '')
+  /* الأرقام الهندية تصير غربية هنا، مرّةً، قبل أيّ قراءة — فلا يبقى قارئٌ
+     يحتاج أن يتذكّرها. و«٠٥٠» و«050» رقمٌ واحد، وحفظُهما مختلفَين يجعل
+     البحث عن أحدهما لا يجد الآخر. */
+  return toLatinDigits(html)
     .replace(/<(?:br|hr)\s*\/?>/gi, '\n')
     .replace(/<\/(?:div|p|li|tr|h[1-6]|blockquote)\s*>/gi, '\n')
     .replace(/<(?:div|p|li|tr|h[1-6]|blockquote)\b[^>]*>/gi, '\n')
@@ -147,7 +158,11 @@ function translate(target, value) {
  * و`unmapped` عناوينُ وُجدت في الملفّ ولا مقابل لها في الخريطة — تُعرض في
  * الشاشة لتُربط، فلا يضيع حقلٌ صامتاً لأنّ أحداً لم يعرف أنه هناك.
  */
-export function parseSummary(html, fieldMap = DEFAULT_FIELD_MAP) {
+export function parseSummary(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
+  const relations = vocab.contactRelations ?? DEFAULT_RELATIONS;
+  const idTypes = vocab.idTypes ?? DEFAULT_ID_TYPES;
+  const primaryRelation = relations[0] ?? 'أصيل';
+
   const lines = readLabelledLines(htmlToText(html));
 
   /* الخريطة تُطبَّع مرّةً: مفاتيحُها يكتبها إنسانٌ في الشاشة، وقد يشدّد. */
@@ -169,10 +184,76 @@ export function parseSummary(html, fieldMap = DEFAULT_FIELD_MAP) {
     if (!line.value) continue;
 
     const [entity, field] = target.split('.');
+
+    /* ═══ القيمةُ المعنونة تُوحَّد إن كان هدفُها رقماً ═══
+       «الجوال: 050… وجوال أخيه 055…» سطرٌ واحد، وأخذُه كما هو يجعل حقلَ
+       الجوّال يحمل جملةً. فيُؤخذ أوّلُ رقمٍ صالحٍ فيه، ويُترك الباقي
+       للمسح الديناميكي أدناه يلتقطه بصفته. */
+    if (target === 'client.phone') {
+      const first = extractPhones(line.value, relations)[0];
+      if (first) client.phone = first.number;
+      continue;
+    }
+    if (target === 'client.idNumber') {
+      const first = extractIdentities(line.value, idTypes)[0];
+      if (first) {
+        client.idNumber = first.number;
+        if (first.type) client.idType = first.type;
+      }
+      continue;
+    }
+
     const value = translate(target, line.value);
     if (entity === 'client') client[field] = value;
     else kase[field] = value;
   }
 
-  return { client, case: kase, unmapped, labels: lines.map((line) => line.label) };
+  /* ═══ ثمّ المسحُ الديناميكي على النصّ كلِّه ═══
+
+     ما جاء من الخريطة يبقى سيّداً — عنوانٌ كتبه صاحبُ الملفّ أدقُّ من
+     ترجيحٍ من شكل رقم. والمسحُ يُكمل ما نقص: أرقاماً في سطورٍ بلا عنوان،
+     ورقماً ثانياً في سطرٍ فيه رقمان، ونوعَ هويةٍ يُرجَّح من أول رقمها. */
+  const text = htmlToText(html);
+
+  const phones = extractPhones(text, relations);
+  const identities = extractIdentities(text, idTypes);
+
+  /* الرقم الأول: ما وُسم «أصيل» إن وُجد، وإلا أولُ ما ظهر. وما جاء من
+     الخريطة يسبقهما — فإن كتب صاحبُ الملفّ «رقم الجوال» صراحةً فهو المعنيّ. */
+  const primary = phones.find((entry) => entry.relation === primaryRelation) ?? phones[0];
+  if (!client.phone && primary) client.phone = primary.number;
+  else if (client.phone) {
+    const normalized = phones.find((entry) => entry.number === normalizePhoneLike(client.phone));
+    if (normalized) client.phone = normalized.number;
+  }
+
+  const contacts = [];
+  for (const entry of phones) {
+    contacts.push({
+      number: entry.number,
+      relation: entry.relation ?? (entry.number === client.phone ? primaryRelation : null),
+    });
+  }
+  if (contacts.length) client.contacts = contacts;
+
+  const identity = identities[0];
+  if (!client.idNumber && identity) client.idNumber = identity.number;
+  if (!client.idType && identity?.type) client.idType = identity.type;
+
+  /* وهويةٌ جاءت من الخريطة بلا نوع: يُرجَّح نوعُها من رقمها هي. */
+  if (client.idNumber && !client.idType) {
+    const matched = identities.find((entry) => entry.number === client.idNumber);
+    if (matched?.type) client.idType = matched.type;
+  }
+
+  return { client, case: kase, unmapped, labels: lines.map((line) => line.label), phones, identities };
+}
+
+/* ما جاء من الخريطة قد يكون «+966 50 …» — فيُوحَّد ليُقارَن بما مُسح. */
+function normalizePhoneLike(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.startsWith('00966')) return `0${digits.slice(5)}`;
+  if (digits.startsWith('966')) return `0${digits.slice(3)}`;
+  if (digits.length === 9 && digits[0] !== '0') return `0${digits}`;
+  return digits;
 }

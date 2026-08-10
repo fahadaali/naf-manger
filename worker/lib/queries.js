@@ -30,6 +30,13 @@ const DEFAULT_SETTINGS = {
     'أخرى',
   ],
   caseTypes: ['قضية تجارية', 'قضية عمالية', 'قضية مدنية', 'قضية جزائية'],
+
+  /* ═══ صفةُ صاحب الرقم، ونوعُ الهوية ═══
+     ملفُّ الموكّل يحمل أرقاماً لغيره — لوكيله ولأبيه ولأخيه — وحفظُها بلا
+     صفةٍ يجعلها أرقاماً لا يُعرف لمن. وهاتان قائمتان كبقية المفردات:
+     تُحرَّران من «تكوين النظام»، وأوّلُ `contactRelations` هو الافتراض. */
+  contactRelations: ['أصيل', 'وكيل', 'أب', 'أم', 'أخ', 'ابن', 'زوج', 'أخرى'],
+  idTypes: ['هوية وطنية', 'إقامة', 'سجل تجاري'],
   caseStatuses: ['pending', 'in-progress', 'completed', 'postponed'],
 
   /* ═══ ثلاثُ قوائم كانت تخالف ما تكتبه الشاشات ═══
@@ -193,15 +200,20 @@ export async function convertProspect(env, user, id) {
 
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT INTO clients (id, full_name, id_number, phone, email, join_date, client_type,
+      /* ونوعُ الهوية وبقيةُ الأرقام تنتقل معه: محتملٌ سُجّل له رقمُ وكيله
+         ورقمُ أخيه ثم صار عميلاً، كان يصل ملفُّه بالرقم الأول وحده. */
+      `INSERT INTO clients (id, full_name, id_number, id_type, phone, contacts, email,
+                            join_date, client_type,
                             status, notes, profile_picture, commercial_register,
                             legal_representative, attachments, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'current', ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       clientId,
       row.full_name,
       row.id_number,
+      row.id_type,
       row.phone,
+      row.contacts ?? '[]',
       row.email,
       row.join_date,
       row.client_type,

@@ -505,7 +505,16 @@ function shapePlan(plan) {
     conflicts: plan.conflicts,
     unmapped: (plan.unmapped ?? []).map((entry) => entry.label),
     client: plan.client
-      ? { action: plan.client.action, fullName: plan.client.values.fullName, idNumber: plan.client.values.idNumber }
+      ? {
+          action: plan.client.action,
+          fullName: plan.client.values.fullName,
+          idNumber: plan.client.values.idNumber ?? null,
+          idType: plan.client.values.idType ?? null,
+          phone: plan.client.values.phone ?? null,
+          /* عددُ الأرقام يُعرض: من يرى «٣ أرقام» يعرف أنّ أرقام الأهل
+             التُقطت، ومن يرى «١» يراجع ملفَّه. */
+          contacts: (plan.client.values.contacts ?? []).length,
+        }
       : null,
     case: plan.case
       ? { action: plan.case.action, caseNumber: plan.case.values.caseNumber,
