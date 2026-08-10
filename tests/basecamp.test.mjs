@@ -267,5 +267,40 @@ check('العدّ يفصل العملاء عن الداخلي',
   check('ردٌّ ليس JSON لا يُسقط المبادلة', out.error?.status === 500 && out.error?.code === null, JSON.stringify(out));
 }
 
+
+// ═══ ١٣) الاعتماد يُقصّ قبل الإرسال ═══
+//
+// اللصقُ من صفحة بيسكامب إلى لوحة Cloudflare يحمل سطراً جديداً أو مسافةً
+// طرفية لا تُرى في الحقل — فتصل 37signals فتُغيّر السرَّ فيُردّ الطلب،
+// ويبحث صاحبُه عن خطأٍ في سرٍّ صحيح.
+{
+  let sentUrl = '';
+  globalThis.fetch = async (input) => {
+    sentUrl = String(input);
+    return { ok: true, status: 200, json: async () => ({ access_token: 'a', refresh_token: 'r', expires_in: 1 }) };
+  };
+  const { exchangeCode } = await import('../worker/lib/basecamp/oauth.js');
+  await exchangeCode(
+    { BASECAMP_CLIENT_ID: '  abc123\n', BASECAMP_CLIENT_SECRET: 'sec456 \r\n', BASECAMP_TOKEN_KEY: 'k' },
+    new URL('https://crm.naflaw.sa/api/basecamp/callback'),
+    'code',
+  );
+  const params = new URL(sentUrl).searchParams;
+  check('المعرّف يُقصّ', params.get('client_id') === 'abc123', JSON.stringify(params.get('client_id')));
+  check('والسرّ يُقصّ', params.get('client_secret') === 'sec456', JSON.stringify(params.get('client_secret')));
+}
+
+// ═══ ١٤) مفتاحُ التعمية لا يُقصّ ═══
+//
+// وقصُّه يُبدّله، فيُبطل فكَّ ما عُمّي به قبل ذلك — ولا مقارنةَ له بطرفٍ
+// خارجي أصلاً حتى تضرّه مسافة.
+{
+  const { seal: sealNow, open: openNow } = await import('../worker/lib/basecamp/secrets.js');
+  const padded = ' مفتاحٌ بمسافة ';
+  const sealedPadded = await sealNow(padded, 'رمز');
+  check('المفتاح بمسافته يفكّ ما عمّاه', (await openNow(padded, sealedPadded)) === 'رمز');
+  check('ومقصوصاً لا يفكّه', (await openNow(padded.trim(), sealedPadded)) === null);
+}
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

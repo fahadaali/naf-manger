@@ -27,7 +27,21 @@ export function credentials(env) {
   const clientSecret = env.BASECAMP_CLIENT_SECRET;
   const tokenKey = env.BASECAMP_TOKEN_KEY;
   if (!clientId || !clientSecret || !tokenKey) return null;
-  return { clientId, clientSecret, tokenKey };
+
+  /* ═══ تُقصّ أطرافُها ═══
+
+     السرُّ يُنسخ من صفحة بيسكامب ويُلصق في لوحة Cloudflare، واللصقُ يحمل
+     سطراً جديداً أو مسافةً طرفية في الغالب. وهي لا تُرى في الحقل، وتصل
+     37signals فتُغيِّر السرَّ فتردّ «معرّفٌ غير صالح» — فيبحث صاحبُه عن
+     خطأٍ في السرّ وهو صحيح، والعلّةُ محرفٌ لا يُطبع.
+
+     ولا يُقصّ `tokenKey`: هو من عند صاحبه ولا يُقارَن بشيءٍ خارجي، وقصُّه
+     يُبدّله فيُبطل تعميةَ ما حُفظ به قبل هذا السطر. */
+  return {
+    clientId: String(clientId).trim(),
+    clientSecret: String(clientSecret).trim(),
+    tokenKey,
+  };
 }
 
 /** عنوانُ العودة يُشتقّ من عنوان الطلب لا يُكتب ثابتاً: نطاقُ الاختبار غيرُ نطاق الإنتاج. */
@@ -150,11 +164,7 @@ async function refresh(env, refreshToken) {
 /** أيُّ حسابٍ يملكه هذا الرمز — يُنادى مرّةً عند الربط. */
 export async function identify(accessToken) {
   const response = await fetch(`${LAUNCHPAD}/authorization.json`, {
-    headers: {
-      authorization: `Bearer ${accessToken}`,
-      'user-agent': 'NAF Manager (support@naflaw.sa)',
-      accept: 'application/json',
-    },
+    headers: { authorization: `Bearer ${accessToken}`, ...LAUNCHPAD_HEADERS },
   });
   if (!response.ok) {
     console.error('Basecamp: تعذّرت قراءة الهوية —', response.status);

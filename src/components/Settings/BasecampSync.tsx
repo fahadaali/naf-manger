@@ -61,7 +61,7 @@ const EXCHANGE_HINT = (detail: string): string => {
     return 'الأرجح أنّ المعرّف أو السرّ خاطئ';
   }
   if (detail.startsWith('403')) return 'رفض بيسكامب الطلب';
-  return `ردّ بيسكامب: ${detail}`;
+  return 'ردٌّ غير متوقَّع من بيسكامب';
 };
 
 const readError = (error: unknown, fallback: string) => {
@@ -103,7 +103,12 @@ export default function BasecampSync() {
     const known = RETURN[base];
     setNotice(
       known
-        ? { tone: known.tone, text: detail ? `${known.text} — ${EXCHANGE_HINT(detail)}` : known.text }
+        /* والردُّ الخام يُعرض مع التفسير: التفسيرُ ترجيحٌ، والخامُ حقيقة —
+           وبه يُفرَّق حين يُخطئ الترجيح. */
+        ? {
+            tone: known.tone,
+            text: detail ? `${known.text} — ${EXCHANGE_HINT(detail)} (${detail})` : known.text,
+          }
         : { tone: 'warning', text: 'تعذّر إتمام الربط' },
     );
     const url = new URL(window.location.href);
