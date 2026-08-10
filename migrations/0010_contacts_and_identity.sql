@@ -15,6 +15,26 @@
 -- ولا سبيلَ إلى رفع `NOT NULL` في SQLite إلا بإعادة البناء: إنشاءُ جدولٍ
 -- بالشكل الجديد، ونقلُ الصفوف، ثم الإحلال. والمعرّفات تبقى كما هي،
 -- فإشاراتُ `cases.client_id` سليمةٌ بعده.
+--
+-- ═══ وحذفُ الجدول يجرّ أبناءه ═══
+--
+-- `DROP TABLE` في SQLite — والقيودُ مفعَّلة، وهي كذلك في D1 — يُجري حذفاً
+-- ضمنياً لكل صفٍّ قبل إسقاط الجدول. و`cases.client_id` عليها
+-- `ON DELETE CASCADE`، و`commission_payments.case_id` كذلك. فحذفُ جدول
+-- العملاء لإعادة بنائه **يمحو القضايا كلَّها والعمولات معها**.
+--
+-- ولا `PRAGMA foreign_keys = OFF` في D1 — وهو الوحيد الذي يمنع الحذفَ
+-- الضمني. و`defer_foreign_keys` لا يمنعه: إنّما يؤجّل الإبلاغ عن
+-- المخالفة، والأفعالُ تقع كما هي (جُرّب، فمُحيت القضايا معه).
+--
+-- فتُحفظ صفوفُ الأبناء في جداولَ مؤقّتة قبل الهدم وتُعاد بعده. صراحةً،
+-- بلا `PRAGMA` تعتمد على ما تسمح به المنصة.
+
+-- ═══ صيانةُ الأبناء قبل الهدم ═══
+CREATE TABLE _keep_cases       AS SELECT * FROM cases;
+CREATE TABLE _keep_commissions AS SELECT * FROM commission_payments;
+-- و`basecamp_projects` عليها `ON DELETE SET NULL` — تُفرَّغ إشاراتُها لا صفوفُها.
+CREATE TABLE _keep_bc_links    AS SELECT project_id, client_id, case_id FROM basecamp_projects;
 
 -- ═══ العملاء ═══
 CREATE TABLE clients_new (
@@ -116,6 +136,20 @@ ALTER TABLE prospects_new RENAME TO prospects;
 CREATE INDEX IF NOT EXISTS idx_prospects_status      ON prospects(prospect_status);
 CREATE INDEX IF NOT EXISTS idx_prospects_assigned_to ON prospects(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_prospects_follow_up   ON prospects(follow_up_date);
+
+-- ═══ ويعود الأبناء ═══
+-- بالترتيب: القضايا قبل عمولاتها، وإلا رُدّت العمولةُ بقيدٍ إلى قضيةٍ
+-- لم تُدرج بعد.
+INSERT INTO cases               SELECT * FROM _keep_cases;
+INSERT INTO commission_payments SELECT * FROM _keep_commissions;
+
+UPDATE basecamp_projects
+   SET client_id = (SELECT client_id FROM _keep_bc_links k WHERE k.project_id = basecamp_projects.project_id),
+       case_id   = (SELECT case_id   FROM _keep_bc_links k WHERE k.project_id = basecamp_projects.project_id);
+
+DROP TABLE _keep_cases;
+DROP TABLE _keep_commissions;
+DROP TABLE _keep_bc_links;
 
 -- ═══ تاريخُ إنشاء المشروع في بيسكامب ═══
 -- «عميلٌ منذ» كان يُكتب تاريخَ الاستيراد — أي أنّ موكّلاً منذ ٢٠٢١ يظهر
