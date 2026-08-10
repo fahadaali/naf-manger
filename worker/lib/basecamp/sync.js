@@ -25,6 +25,18 @@ import { normalizeArabic } from './discover.js';
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
+/**
+ * لحظةُ إنشاء المشروع عندهم — ثوانيَ.
+ *
+ * وبيسكامب تردّها ISO بإزاحةِ الحساب («‎2021-04-15T14:22:38.000+03:00‎»)،
+ * فتُقرأ لحظةً صحيحة. و`null` لما لا يُقرأ — فلا يُكتب تاريخٌ مفبرك.
+ */
+function toEpoch(iso) {
+  if (!iso) return null;
+  const at = new Date(iso).getTime();
+  return Number.isNaN(at) ? null : Math.floor(at / 1000);
+}
+
 const FIELD_MAP_KEY = 'basecamp_field_map';
 
 /** الحقول التي تملكها المزامنة. وما عداها للمنصة وحدها. */
@@ -124,7 +136,13 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
     projectId: row.project_id,
     projectName: row.name,
     appUrl: row.app_url,
+    /* ═══ تاريخُ المشروع عندهم يخدم أمرين ═══
+       `joinDate` — يومُه، ومنه «عميلٌ منذ».
+       `createdOn` — لحظتُه، ومنها تاريخُ إنشاء القضية.
+       واليومُ يُقتطع من النصّ لا يُشتقّ من `Date`: الاشتقاق يُدخل المنطقة
+       الزمنية فينزلق اليوم عن اليوم الذي أنشأه فيه صاحبُ المكتب. */
     joinDate: row.created_on ? String(row.created_on).slice(0, 10) : null,
+    createdOn: row.created_on ?? null,
     actions: [],       // create_client | link_client | create_case | update_case | none
     warnings: [],
     conflicts: [],
@@ -308,13 +326,17 @@ async function applyPlan(env, plan, actorId) {
   /* ويُعاد البحث هنا لا يُكتفى بما في الخطّة: خطّةٌ سابقة في هذه الدفعة
      قد أنشأت العميل بعد أن بُنيت هذه. وهذا هو الحارس الأخير قبل قيد
      التفرّد — والخطّةُ تصحّ بلا حاجةٍ إليه، لكنّه أرخصُ من صفٍّ ساقط. */
+  const projectStart = toEpoch(plan.createdOn);
+
   let clientId = plan.client.id;
+  let createdNow = false;
   if (!clientId) {
     const late = await findClient(env, plan.client.values);
     if (late) clientId = late.row.id;
   }
   if (!clientId) {
     clientId = crypto.randomUUID();
+    createdNow = true;
     const values = plan.client.values;
     await env.DB.prepare(
       `INSERT INTO clients (id, full_name, id_number, id_type, phone, contacts, email,
@@ -344,8 +366,13 @@ async function applyPlan(env, plan, actorId) {
 
   /* ═══ عميلٌ قائم: يُملأ الفارغُ ولا يُدهس المكتوب ═══
      مشروعٌ ثانٍ لعميلٍ موجود قد يحمل رقمَ هويته أو أرقامَ أهله وهي ناقصةٌ
-     عندنا. فتُملأ حين تغيب — وما فيه قيمةٌ لا يُمسّ، فقد تكون يدٌ كتبتها. */
-  if (plan.client.id) {
+     عندنا. فتُملأ حين تغيب — وما فيه قيمةٌ لا يُمسّ، فقد تكون يدٌ كتبتها.
+
+     والشرطُ «لم يُنشأ الآن» لا «كان في الخطّة»: مشروعان لعميلٍ واحد في
+     دفعةٍ واحدة يُنشئ أوّلُهما العميل، وثانيهما يجده بالبحث المتأخّر —
+     فتخطّيه هنا كان يُسقط دمجَ أرقامه **وتصحيحَ تاريخ انضمامه**، وهي
+     بعينها حالةُ «العميل له أكثر من قضية». */
+  if (!createdNow) {
     const current = await env.DB.prepare(`SELECT * FROM clients WHERE id = ?`)
       .bind(clientId)
       .first();
@@ -355,6 +382,18 @@ async function applyPlan(env, plan, actorId) {
     if (current && !current.id_number && values.idNumber) fill.id_number = values.idNumber;
     if (current && !current.id_type && values.idType) fill.id_type = values.idType;
     if (current && !current.phone && values.phone) fill.phone = values.phone;
+
+    /* ═══ «عميلٌ منذ» أقدمُ قضاياه ═══
+       للموكّل قضايا، ولكلٍّ مشروعُها وتاريخُ إنشائه. وصفتُه عميلاً بدأت
+       بأوّلها لا بآخرها ولا بالتي وقعت أن تُقرأ أوّلاً — والمشاريع تُقرأ
+       بترتيب الاسم، فلا علاقة لترتيب القراءة بترتيب الزمن.
+
+       والتحريكُ إلى الأقدم وحده: لا يُؤخَّر تاريخُ عميلٍ أبداً. فهو حسابُ
+       أدنى القيم — يستوي فيه ترتيبُ المشاريع، ويصحّ مهما أُعيدت المزامنة،
+       ويُبقي تاريخاً أقدمَ كتبته يدٌ. */
+    if (current && plan.joinDate && (!current.join_date || plan.joinDate < current.join_date)) {
+      fill.join_date = plan.joinDate;
+    }
 
     const existingContacts = safeJson(current?.contacts) ?? [];
     const incoming = values.contacts ?? [];
@@ -395,7 +434,10 @@ async function applyPlan(env, plan, actorId) {
         values.status ?? 'pending',
         values.outcome ?? null,
         plan.appUrl,
-        now,
+        /* ═══ القضيةُ أُنشئت يومَ أُنشئ مشروعُها ═══
+           كانت تُختم بلحظة الاستيراد، فتظهر قضيةٌ من ٢٠٢١ منشأةً اليوم —
+           ويُبنى على ذلك الترتيبُ في الشاشات والعمرُ في التقارير. */
+        projectStart ?? now,
         now,
       )
       .run();
@@ -415,6 +457,21 @@ async function applyPlan(env, plan, actorId) {
     await env.DB.prepare(`UPDATE cases SET basecamp_url = ? WHERE id = ?`)
       .bind(plan.appUrl, caseId)
       .run();
+  }
+
+  /* ═══ وتاريخُ الإنشاء يُصحَّح على مشروعه ═══
+     قضايا استُوردت قبل هذا حملت تاريخَ الاستيراد، ولا تُصلحها مزامنةٌ
+     تكتب الحقولَ المتبدّلة وحدها — إذ ليس `created_at` منها.
+
+     وهو تصحيحٌ لا دهس: العمود لا تكتبه يدٌ من أي شاشة، فليس فيه ما يُحفظ.
+     والشرطُ `<>` يجعل النداء بلا أثرٍ حين يكون صحيحاً أصلاً. */
+  if (caseId && projectStart) {
+    const fixed = await env.DB.prepare(
+      `UPDATE cases SET created_at = ? WHERE id = ? AND created_at <> ?`,
+    )
+      .bind(projectStart, caseId, projectStart)
+      .run();
+    if (fixed?.meta?.changes) result.updated.push('createdDate');
   }
 
   // ── التعارضات: تُسجَّل ولا تُكتب ──

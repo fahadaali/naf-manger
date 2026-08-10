@@ -238,6 +238,63 @@ check('وقضيتان', db.prepare(`SELECT COUNT(*) n FROM cases`).get().n === 2
 const urls = db.prepare(`SELECT basecamp_url FROM cases ORDER BY case_number`).all().map((r) => r.basecamp_url);
 check('ولكلٍّ رابطُ مشروعها', new Set(urls).size === 2, urls);
 
+// ── ٧ب) التواريخ: لكلّ قضيةٍ تاريخُ مشروعها، وللعميل أقدمُها ──
+/* المشروعان يُقرآن بترتيب الاسم، والأقدمُ زمناً ثانيهما قراءةً — عمداً:
+   لو كان «عميلٌ منذ» يُؤخذ من أوّل ما يُقرأ لأخطأ هنا. */
+({ db, env } = setup());
+db.prepare(`UPDATE basecamp_projects SET name = 'أ-مشروعٌ حديث', created_on = ? WHERE project_id = '101'`)
+  .run('2024-03-02T09:00:00.000+03:00');
+db.prepare(
+  `INSERT INTO basecamp_projects (project_id, name, app_url, status, vault_id, doc_id, kind,
+                                  created_on, created_at, updated_at)
+   VALUES ('102', 'ب-مشروعٌ قديم', 'https://3.basecamp.com/1/projects/102', 'active', '12', '902',
+           'client', '2019-06-11T11:30:00.000+03:00', ?, ?)`,
+).run(now, now);
+
+call = 0;
+globalThis.fetch = async () => {
+  call++;
+  const content = call % 2 === 1 ? DOC : DOC.replace('ق-2026-014', 'ق-2026-015');
+  return { ok: true, status: 200, headers: new Map(),
+    json: async () => ({ id: 900 + call, title: 'ملخص القضية', content, app_url: 'x', updated_at: 'x' }) };
+};
+
+await runSync(env, connection, actor);
+
+const dayOf = (seconds) => new Date(Number(seconds) * 1000).toISOString().slice(0, 10);
+const dated = db.prepare(`SELECT case_number, created_at FROM cases ORDER BY case_number`).all();
+check('لكلّ قضيةٍ تاريخُ إنشاء مشروعها',
+  dayOf(dated[0].created_at) === '2024-03-02' && dayOf(dated[1].created_at) === '2019-06-11',
+  dated.map((row) => [row.case_number, dayOf(row.created_at)]));
+
+check('و«عميلٌ منذ» أقدمُ قضاياه لا أوّلُ ما قُرئ',
+  db.prepare(`SELECT join_date FROM clients`).get().join_date === '2019-06-11',
+  db.prepare(`SELECT join_date FROM clients`).get());
+
+/* والمزامنةُ الثانية لا تُحرّك شيئاً: حسابُ أدنى القيم يستقرّ. */
+await runSync(env, connection, actor);
+check('ومزامنةٌ ثانيةٌ لا تُزحزح التاريخ',
+  db.prepare(`SELECT join_date FROM clients`).get().join_date === '2019-06-11');
+
+/* ═══ وما استُورد قبل هذا يُصحَّح ═══
+   قضايا الاستيراد الأول حملت تاريخَ الاستيراد. و`created_at` ليس من حقول
+   الدمج، فلا تُصلحه كتابةُ المتبدّل — بل نداءٌ صريح. */
+db.prepare(`UPDATE cases SET created_at = ? WHERE case_number = 'ق-2026-015'`).run(now);
+db.prepare(`UPDATE clients SET join_date = '2026-08-10'`).run();
+await runSync(env, connection, actor);
+check('تاريخُ قضيةٍ استُوردت خطأً يُصحَّح',
+  dayOf(db.prepare(`SELECT created_at FROM cases WHERE case_number = 'ق-2026-015'`).get().created_at)
+    === '2019-06-11');
+check('و«عميلٌ منذ» يرجع إلى أقدمها',
+  db.prepare(`SELECT join_date FROM clients`).get().join_date === '2019-06-11');
+
+/* ولا يُؤخَّر تاريخٌ أقدمُ كتبته يد: الحركةُ إلى الأقدم وحدها. */
+db.prepare(`UPDATE clients SET join_date = '2015-01-01'`).run();
+await runSync(env, connection, actor);
+check('وتاريخٌ أقدمُ بيدٍ يبقى',
+  db.prepare(`SELECT join_date FROM clients`).get().join_date === '2015-01-01',
+  db.prepare(`SELECT join_date FROM clients`).get());
+
 // ── ٨) ملفٌّ بلا رقمِ هويةٍ ولا رقمِ قضية ──
 ({ db, env } = setup());
 docContent = '<div>اسم العميل: عميلٌ بلا أرقام</div><div>نوع القضية: قضية مدنية</div>';
