@@ -409,6 +409,65 @@ check('مسارٌ مجهول تحت ‎/api‎ يردّ JSON ٤٠٤ لا صفح�
 check('ومسارُ واجهةٍ يردّ الصفحة', (await hit('GET', '/clients')).status === 200);
 
 // ═══════════════════════════════════════════════════════════
+group('نموُّ اللوحة — محسوبٌ لا مكتوب');
+setUser(ADMIN);
+
+/* كانت اللوحة تعرض «‎+١٢٪‎» و«‎+٨٪‎» و«‎+٥٪‎» مكتوبةً في التصيير: لا تُقرأ من
+   شيء ولا تتغيّر أبداً. فيُقاس هنا أنّ الرقم يتبع البيانات فعلاً. */
+const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+
+/* والقياسُ على الفرق لا على عددٍ مطلق: الجدولُ فيه صفوفُ الفقرات السابقة،
+   وتثبيتُ رقمٍ نهائيٍّ هنا يجعل كلَّ إضافةٍ في فقرةٍ أخرى تُسقط هذه. */
+const before = (await hit('GET', '/api/stats')).body.data.growth;
+check('النموّ يُردّ محسوباً', before?.clients !== undefined, before);
+
+/* واحدٌ في الشهر السابق، وثلاثةٌ في الحاضر. */
+for (const [name, day] of [
+  ['نموّ ١', daysAgo(45)],
+  ['نموّ ٢', daysAgo(10)],
+  ['نموّ ٣', daysAgo(5)],
+  ['نموّ ٤', daysAgo(1)],
+]) {
+  await hit('POST', '/api/clients', { fullName: name, joinDate: day });
+}
+
+r = await hit('GET', '/api/stats');
+const after = r.body.data.growth;
+check('ثلاثةٌ تُضاف إلى الشهر الحاضر',
+  after.clients.current === before.clients.current + 3, [before.clients, after.clients]);
+check('وواحدٌ إلى السابق',
+  after.clients.previous === before.clients.previous + 1, [before.clients, after.clients]);
+check('والنسبةُ حاصلُ قسمتهما لا رقمٌ مكتوب',
+  after.clients.percent ===
+    Math.round(((after.clients.current - after.clients.previous) / after.clients.previous) * 100),
+  after.clients);
+check('والرقمُ تحرّك بتحرّك البيانات',
+  after.clients.percent !== before.clients.percent, [before.clients.percent, after.clients.percent]);
+
+/* ═══ شهرٌ سابق فارغ لا نسبةَ منه ═══
+   والقسمةُ على صفرٍ تُعرض «‎∞٪‎» أو «‎١٠٠٪‎» وكلاهما كذب. */
+check('وبلا شهرٍ سابق تغيب النسبة',
+  r.body.data.growth.prospects.percent === null, r.body.data.growth.prospects);
+check('ويبقى العددُ يُقال', typeof r.body.data.growth.prospects.current === 'number',
+  r.body.data.growth.prospects);
+
+/* ═══ والمؤرشفُ خارجَ اللوحة ═══
+   أُخرج من شاشته بقصد، فعدُّه في لوحته يناقضها. */
+const beforeArchive = (await hit('GET', '/api/stats')).body.data.totalClients;
+const growthIds = (await hit('GET', '/api/clients')).body.data
+  .filter((row) => row.fullName.startsWith('نموّ'))
+  .map((row) => row.id);
+await hit('POST', '/api/clients/bulk', { action: 'archive', ids: growthIds });
+r = await hit('GET', '/api/stats');
+check('المؤرشفُ يخرج من إجمالي اللوحة',
+  r.body.data.totalClients === beforeArchive - growthIds.length,
+  `${beforeArchive} → ${r.body.data.totalClients}`);
+check('ومن حساب النموّ معه',
+  r.body.data.growth.clients.current === before.clients.current,
+  [before.clients, r.body.data.growth.clients]);
+await hit('POST', '/api/clients/bulk', { action: 'delete', ids: growthIds });
+
+// ═══════════════════════════════════════════════════════════
 group('الأرشفةُ والفعلُ على جملةِ صفوف');
 setUser(ADMIN);
 

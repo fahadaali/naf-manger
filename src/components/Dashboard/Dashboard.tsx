@@ -4,25 +4,30 @@ import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
 import { db } from '../../data/database';
+import { DashboardStats } from '../../types';
 import { useChartPalette } from '../../lib/chart-tokens';
 import { formatNumber } from '@/registry/naf/lib/format';
+
+/* الحالةُ الفارغة تُكتب مرّةً وتُقرأ في الابتداء وفي الخطأ معاً: كانت
+   مكرّرةً في موضعين، فيُزاد حقلٌ في أحدهما ويُنسى في الآخر. */
+const EMPTY_STATS: DashboardStats = {
+  totalClients: 0,
+  totalProspects: 0,
+  totalCases: 0,
+  pendingCases: 0,
+  completedCases: 0,
+  winRate: 0,
+  clientsByType: { individual: 0, company: 0, association: 0, government: 0 },
+  prospectsByStatus: {},
+  casesByStatus: { pending: 0, 'in-progress': 0, completed: 0, postponed: 0 },
+  conversionRate: 0,
+};
 
 export default function Dashboard() {
   // لوحة الرسوم تُقرأ من الرموز وتُعاد قراءتها عند تبديل المظهر
   const palette = useChartPalette();
 
-  const [stats, setStats] = useState({
-    totalClients: 0,
-    totalProspects: 0,
-    totalCases: 0,
-    pendingCases: 0,
-    completedCases: 0,
-    winRate: 0,
-    clientsByType: { individual: 0, company: 0, association: 0, government: 0 },
-    prospectsByStatus: {},
-    casesByStatus: { pending: 0, 'in-progress': 0, completed: 0, postponed: 0 },
-    conversionRate: 0
-  });
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
 
   useEffect(() => {
     // تحديث الإحصائيات عند تحميل الصفحة
@@ -42,18 +47,7 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error loading stats:', error);
       // في حالة الخطأ، استخدم قيم افتراضية
-      setStats({
-        totalClients: 0,
-        totalProspects: 0,
-        totalCases: 0,
-        pendingCases: 0,
-        completedCases: 0,
-        winRate: 0,
-        clientsByType: { individual: 0, company: 0, association: 0, government: 0 },
-        prospectsByStatus: {},
-        casesByStatus: { pending: 0, 'in-progress': 0, completed: 0, postponed: 0 },
-        conversionRate: 0
-      });
+      setStats(EMPTY_STATS);
     }
   };
 
@@ -94,26 +88,29 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+        {/* والمؤشّرات تأتي من `‎/api/stats‎` محسوبةً — كانت أرقاماً مكتوبةً
+            هنا لا تُقرأ من شيء ولا تتغيّر: «‎+١٢٪‎» و«‎+٨٪‎» و«‎+٥٪‎» في كل
+            فتحةٍ منذ أوّل يوم. */}
         <StatsCard
           title="إجمالي العملاء"
           value={stats.totalClients}
           icon={Users}
           color="bg-chart-1"
-          trend={{ value: 12, label: 'الشهر الماضي' }}
+          trend={stats.growth?.clients}
         />
         <StatsCard
           title="العملاء المحتملين"
           value={stats.totalProspects}
           icon={UserPlus}
           color="bg-chart-2"
-          trend={{ value: 8, label: 'الشهر الماضي' }}
+          trend={stats.growth?.prospects}
         />
         <StatsCard
           title="إجمالي القضايا"
           value={stats.totalCases}
           icon={FileText}
           color="bg-chart-3"
-          trend={{ value: 8, label: 'الشهر الماضي' }}
+          trend={stats.growth?.cases}
         />
         <StatsCard
           title="القضايا المنظورة"
@@ -126,7 +123,6 @@ export default function Dashboard() {
           value={`${formatNumber(stats.winRate)}%`}
           icon={Award}
           color="bg-chart-5"
-          trend={{ value: 5, label: 'الشهر الماضي' }}
         />
       </div>
 

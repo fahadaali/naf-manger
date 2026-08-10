@@ -421,6 +421,20 @@ export interface ActivityLog {
   details?: Record<string, any>;
 }
 
+/**
+ * نموُّ مقياسٍ بين شهرين.
+ *
+ * `percent` يجوز أن يغيب: شهرٌ سابق بلا صفٍّ واحد لا نسبةَ منه — والقسمةُ
+ * على صفرٍ تُعرض «‎∞٪‎» أو «‎١٠٠٪‎» وكلاهما كذب. فتُعرض `current` وحدها.
+ */
+export interface Growth {
+  /** ما وقع في الثلاثين يوماً الأخيرة. */
+  current: number;
+  /** وما وقع في الثلاثين التي قبلها. */
+  previous: number;
+  percent: number | null;
+}
+
 export interface DashboardStats {
   totalClients: number;
   totalProspects: number;
@@ -432,6 +446,13 @@ export interface DashboardStats {
   prospectsByStatus: Record<string, number>;
   casesByStatus: Record<string, number>;
   conversionRate: number; // Prospects to clients conversion rate
+  /* والنموّ لثلاثةٍ فقط: «معدّل الربح» لا عمودَ يقول متى أُغلقت قضيتُه،
+     فلا يُقاس نموُّه ولا يُفبرك له رقم. */
+  growth?: {
+    clients: Growth;
+    prospects: Growth;
+    cases: Growth;
+  };
 }
 
 export interface SystemSettings {

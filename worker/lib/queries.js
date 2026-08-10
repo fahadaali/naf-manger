@@ -235,14 +235,77 @@ export async function convertProspect(env, user, id) {
   return json({ ok: true, data: toClient(RESOURCES.clients, created) }, 201);
 }
 
+/* ═══ النموّ ═══
+ *
+ * كانت اللوحة تعرض «‎+١٢٪‎» و«‎+٨٪‎» و«‎+٥٪‎» — أرقاماً مكتوبةً في التصيير لا
+ * تُقرأ من شيء ولا تتغيّر أبداً. ومؤشّرٌ ثابتٌ في لوحةِ مكتبٍ أسوأُ من لا
+ * مؤشّر: يُقرأ على أنّه قياس، ويُبنى عليه ظنٌّ أنّ العمل ينمو.
+ *
+ * والحسابُ الآن: ما وقع في الثلاثين يوماً الأخيرة، منسوباً إلى الثلاثين
+ * التي قبلها. وهو ما تعنيه «مقارنةً بالشهر الماضي» حرفياً.
+ *
+ * والنسبةُ تغيب حين لا يصحّ حسابُها — شهرٌ سابق بلا صفٍّ واحد لا نسبةَ
+ * منه، فيُعرض العددُ نفسُه بدلَها («‎+٣ جديد‎») ولا تُفبرك قسمةٌ على صفر.
+ */
+function growth(current, previous) {
+  const now = Number(current ?? 0);
+  const before = Number(previous ?? 0);
+  return {
+    current: now,
+    previous: before,
+    percent: before > 0 ? Math.round(((now - before) / before) * 100) : null,
+  };
+}
+
+/* حدودُ النافذتين — يومياً لا لحظياً: «الشهر الماضي» في كلام المكتب يومٌ
+   لا ثانية، والحدُّ اليوميّ يجعل الرقم ثابتاً طوال اليوم لا يتزحزح مع كل
+   تحديثِ صفحة. */
+const WINDOW = {
+  recentDate: `date('now', '-30 days')`,
+  priorDate: `date('now', '-60 days')`,
+};
+
 /* ═══ الإحصاءات ═══
    تُحسب في القاعدة لا في الذاكرة: الجمعُ على آلاف الصفوف في `Worker` يحمل
-   الجدول كلَّه إليه في كل فتحةِ لوحة. */
+   الجدول كلَّه إليه في كل فتحةِ لوحة.
+
+   والمؤرشفُ خارجَها كلِّها: أُخرج من شاشته بقصد، فعدُّه في لوحته يناقضها. */
 export async function readStats(env) {
-  const [clients, prospects, cases] = await env.DB.batch([
-    env.DB.prepare(`SELECT client_type, COUNT(*) n FROM clients GROUP BY client_type`),
-    env.DB.prepare(`SELECT prospect_status, COUNT(*) n FROM prospects GROUP BY prospect_status`),
-    env.DB.prepare(`SELECT status, outcome, COUNT(*) n FROM cases GROUP BY status, outcome`),
+  const [clients, prospects, cases, newClients, newProspects, newCases] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
+    ),
+    env.DB.prepare(
+      `SELECT prospect_status, COUNT(*) n FROM prospects WHERE archived_at IS NULL GROUP BY prospect_status`,
+    ),
+    env.DB.prepare(
+      `SELECT status, outcome, COUNT(*) n FROM cases WHERE archived_at IS NULL GROUP BY status, outcome`,
+    ),
+
+    /* ═══ العملاء يُعدّون بـ«عميلٌ منذ» لا بلحظة إدراج الصفّ ═══
+       موكّلٌ من ٢٠١٩ استُورد اليوم ليس عميلاً جديداً هذا الشهر. و`join_date`
+       هو تاريخُ صيرورته عميلاً — وهو ما تعنيه اللوحة بالنموّ. */
+    env.DB.prepare(
+      `SELECT SUM(CASE WHEN join_date >= ${WINDOW.recentDate} THEN 1 ELSE 0 END) recent,
+              SUM(CASE WHEN join_date >= ${WINDOW.priorDate}
+                        AND join_date <  ${WINDOW.recentDate} THEN 1 ELSE 0 END) prior
+         FROM clients WHERE archived_at IS NULL`,
+    ),
+    env.DB.prepare(
+      `SELECT SUM(CASE WHEN join_date >= ${WINDOW.recentDate} THEN 1 ELSE 0 END) recent,
+              SUM(CASE WHEN join_date >= ${WINDOW.priorDate}
+                        AND join_date <  ${WINDOW.recentDate} THEN 1 ELSE 0 END) prior
+         FROM prospects WHERE archived_at IS NULL`,
+    ),
+
+    /* والقضيةُ بـ`created_at` — وهو تاريخُ إنشاء مشروعها في بيسكامب منذ
+       تصحيحه، أي يومُ فتحها فعلاً. والعمود ثوانٍ، فالحدُّ يُحوَّل. */
+    env.DB.prepare(
+      `SELECT SUM(CASE WHEN created_at >= strftime('%s', ${WINDOW.recentDate}) THEN 1 ELSE 0 END) recent,
+              SUM(CASE WHEN created_at >= strftime('%s', ${WINDOW.priorDate})
+                        AND created_at <  strftime('%s', ${WINDOW.recentDate}) THEN 1 ELSE 0 END) prior
+         FROM cases WHERE archived_at IS NULL`,
+    ),
   ]);
 
   const clientsByType = {};
@@ -286,6 +349,16 @@ export async function readStats(env) {
         totalClients + totalProspects > 0
           ? Math.round((totalClients / (totalClients + totalProspects)) * 100)
           : 0,
+
+      /* ولا نموَّ لـ«معدّل الربح»: لا عمودَ يقول متى أُغلقت القضية —
+         `updated_at` يتحرّك مع أيّ تعديل، فبناءُ «ربحُ هذا الشهر» عليه
+         يقيس التحريرَ لا الحُكم. فتُترك بطاقتُه بلا مؤشّر حتى يوجد ما
+         يُقاس، ولا يُوضع رقمٌ يُقرأ قياساً وليس منه. */
+      growth: {
+        clients: growth(newClients.results?.[0]?.recent, newClients.results?.[0]?.prior),
+        prospects: growth(newProspects.results?.[0]?.recent, newProspects.results?.[0]?.prior),
+        cases: growth(newCases.results?.[0]?.recent, newCases.results?.[0]?.prior),
+      },
     },
   });
 }
