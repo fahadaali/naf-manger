@@ -8,6 +8,7 @@ import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../ty
 import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
+import { BasecampConflict, BasecampMap, BasecampPreview, BasecampSummary } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
 /* ═══ التواريخ ═══
@@ -322,6 +323,38 @@ export class LocalDatabase {
 
   async disconnectBasecamp(): Promise<void> {
     await api.del('/basecamp/connection');
+  }
+
+  async getBasecampMap(): Promise<BasecampMap> {
+    return await api.read<BasecampMap>('/basecamp/map');
+  }
+
+  async saveBasecampMap(map: Record<string, string>): Promise<{ map: Record<string, string> }> {
+    return await api.put('/basecamp/map', { map });
+  }
+
+  /* المعاينة تقرأ ولا تكتب — و`POST` لأنها تُشغّل عملاً على بيسكامب. */
+  async previewBasecamp(): Promise<BasecampPreview> {
+    return await api.post<BasecampPreview>('/basecamp/preview');
+  }
+
+  async syncBasecamp(): Promise<BasecampSummary> {
+    return await api.post<BasecampSummary>('/basecamp/sync');
+  }
+
+  async setBasecampAutoSync(enabled: boolean): Promise<{ syncEnabled: boolean }> {
+    return await api.put('/basecamp/auto-sync', { enabled });
+  }
+
+  async getBasecampConflicts(): Promise<BasecampConflict[]> {
+    return await api.read<BasecampConflict[]>('/basecamp/conflicts');
+  }
+
+  async resolveBasecampConflict(
+    id: string,
+    resolution: 'basecamp' | 'platform' | 'ignored',
+  ): Promise<{ id: string; resolution: string }> {
+    return await api.post(`/basecamp/conflicts/${encodeURIComponent(id)}`, { resolution });
   }
 
   /* ═══ رموز شاشات العرض ═══

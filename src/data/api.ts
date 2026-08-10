@@ -91,6 +91,9 @@ export const api = {
 
   read: <T>(path: string) => call<T>(path),
 
+  put: <T>(path: string, body: unknown) =>
+    call<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+
   /* حذفٌ على مسارٍ حرّ. و`remove` أعلاه تخدم `‎/<مورد>/<معرّف>‎` وحدها،
      و`‎/basecamp/connection‎` ليس على ذلك الشكل. */
   del: <T>(path: string) => call<T>(path, { method: 'DELETE' }),

@@ -278,6 +278,48 @@ check('ومع الارتباط يستدلّ', r.body.ok && r.body.data.insights.
 check('ويُخبَّأ', (await hit('GET', '/api/insights', undefined, withAi)).body.data.cached === true);
 
 // ═══════════════════════════════════════════════════════════
+group('مسارات بيسكامب الجديدة');
+
+r = await hit('GET', '/api/basecamp/map');
+check('الخريطة تُقرأ بافتراضها',
+  r.body.ok && r.body.data.map['اسم العميل'] === 'client.fullName', r.body.data?.map);
+check('ومعها الحقول الممكنة', r.body.ok && 'case.caseNumber' in r.body.data.targets);
+
+r = await hit('PUT', '/api/basecamp/map', { map: { 'الموكّل': 'client.fullName', 'س': 'case.مجهول' } });
+check('تُحفظ الخريطة', r.body.ok, r.body);
+check('ومدخلٌ يشير إلى حقلٍ مجهول يُسقَط',
+  r.body.ok && !('س' in r.body.data.map) && r.body.data.map['الموكّل'] === 'client.fullName', r.body.data);
+
+/* بلا أسرارٍ مضبوطة لا يقع شيء — والرمزُ يقول السبب لا «تعذّر». */
+for (const [name, path, method] of [
+  ['المعاينة', '/api/basecamp/preview', 'POST'],
+  ['التنفيذ', '/api/basecamp/sync', 'POST'],
+]) {
+  r = await hit(method, path);
+  check(`${name} بلا أسرار → not_configured`, r.status === 503 && r.body.error === 'not_configured', r.body);
+}
+
+r = await hit('PUT', '/api/basecamp/auto-sync', { enabled: true });
+check('الآلية لا تُفتح بلا ربط', !r.body.ok, r.body);
+
+r = await hit('GET', '/api/basecamp/conflicts');
+check('الاختلافات تُقرأ فارغةً', r.body.ok && r.body.data.length === 0, r.body);
+
+setUser(STAFF);
+for (const [name, path, method, body] of [
+  ['map', '/api/basecamp/map', 'GET', undefined],
+  ['map-write', '/api/basecamp/map', 'PUT', { map: {} }],
+  ['preview', '/api/basecamp/preview', 'POST', undefined],
+  ['sync', '/api/basecamp/sync', 'POST', undefined],
+  ['auto-sync', '/api/basecamp/auto-sync', 'PUT', { enabled: true }],
+  ['conflicts', '/api/basecamp/conflicts', 'GET', undefined],
+]) {
+  r = await hit(method, path, body);
+  check(`${name} يردّ ٤٠٣ لغير المسؤول`, r.status === 403, JSON.stringify(r));
+}
+setUser(ADMIN);
+
+// ═══════════════════════════════════════════════════════════
 group('التصدير');
 r = await hit('GET', '/api/export');
 check('التصدير يجمع كلَّ الجداول', r.body.ok && r.body.data.clients.length === 3 && r.body.data.cases.length === 2, Object.keys(r.body.data ?? {}));

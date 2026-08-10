@@ -18,6 +18,7 @@ import { Card } from '@/registry/naf/ui/card';
 import { Alert } from '@/registry/naf/ui/alert';
 import { Badge } from '@/registry/naf/ui/badge';
 import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
+import { ConflictsPanel, FieldMapPanel, PreviewPanel } from './BasecampPanels';
 
 /* ═══ ربط بيسكامب ═══
  *
@@ -28,8 +29,9 @@ import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
  * يفتحها. لأنّ التصنيف يقرّر أيَّ بياناتٍ تدخل قاعدةَ الموكّلين — وقرارٌ
  * كهذا لا يُترك لوجودِ ملفٍّ أو غيابه.
  *
- * وهذه المرحلة **قراءةٌ محضة**: تمسح وتصنّف وتعرض، ولا تكتب في العملاء
- * ولا في القضايا حرفاً. والكتابة تأتي بعد معاينةٍ يراها صاحبُ المكتب.
+ * والترتيب هو ترتيبُ العمل: اتّصالٌ ← تصنيفٌ ← خريطةُ حقول ← معاينةٌ ←
+ * تنفيذ ← ثم تُفتح الآلية. ولا تُكتب في قاعدة العملاء كلمةٌ قبل معاينةٍ
+ * رآها صاحبُ المكتب وأكّدها.
  */
 
 /** رموزُ الخادم تُترجَم هنا: «تعذّر» لثلاث عللٍ مختلفة يرسل صاحبَه يبحث في المكان الخطأ. */
@@ -83,8 +85,16 @@ export default function BasecampSync() {
     window.history.replaceState({}, '', url.toString());
   }, []);
 
-  const load = async () => {
-    setLoading(true);
+  /**
+   * `quiet` يُحدِّث بلا دوّارةِ الشاشة.
+   *
+   * ولولاه لاختفى ما تقوله الألواح فورَ قوله: لوحُ المعاينة ينادي `load`
+   * بعد تنفيذٍ ناجح ليُحدِّث العدّادات، فترفع الدوّارةُ الشجرةَ كلَّها
+   * وتُعيد تركيبها — فيسقط `applied` في اللوح ومعه جملةُ «أُنشئ كذا
+   * وحُدّث كذا». يضغط صاحبُه «نفّذ» فلا يُقال له شيء، وقد وقع كلُّ شيء.
+   */
+  const load = async (quiet = false) => {
+    if (!quiet) setLoading(true);
     setError('');
     try {
       const next = await db.getBasecampStatus();
@@ -93,7 +103,7 @@ export default function BasecampSync() {
     } catch (loadError) {
       setError(readError(loadError, 'تعذّرت قراءة حالة الربط'));
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   };
 
@@ -377,8 +387,10 @@ export default function BasecampSync() {
             </div>
           )}
 
-          {/* `formatNumber` لا `isolate`: البلاطات أعلاه بأرقامٍ عربية-هندية،
-              و`isolate` يعزل الاتّجاه ولا يوطّن الرقم — فيظهر «2» بين «٤» و«١». */}
+          {/* `formatNumber` لا `isolate`: الأولى مُنسِّقُ المنصة كلِّها
+              (`en-US` بفاصل آلاف)، والثانية تعزل الاتّجاه ولا تُنسّق —
+              فرقمٌ من أربع خاناتٍ يظهر بلا فاصلةٍ بين بلاطاتٍ تحملها.
+              و`bdi` يتكفّل بالاتّجاه. */}
           {clientProjects.length > 0 && (
             <p className="text-xs text-muted-foreground">
               <bdi>{formatNumber(clientProjects.length)}</bdi>
@@ -386,6 +398,21 @@ export default function BasecampSync() {
             </p>
           )}
         </Card>
+      )}
+
+      {/* ═══ خريطةُ الحقول ثم المعاينة ثم الاختلافات ═══
+          ولا تظهر إلا بعد ربطٍ قائم: لوحُ معاينةٍ فوق حسابٍ غير مربوط
+          يَعِد بما لا يقع. */}
+      {status?.state === 'connected' && (
+        <>
+          <FieldMapPanel />
+          <PreviewPanel
+            syncEnabled={status.syncEnabled === true}
+            lastSyncAt={status.lastSyncAt ?? null}
+            onChanged={() => load(true)}
+          />
+          <ConflictsPanel onResolved={() => load(true)} />
+        </>
       )}
 
       {/* ═══ نصُّ الملفّ ═══

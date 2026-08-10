@@ -15,12 +15,20 @@ import {
   classifyProject,
   disconnect,
   finishConnect,
+  listConflicts,
   listProjects,
+  preview,
+  readMap,
   readSample,
   readStatus,
   rescan,
+  resolveConflict,
+  setAutoSync,
   startConnect,
+  sync,
+  writeMap,
 } from './lib/basecamp/handlers.js';
+import { scheduledSync } from './lib/basecamp/cron.js';
 import {
   createReport,
   deleteReport,
@@ -50,6 +58,13 @@ const FILES_PREFIX = '/api/files/';
 const DISPLAY_API_PREFIX = '/api/display/';
 
 export default {
+  /* ═══ الجدولة ═══
+     مزامنةُ بيسكامب كلَّ ساعة. ولا تعمل إلا إذا فُتحت صراحةً بعد معاينةٍ
+     رآها صاحبُ المكتب — والفحصُ في `cron.js` لا هنا. */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(scheduledSync(env));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
     const config = platformConfig(env);
@@ -215,6 +230,18 @@ export default {
         if (id === 'projects' && !verb && request.method === 'GET') return listProjects(env, user);
         if (id === 'projects' && verb && request.method === 'PATCH') {
           return classifyProject(request, env, user, verb);
+        }
+        if (id === 'map' && request.method === 'GET') return readMap(env, user);
+        if (id === 'map' && request.method === 'PUT') return writeMap(request, env, user);
+        /* المعاينة تقرأ ولا تكتب — ومع ذلك `POST`: تُشغّل عملاً على
+           بيسكامب وتُقرأ نتيجتُه مرّةً، فلا تُخبَّأ في وسيطٍ ولا تُعاد
+           بضغطة رجوع. */
+        if (id === 'preview' && request.method === 'POST') return preview(env, user);
+        if (id === 'sync' && request.method === 'POST') return sync(env, user, { source: 'يدوي' });
+        if (id === 'auto-sync' && request.method === 'PUT') return setAutoSync(request, env, user);
+        if (id === 'conflicts' && !verb && request.method === 'GET') return listConflicts(env, user);
+        if (id === 'conflicts' && verb && request.method === 'POST') {
+          return resolveConflict(request, env, user, verb);
         }
       }
       if (name === 'export' && !id && request.method === 'GET') {

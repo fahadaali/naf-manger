@@ -6,6 +6,8 @@
 
 import { BasecampError } from './api.js';
 import { readSummaryDocument, scanProjects } from './discover.js';
+import { DEFAULT_FIELD_MAP, TARGETS } from './parse.js';
+import { buildPlan, readFieldMap, runSync, writeFieldMap } from './sync.js';
 import {
   activeConnection,
   beginAuthorization,
@@ -267,6 +269,241 @@ export async function readSample(env, user, url) {
     console.error('Basecamp: تعذّرت قراءة الملخّص —', code);
     return fail(code, 502);
   }
+}
+
+/* ═══ خريطةُ الحقول ═══
+   عناوينُ «ملخص القضية» تختلف بين مكتبٍ وآخر، فتُعدَّل من الشاشة لا
+   بنشرِ شيفرة. */
+export async function readMap(env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+  return Response.json({
+    ok: true,
+    data: { map: await readFieldMap(env), targets: TARGETS, defaults: DEFAULT_FIELD_MAP },
+  });
+}
+
+export async function writeMap(request, env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+  if (!body?.map || typeof body.map !== 'object') return fail('invalid_body', 400);
+
+  /* لا يُحفظ إلا ما يشير إلى حقلٍ معروف: مدخلٌ يشير إلى `case.xyz` يمرّ
+     صامتاً ثم لا يُكتب شيء، وصاحبُه يظنّ أنه ربط. */
+  const clean = {};
+  for (const [label, target] of Object.entries(body.map)) {
+    const name = String(label ?? '').trim().slice(0, 80);
+    if (!name || !(target in TARGETS)) continue;
+    clean[name] = target;
+  }
+
+  await writeFieldMap(env, clean, user.id);
+  return Response.json({ ok: true, data: { map: clean } });
+}
+
+/* ═══ المعاينة ═══
+   تشغيلٌ جافّ: تقرأ الملفّات وتبني الخطّة وتردّها، ولا تكتب في `clients`
+   ولا `cases` حرفاً. وهي الشرط قبل أول كتابة. */
+export async function preview(env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  const connection = await activeConnection(env);
+  if (connection.error) {
+    return fail(connection.error, CONNECTION_ERRORS.has(connection.error) ? 503 : 502);
+  }
+
+  try {
+    const { summary, plans } = await buildPlan(env, connection);
+    return Response.json({ ok: true, data: { summary, plans: plans.map(shapePlan) } });
+  } catch (planError) {
+    const code = planError instanceof BasecampError ? planError.code : 'preview_failed';
+    console.error('Basecamp: تعذّرت المعاينة —', code);
+    return fail(code, 502);
+  }
+}
+
+/* ═══ التنفيذ ═══ */
+export async function sync(env, user, { source = 'يدوي' } = {}) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  const connection = await activeConnection(env);
+  if (connection.error) {
+    return fail(connection.error, CONNECTION_ERRORS.has(connection.error) ? 503 : 502);
+  }
+
+  try {
+    const applied = await runSync(env, connection, {
+      actorId: user.id,
+      actorName: user.name,
+      source,
+    });
+    return Response.json({ ok: true, data: applied });
+  } catch (syncError) {
+    const code = syncError instanceof BasecampError ? syncError.code : 'sync_failed';
+    console.error('Basecamp: تعذّرت المزامنة —', code);
+    await env.DB.prepare(`UPDATE basecamp_connection SET last_sync_error = ? WHERE id = 1`)
+      .bind(code)
+      .run()
+      .catch(() => {});
+    return fail(code, 502);
+  }
+}
+
+/**
+ * تشغيلُ المزامنة الآلية.
+ *
+ * ولا تُفتح إلا بعد مزامنةٍ يدويةٍ ناجحة: المعاينةُ ثم التأكيدُ ثم الآلية.
+ * وجدولةٌ تبدأ الكتابة في قاعدة موكّلين قبل أن يرى صاحبُها ما ستكتبه
+ * خطأٌ لا يُصلَح بعده.
+ */
+export async function setAutoSync(request, env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+  const enabled = body?.enabled === true;
+
+  if (enabled) {
+    const row = await env.DB.prepare(
+      `SELECT last_sync_at FROM basecamp_connection WHERE id = 1`,
+    ).first();
+    if (!row) return fail('not_connected', 503);
+    if (!row.last_sync_at) return fail('sync_first', 409);
+  }
+
+  const result = await env.DB.prepare(
+    `UPDATE basecamp_connection SET sync_enabled = ? WHERE id = 1`,
+  )
+    .bind(enabled ? 1 : 0)
+    .run();
+  if (!result.meta?.changes) return fail('not_connected', 503);
+
+  await logActivity(env, user, enabled ? 'فُتحت مزامنة بيسكامب الآلية' : 'أُوقفت مزامنة بيسكامب الآلية');
+  return Response.json({ ok: true, data: { syncEnabled: enabled } });
+}
+
+/* ═══ الاختلافات ═══ */
+export async function listConflicts(env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  const { results } = await env.DB.prepare(
+    `SELECT c.*, p.name AS project_name, k.case_number
+     FROM basecamp_conflicts c
+     LEFT JOIN basecamp_projects p ON p.project_id = c.project_id
+     LEFT JOIN cases k ON k.id = c.case_id
+     WHERE c.resolved_at IS NULL
+     ORDER BY c.detected_at DESC`,
+  ).all();
+
+  return Response.json({
+    ok: true,
+    data: (results ?? []).map((row) => ({
+      id: row.id,
+      projectId: row.project_id,
+      projectName: row.project_name ?? '',
+      caseId: row.case_id ?? null,
+      caseNumber: row.case_number ?? null,
+      field: row.field,
+      platformValue: row.platform_value ?? '',
+      basecampValue: row.basecamp_value ?? '',
+      detectedAt: row.detected_at,
+    })),
+  });
+}
+
+const CASE_COLUMN = {
+  caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
+  status: 'status', outcome: 'outcome',
+};
+
+/**
+ * حسمُ اختلاف.
+ *
+ * `basecamp` يكتب قيمتَهم ويحدّث الصورة المحفوظة معاً — ولولا الثانية
+ * لعاد التعارضُ نفسُه في المزامنة التالية، لأنّ المنصة ستبدو «مسّتها يد».
+ * و`platform` و`ignored` يُغلقان الصفَّ ويثبّتان قيمة بيسكامب في الصورة،
+ * فلا يُسأل عنها ثانيةً ما لم تتبدّل عندهم.
+ */
+export async function resolveConflict(request, env, user, conflictId) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+
+  const choice = body?.resolution;
+  if (!['basecamp', 'platform', 'ignored'].includes(choice)) return fail('invalid_resolution', 400);
+
+  const row = await env.DB.prepare(
+    `SELECT * FROM basecamp_conflicts WHERE id = ? AND resolved_at IS NULL`,
+  )
+    .bind(conflictId)
+    .first();
+  if (!row) return fail('not_found', 404);
+
+  const now = nowSeconds();
+
+  if (choice === 'basecamp' && row.case_id && CASE_COLUMN[row.field]) {
+    await env.DB.prepare(`UPDATE cases SET ${CASE_COLUMN[row.field]} = ?, updated_at = ? WHERE id = ?`)
+      .bind(row.basecamp_value, now, row.case_id)
+      .run();
+  }
+
+  const project = await env.DB.prepare(
+    `SELECT synced_values FROM basecamp_projects WHERE project_id = ?`,
+  )
+    .bind(row.project_id)
+    .first();
+
+  let snapshot = {};
+  try { snapshot = JSON.parse(project?.synced_values ?? '{}') ?? {}; } catch { snapshot = {}; }
+  snapshot[row.field] = row.basecamp_value;
+
+  await env.DB.prepare(
+    `UPDATE basecamp_projects SET synced_values = ?, updated_at = ? WHERE project_id = ?`,
+  )
+    .bind(JSON.stringify(snapshot), now, row.project_id)
+    .run();
+
+  await env.DB.prepare(
+    `UPDATE basecamp_conflicts SET resolved_at = ?, resolution = ? WHERE id = ?`,
+  )
+    .bind(now, choice, conflictId)
+    .run();
+
+  return Response.json({ ok: true, data: { id: conflictId, resolution: choice } });
+}
+
+/** الخطّة كما تُعرض — بلا ما لا تحتاجه الشاشة. */
+function shapePlan(plan) {
+  return {
+    projectId: plan.projectId,
+    projectName: plan.projectName,
+    appUrl: plan.appUrl,
+    error: plan.error,
+    warnings: plan.warnings,
+    conflicts: plan.conflicts,
+    unmapped: (plan.unmapped ?? []).map((entry) => entry.label),
+    client: plan.client
+      ? { action: plan.client.action, fullName: plan.client.values.fullName, idNumber: plan.client.values.idNumber }
+      : null,
+    case: plan.case
+      ? { action: plan.case.action, caseNumber: plan.case.values.caseNumber,
+          caseType: plan.case.values.caseType, changes: Object.keys(plan.case.changes ?? {}) }
+      : null,
+  };
 }
 
 /* سجلُّ الأنشطة القائم يحمل عملَ المزامنة كذلك — فلا جدولَ سجلٍّ ثانٍ،

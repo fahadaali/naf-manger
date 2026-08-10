@@ -238,6 +238,63 @@ export interface BasecampSample {
   updatedAt: string | null;
 }
 
+/** خريطةُ الحقول: عنوانٌ في «ملخص القضية» ← حقلٌ في المنصة. */
+export interface BasecampMap {
+  map: Record<string, string>;
+  targets: Record<string, { label: string; entity: 'client' | 'case'; required?: boolean }>;
+  defaults: Record<string, string>;
+}
+
+/** ما سيقع لمشروعٍ واحد — تُعرض قبل أن يقع. */
+export interface BasecampPlan {
+  projectId: string;
+  projectName: string;
+  appUrl: string;
+  error: string | null;
+  warnings: string[];
+  conflicts: { field: string; platformValue: string; basecampValue: string }[];
+  /** عناوينُ في الملفّ بلا مقابلٍ في الخريطة — تُعرض لتُربط، فلا تضيع صامتة. */
+  unmapped: string[];
+  client: { action: 'create_client' | 'link_client'; fullName: string; idNumber: string } | null;
+  case:
+    | { action: 'create_case' | 'update_case' | 'none'; caseNumber: string; caseType: string; changes: string[] }
+    | null;
+}
+
+export interface BasecampSummary {
+  projects: number;
+  createClients: number;
+  linkClients: number;
+  createCases: number;
+  updateCases: number;
+  unchanged: number;
+  conflicts: number;
+  failed: number;
+  warnings: number;
+  /** بعد التنفيذ وحده. */
+  clientsCreated?: number;
+  casesCreated?: number;
+  casesUpdated?: number;
+}
+
+export interface BasecampPreview {
+  summary: BasecampSummary;
+  plans: BasecampPlan[];
+}
+
+/** حقلٌ مسّته يدٌ وتبدّل عندهم — يُعرض بالقيمتين ولا يُكتب. */
+export interface BasecampConflict {
+  id: string;
+  projectId: string;
+  projectName: string;
+  caseId: string | null;
+  caseNumber: string | null;
+  field: string;
+  platformValue: string;
+  basecampValue: string;
+  detectedAt: number;
+}
+
 /** تفضيلاتُ إشعارات العضو — مفاتيحُها عقدٌ مع `updateMe` في الخادم. */
 export interface NotificationPrefs {
   newClients: boolean;

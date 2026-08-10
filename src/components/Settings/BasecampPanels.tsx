@@ -1,0 +1,479 @@
+import { useEffect, useState } from 'react';
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  CircleCheck,
+  Eye,
+  Lightbulb,
+  Play,
+  RefreshCw,
+  Timer,
+  TriangleAlert,
+} from 'lucide-react';
+
+import { db } from '../../data/database';
+import { BasecampConflict, BasecampMap, BasecampPreview, BasecampSummary } from '../../types';
+import { Button } from '@/registry/naf/ui/button';
+import { Card } from '@/registry/naf/ui/card';
+import { Alert } from '@/registry/naf/ui/alert';
+import { Badge } from '@/registry/naf/ui/badge';
+import { Select } from '@/registry/naf/ui/select';
+import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
+
+/* ألواحُ المراحل الثلاث بعد الاكتشاف: خريطةُ الحقول، والمعاينة والتنفيذ،
+   والاختلافات. وهي في ملفٍّ ثانٍ لأنّ `BasecampSync` صار طويلاً — ولوحُ
+   الاتّصال والتصنيف عملٌ آخرُ عن هذا. */
+
+const FIELD_LABEL: Record<string, string> = {
+  caseNumber: 'رقم القضية',
+  caseType: 'نوع القضية',
+  summary: 'ملخص القضية',
+  status: 'حالة القضية',
+  outcome: 'نتيجة القضية',
+};
+
+const PLAN_ERROR: Record<string, string> = {
+  no_summary: 'لا ملفّ ملخّص',
+  no_client_name: 'الملفّ بلا اسم عميل',
+  duplicate_case_number: 'رقم القضية مكرّر بين مشروعين',
+  read_failed: 'تعذّرت قراءة الملفّ',
+  rate_limited: 'تجاوز حدّ النداءات',
+  not_found: 'الملفّ غير موجود عندهم',
+};
+
+const ACTION_LABEL: Record<string, { text: string; variant: 'success' | 'primary' | 'outline' }> = {
+  create_client: { text: 'عميل جديد', variant: 'success' },
+  link_client: { text: 'عميل قائم', variant: 'outline' },
+  create_case: { text: 'قضية جديدة', variant: 'success' },
+  update_case: { text: 'تحديث', variant: 'primary' },
+  none: { text: 'بلا تغيير', variant: 'outline' },
+};
+
+/* ═══ خريطة الحقول ═══ */
+export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
+  const [data, setData] = useState<BasecampMap | null>(null);
+  const [draft, setDraft] = useState<[string, string][]>([]);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  /* مطويٌّ ابتداءً: الخريطة تُضبط مرّةً ثم تُنسى، وسبعةَ عشرَ سطراً
+     مفتوحةً تدفع المعاينةَ والاختلافات — وهما عملُ كل يوم — تحت الطيّ. */
+  const [open, setOpen] = useState(false);
+
+  const load = async () => {
+    const next = await db.getBasecampMap();
+    setData(next);
+    setDraft(Object.entries(next.map));
+  };
+
+  useEffect(() => {
+    load().catch(() => setNote('تعذّرت قراءة الخريطة'));
+  }, []);
+
+  if (!data) return null;
+
+  const save = async () => {
+    setBusy(true);
+    setNote('');
+    try {
+      const map: Record<string, string> = {};
+      for (const [label, target] of draft) {
+        const name = label.trim();
+        if (name && target) map[name] = target;
+      }
+      await db.saveBasecampMap(map);
+      setNote('حُفظت الخريطة');
+      onSaved?.();
+    } catch {
+      setNote('تعذّر الحفظ');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="font-semibold text-foreground">خريطة الحقول</h4>
+          <p className="text-sm text-muted-foreground">
+            العنوانُ كما هو مكتوبٌ في «ملخص القضية»، يقابله حقلٌ في المنصة. والتشكيلُ
+            والتطويلُ لا يُهمّان — تُطابَق موحَّدةً.
+          </p>
+        </div>
+        <Button onClick={() => setOpen(!open)} variant="outline" size="sm">
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+          {open ? 'اطوِ' : `اعرض (${formatNumber(draft.length)})`}
+        </Button>
+      </div>
+
+      {!open ? null : (
+      <>
+      <div className="space-y-2">
+        {draft.map(([label, target], index) => (
+          <div key={index} className="flex flex-wrap items-center gap-2">
+            <input
+              value={label}
+              onChange={(event) => {
+                const next = [...draft];
+                next[index] = [event.target.value, target];
+                setDraft(next);
+              }}
+              placeholder="العنوان في الملفّ"
+              className="flex-1 min-w-40 h-9 px-3 rounded-md border border-border bg-card text-sm"
+            />
+            <ArrowLeftRight className="h-4 w-4 text-muted-foreground flex-none" aria-hidden="true" />
+            <Select
+              value={target}
+              onChange={(event) => {
+                const next = [...draft];
+                next[index] = [label, event.target.value];
+                setDraft(next);
+              }}
+              className="flex-1 min-w-44"
+            >
+              {Object.entries(data.targets).map(([key, meta]) => (
+                <option key={key} value={key}>
+                  {meta.entity === 'client' ? 'العميل — ' : 'القضية — '}
+                  {meta.label}
+                </option>
+              ))}
+            </Select>
+            <Button
+              onClick={() => setDraft(draft.filter((_, position) => position !== index))}
+              variant="outline"
+              size="sm"
+            >
+              احذف
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button onClick={() => setDraft([...draft, ['', 'client.fullName']])} variant="outline" size="sm">
+          أضف سطراً
+        </Button>
+        <Button onClick={() => setDraft(Object.entries(data.defaults))} variant="outline" size="sm">
+          أعد الافتراضي
+        </Button>
+        <Button onClick={save} disabled={busy} size="sm">
+          {busy ? 'جارٍ الحفظ' : 'احفظ الخريطة'}
+        </Button>
+        {note && <span className="text-sm text-muted-foreground">{note}</span>}
+      </div>
+      </>
+      )}
+      {!open && note && <p className="text-sm text-muted-foreground">{note}</p>}
+    </Card>
+  );
+}
+
+/* ═══ المعاينة والتنفيذ ═══ */
+export function PreviewPanel({
+  syncEnabled,
+  lastSyncAt,
+  onChanged,
+}: {
+  syncEnabled: boolean;
+  lastSyncAt: number | null;
+  onChanged: () => void;
+}) {
+  const [preview, setPreview] = useState<BasecampPreview | null>(null);
+  const [applied, setApplied] = useState<BasecampSummary | null>(null);
+  const [busy, setBusy] = useState<'preview' | 'sync' | 'auto' | null>(null);
+  const [error, setError] = useState('');
+
+  const run = async (which: 'preview' | 'sync') => {
+    setBusy(which);
+    setError('');
+    setApplied(null);
+    try {
+      if (which === 'preview') {
+        setPreview(await db.previewBasecamp());
+      } else {
+        setApplied(await db.syncBasecamp());
+        setPreview(null);
+        onChanged();
+      }
+    } catch (runError) {
+      setError((runError as Error)?.message ?? 'تعذّر التنفيذ');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const toggleAuto = async (enabled: boolean) => {
+    setBusy('auto');
+    setError('');
+    try {
+      await db.setBasecampAutoSync(enabled);
+      onChanged();
+    } catch (toggleError) {
+      setError(
+        (toggleError as { code?: string })?.code === 'sync_first'
+          ? 'لا تُفتح الآلية قبل مزامنةٍ يدويةٍ ناجحة — عاين ثم نفّذ أوّلاً'
+          : 'تعذّر تبديل المزامنة الآلية',
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const tiles = preview
+    ? [
+        { label: 'عملاء جدد', value: preview.summary.createClients },
+        { label: 'قضايا جديدة', value: preview.summary.createCases },
+        { label: 'قضايا تُحدَّث', value: preview.summary.updateCases },
+        { label: 'بلا تغيير', value: preview.summary.unchanged },
+        { label: 'اختلافات', value: preview.summary.conflicts },
+        { label: 'تعذّرت', value: preview.summary.failed },
+      ]
+    : [];
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h4 className="font-semibold text-foreground">المعاينة والتنفيذ</h4>
+          <p className="text-sm text-muted-foreground">
+            المعاينةُ تقرأ الملفّات وتقول ما سيقع — ولا تكتب في العملاء ولا القضايا حرفاً.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => run('preview')} disabled={busy !== null} variant="outline">
+            <Eye className={`h-4 w-4 ${busy === 'preview' ? 'animate-pulse' : ''}`} />
+            {busy === 'preview' ? 'جارٍ القراءة' : 'عاين'}
+          </Button>
+          <Button onClick={() => run('sync')} disabled={busy !== null || !preview}>
+            <Play className="h-4 w-4" />
+            {busy === 'sync' ? 'جارٍ التنفيذ' : 'نفّذ المعاينة'}
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <TriangleAlert aria-hidden="true" />
+          <span>{error}</span>
+        </Alert>
+      )}
+
+      {applied && (
+        <Alert variant="success">
+          <CircleCheck aria-hidden="true" />
+          <span>
+            {`أُنشئ ${formatNumber(applied.clientsCreated ?? 0)} عميلاً و${formatNumber(applied.casesCreated ?? 0)} قضية، ` +
+              `وحُدّثت ${formatNumber(applied.casesUpdated ?? 0)}` +
+              (applied.conflicts ? `، و${formatNumber(applied.conflicts)} اختلافاً ينتظر قرارك` : '')}
+          </span>
+        </Alert>
+      )}
+
+      {preview && (
+        <>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 py-2 border-y border-border">
+            {tiles.map((tile) => (
+              <div key={tile.label} className="text-center">
+                <p className="text-xl font-bold text-foreground">
+                  <bdi>{formatNumber(tile.value)}</bdi>
+                </p>
+                <p className="text-xs text-muted-foreground">{tile.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="text-start py-2 font-medium">المشروع</th>
+                  <th className="text-start py-2 font-medium">العميل</th>
+                  <th className="text-start py-2 font-medium">القضية</th>
+                  <th className="text-start py-2 font-medium">ملاحظات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.plans.map((plan) => (
+                  <tr key={plan.projectId} className="border-b border-border/50 align-top">
+                    <td className="py-3">{plan.projectName}</td>
+                    <td className="py-3">
+                      {plan.client ? (
+                        <div className="space-y-1">
+                          <Badge variant={ACTION_LABEL[plan.client.action].variant}>
+                            {ACTION_LABEL[plan.client.action].text}
+                          </Badge>
+                          <p className="text-foreground">{plan.client.fullName}</p>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      {plan.case ? (
+                        <div className="space-y-1">
+                          <Badge variant={ACTION_LABEL[plan.case.action].variant}>
+                            {ACTION_LABEL[plan.case.action].text}
+                          </Badge>
+                          <p className="text-foreground"><bdi>{plan.case.caseNumber}</bdi></p>
+                          {plan.case.changes.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {plan.case.changes.map((f) => FIELD_LABEL[f] ?? f).join('، ')}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 space-y-1">
+                      {plan.error && (
+                        <p className="text-destructive text-xs">
+                          {PLAN_ERROR[plan.error] ?? plan.error}
+                        </p>
+                      )}
+                      {plan.warnings.map((warning, index) => (
+                        <p key={index} className="text-warning-strong text-xs">{warning}</p>
+                      ))}
+                      {plan.conflicts.map((conflict, index) => (
+                        <p key={`c${index}`} className="text-warning-strong text-xs">
+                          {`اختلافٌ في ${FIELD_LABEL[conflict.field] ?? conflict.field}`}
+                        </p>
+                      ))}
+                      {plan.unmapped.length > 0 && (
+                        <p className="text-muted-foreground text-xs flex items-start gap-1">
+                          <Lightbulb className="h-3 w-3 mt-0.5 flex-none" aria-hidden="true" />
+                          {`بلا ربط: ${plan.unmapped.slice(0, 4).join('، ')}`}
+                        </p>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* ═══ المزامنة الآلية ═══
+          لا تُفتح قبل تنفيذٍ يدويٍّ ناجح: جدولةٌ تكتب في قاعدة موكّلين بلا
+          أن يرى صاحبُها ما ستكتبه خطأٌ لا يُصلَح بعده. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
+        <div className="flex items-start gap-2">
+          <Timer className="h-5 w-5 text-muted-foreground mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-foreground">المزامنة الآلية كلَّ ساعة</p>
+            <p className="text-xs text-muted-foreground">
+              {lastSyncAt
+                ? 'تلتقط المشاريع الجديدة وتحدّث ما تبدّل — وما مسّته يدُك يقف وينتظر قرارك.'
+                : 'تُفتح بعد أول تنفيذٍ يدويٍّ ناجح.'}
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={() => toggleAuto(!syncEnabled)}
+          disabled={busy !== null || !lastSyncAt}
+          variant={syncEnabled ? 'outline' : 'default'}
+        >
+          <RefreshCw className={`h-4 w-4 ${busy === 'auto' ? 'animate-spin' : ''}`} />
+          {syncEnabled ? 'أوقفها' : 'شغّلها'}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/* ═══ الاختلافات ═══ */
+export function ConflictsPanel({ onResolved }: { onResolved: () => void }) {
+  const [conflicts, setConflicts] = useState<BasecampConflict[]>([]);
+  const [busy, setBusy] = useState('');
+
+  const load = async () => {
+    setConflicts(await db.getBasecampConflicts().catch(() => []));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const resolve = async (id: string, choice: 'basecamp' | 'platform' | 'ignored') => {
+    setBusy(id);
+    try {
+      await db.resolveBasecampConflict(id, choice);
+      await load();
+      onResolved();
+    } finally {
+      setBusy('');
+    }
+  };
+
+  if (conflicts.length === 0) return null;
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div>
+        <h4 className="font-semibold text-foreground">
+          اختلافاتٌ تنتظر قرارك <bdi>({formatNumber(conflicts.length)})</bdi>
+        </h4>
+        <p className="text-sm text-muted-foreground">
+          حقولٌ مسّتها يدٌ في المنصة وتبدّلت في بيسكامب معاً. لم يُكتب شيء — القرار لك.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {conflicts.map((conflict) => (
+          <div key={conflict.id} className="border border-border rounded-xl p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium text-foreground">
+                {FIELD_LABEL[conflict.field] ?? conflict.field}
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">{conflict.projectName}</span>
+              {conflict.caseNumber && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <bdi className="text-muted-foreground">{conflict.caseNumber}</bdi>
+                </>
+              )}
+              <span className="text-xs text-muted-foreground ms-auto">
+                <bdi>{formatDateTime(new Date(conflict.detectedAt * 1000))}</bdi>
+              </span>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground mb-1">في المنصة</p>
+                <p className="text-sm text-foreground break-words">{conflict.platformValue || '—'}</p>
+              </div>
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground mb-1">في بيسكامب</p>
+                <p className="text-sm text-foreground break-words">{conflict.basecampValue || '—'}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => resolve(conflict.id, 'basecamp')} disabled={busy === conflict.id} size="sm">
+                خذ من بيسكامب
+              </Button>
+              <Button
+                onClick={() => resolve(conflict.id, 'platform')}
+                disabled={busy === conflict.id}
+                variant="outline"
+                size="sm"
+              >
+                أبقِ ما في المنصة
+              </Button>
+              <Button
+                onClick={() => resolve(conflict.id, 'ignored')}
+                disabled={busy === conflict.id}
+                variant="outline"
+                size="sm"
+              >
+                تجاهل
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
