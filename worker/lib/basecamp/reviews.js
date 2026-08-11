@@ -18,6 +18,8 @@
 //
 // وذلك يجعل «راجعتُه» فعلاً ينتهي، لا سؤالاً يُعاد كلَّ ساعة.
 
+import { fullerName } from './names.js';
+
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 /** أنواعُ الأسئلة، ووجهُها العربي في الشاشة. */
@@ -130,11 +132,19 @@ export async function mergeClients(env, { keepId, mergeId }) {
   const now = nowSeconds();
 
   /* القضايا تنتقل باسم الباقي: `client_name` عمودٌ محفوظ لا مشتقّ. */
+  const finalName = fullerName(keep.full_name, merge.full_name);
   await env.DB.prepare(
     `UPDATE cases SET client_id = ?, client_name = ?, updated_at = ? WHERE client_id = ?`,
   )
-    .bind(keepId, keep.full_name, now, mergeId)
+    .bind(keepId, finalName, now, mergeId)
     .run();
+  /* وقضايا الباقي نفسِه تتبع الاسمَ الجديد: `client_name` عمودٌ محفوظ لا
+     مشتقّ، فتركُه يجعل قضاياه القديمة تحمل اسماً وقضاياه المنقولة آخر. */
+  if (finalName !== keep.full_name) {
+    await env.DB.prepare(`UPDATE cases SET client_name = ?, updated_at = ? WHERE client_id = ?`)
+      .bind(finalName, now, keepId)
+      .run();
+  }
 
   await env.DB.prepare(`UPDATE basecamp_projects SET client_id = ? WHERE client_id = ?`)
     .bind(keepId, mergeId)
@@ -142,6 +152,10 @@ export async function mergeClients(env, { keepId, mergeId }) {
 
   /* ويُملأ فارغُ الباقي ممّا في المدموج — ولا يُدهس ما فيه قيمة. */
   const fill = {};
+  /* والاسمُ أتمُّهما: المكرَّرُ قد يكون جاء من الملفّ باسمٍ كامل والباقي
+     مختصر. ومكتبُ محاماة يريد الكامل — هو ما يُكتب في الوكالة. */
+  const fuller = fullerName(keep.full_name, merge.full_name);
+  if (fuller !== keep.full_name) fill.full_name = fuller;
   for (const column of ['id_number', 'id_type', 'phone', 'email', 'commercial_register',
     'legal_representative', 'notes']) {
     if (!keep[column] && merge[column]) fill[column] = merge[column];

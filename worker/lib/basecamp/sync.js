@@ -203,9 +203,9 @@ const safeJson = (text) => {
 function readSnapshot(raw) {
   const stored = safeJson(raw) ?? {};
   if (stored && typeof stored === 'object' && ('case' in stored || 'client' in stored)) {
-    return { case: stored.case ?? {}, client: stored.client ?? {} };
+    return { case: stored.case ?? {}, client: stored.client ?? {}, meta: stored.meta ?? {} };
   }
-  return { case: stored ?? {}, client: {} };
+  return { case: stored ?? {}, client: {}, meta: {} };
 }
 
 /**
@@ -336,7 +336,7 @@ const already = (parsed, target) => {
  *
  * وما عدا ذلك: القاعدةُ قرأت ما في الملفّ، والفارغُ فارغٌ فيه حقّاً.
  */
-async function recoverMissing(env, { parsed, text, vocab, ai }) {
+async function recoverMissing(env, { parsed, text, vocab, ai, synced, plan }) {
   if (!ai?.enabled || !text) return [];
 
   const missing = RECOVERABLE.filter((target) => !already(parsed, target));
@@ -346,6 +346,18 @@ async function recoverMissing(env, { parsed, text, vocab, ai }) {
   const noLabels = (parsed.labels ?? []).length === 0;
   const shifted = parsed.unmapped.length > 0;
   if (!blind && !noLabels && !shifted) return [];
+
+  /* ═══ ولا تُعاد القراءةُ على ملفٍّ لم يتبدّل ═══
+
+     `shifted` شرطٌ يصدق ما دام في الملفّ عنوانٌ لا مقابل له — و«المحامي
+     المسؤول» عنوانٌ لا مقابل له أبداً. فبلا هذا الحارس يُستدلّ على الملفّ
+     نفسِه كلَّ ساعة، ويبتلع سقفَ الدورة فيُحرم التلخيصُ منه.
+
+     فتُحفظ بصمةُ (نصِّ الملفّ + ما كان ناقصاً) في الصورة: ما دامت هي هي
+     فالجوابُ هو هو، وقد أُخذ. */
+  const attempt = await fingerprint({ text, missing: missing.join(',') });
+  if (synced?.meta?.recovery === attempt) return [];
+  if (plan) plan.recoveryFingerprint = attempt;
 
   if (!ai.budget.spend()) return [];
 
@@ -495,7 +507,7 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
      ما قرأته الخريطةُ سيّدٌ لا يُنقَض — والسؤالُ عمّا بقي فارغاً وحده،
      ولا يُنادى إلا حين يدلّ الظاهرُ على أنّ شكلَ الملفّ تبدّل. */
   const text = htmlToText(document.content ?? '');
-  plan.aiFields = await recoverMissing(env, { parsed, text, vocab, ai });
+  plan.aiFields = await recoverMissing(env, { parsed, text, vocab, ai, synced, plan });
 
   /* ═══ ولفظٌ لم يفهمه الجدولُ ولا الجذور ═══
      «ربحانة» فهمها الجذر، و«الحمد لله انتهت لصالحنا» قد لا يفهمها. فتُردّ
@@ -627,34 +639,6 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
       detail: { generated: caseValues.caseNumber },
     });
   }
-  /* ═══ نوعُ القضية حين يخلو منه الملفّ ═══
-
-     كان يُكتب «غير محدّد» ويبقى كذلك في مئات القضايا المستوردة. والطراز
-     يقترح نوعاً **من قائمة المكتب وحدها** — فما ليس في «تكوين النظام»
-     يُردّ، وأسوأُ ما يقع أن يبقى الحقلُ كما كان.
-
-     وهو اقتراحٌ يُقال في المعاينة قبل أن يُكتب: يُقرأ في الشاشة ويُصحَّح.
-     ولا يُقترح فوق نوعٍ كتبه الملفّ أو كتبته يد — الاقتراحُ لمن لا شيءَ له. */
-  if (!caseValues.caseType && ai?.enabled && ai.budget.spend()) {
-    const suggestion = await suggestCaseType(env, {
-      text: htmlToText(document.content ?? '').slice(0, 2000),
-      options: vocab.caseTypes ?? [],
-    });
-    if (suggestion) {
-      caseValues.caseType = suggestion;
-      plan.caseTypeSuggested = true;
-      plan.warnings.push(`نوعُ القضية مقترحٌ آلياً: «${suggestion}» — راجِعه`);
-      plan.reviews.push({
-        kind: 'case_type',
-        subject: suggestion,
-        fingerprint: suggestion,
-        detail: { suggestion, options: vocab.caseTypes ?? [] },
-      });
-    } else {
-      ai.budget.failed++;
-    }
-  }
-  if (!caseValues.caseType) caseValues.caseType = 'غير محدّد';
 
   /* القضيةُ تُطابَق برقمها، ثم بالمشروع المربوط سابقاً — فتغييرُ رقمِ
      القضية في الملفّ يُحدِّث القضيةَ نفسَها ولا يُنشئ ثانية. */
@@ -675,6 +659,42 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
     existingCase = await env.DB.prepare(`SELECT * FROM cases WHERE id = ?`).bind(row.case_id).first();
     if (existingCase) plan.warnings.push('تبدّل رقم القضية في الملفّ');
   }
+
+  /* ═══ نوعُ القضية حين يخلو منه الملفّ ═══
+
+     كان يُكتب «غير محدّد» ويبقى كذلك في مئات القضايا المستوردة. والطراز
+     يقترح نوعاً **من قائمة المكتب وحدها** — فما ليس في «تكوين النظام»
+     يُردّ، وأسوأُ ما يقع أن يبقى الحقلُ كما كان.
+
+     ولا يُقترح فوق نوعٍ كتبه الملفّ ولا فوق نوعٍ في المنصة: بعد أن
+     يُصحَّح النوعُ من لوح المراجعة يبقى الملفُّ خالياً منه إلى الأبد،
+     فبلا هذا الشرط يُستدلّ عليه كلَّ ساعة ويُزاحم التلخيصَ على سقف
+     الدورة — ثمّ يُردّ اقتراحُه لأنّ المنصة أحدث. */
+  const platformType = existingCase?.case_type;
+  const typeIsBlank = !platformType || platformType === 'غير محدّد';
+  if (!caseValues.caseType && typeIsBlank && ai?.enabled && ai.budget.spend()) {
+    const suggestion = await suggestCaseType(env, {
+      text: htmlToText(document.content ?? '').slice(0, 2000),
+      options: vocab.caseTypes ?? [],
+    });
+    if (suggestion) {
+      caseValues.caseType = suggestion;
+      plan.caseTypeSuggested = true;
+      plan.warnings.push(`نوعُ القضية مقترحٌ آلياً: «${suggestion}» — راجِعه`);
+      plan.reviews.push({
+        kind: 'case_type',
+        subject: suggestion,
+        fingerprint: suggestion,
+        detail: { suggestion, options: vocab.caseTypes ?? [] },
+      });
+    } else {
+      ai.budget.failed++;
+    }
+  }
+
+  /* والافتراضُ يتلو الاقتراحَ لا يسبقه: لو كُتب «غير محدّد» قبله لَما بقي
+     فراغٌ يُقترح له، ولمات الاقتراحُ صامتاً. */
+  if (!caseValues.caseType) caseValues.caseType = 'غير محدّد';
 
   if (!existingCase) {
     plan.case = { id: null, values: caseValues, action: 'create_case', changes: caseValues };
@@ -1054,7 +1074,9 @@ async function applyPlan(env, plan, actorId, ai) {
 
      وحقولُ العميل معها الآن: بلا صورةٍ له لا يُعرف أنّ «نوع العميل» تبدّل
      عندهم أم أنّ يداً بدّلته عندنا، فتُدهس اليدُ أو يُهمَل تبدُّلُهم. */
-  const snapshot = { case: {}, client: {} };
+  const snapshot = { case: {}, client: {}, meta: {} };
+  /* وبصمةُ آخرِ قراءةٍ آلية: بها لا تُعاد على ملفٍّ لم يتبدّل. */
+  if (plan.recoveryFingerprint) snapshot.meta.recovery = plan.recoveryFingerprint;
   for (const field of CASE_FIELDS) {
     if (plan.case?.values?.[field] !== undefined) snapshot.case[field] = plan.case.values[field];
   }

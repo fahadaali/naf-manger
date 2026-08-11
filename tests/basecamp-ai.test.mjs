@@ -411,6 +411,31 @@ docContent = FULL_NAME_DOC;
 await buildPlan(env, connection);
 check('ملفٌّ تامٌّ لا يُستدلّ عليه', reads === 0, `reads=${reads}`);
 
+/* ═══ ولا تُعاد القراءةُ على ملفٍّ لم يتبدّل ═══
+   «المحامي المسؤول» عنوانٌ لا مقابل له أبداً، فشرطُ «عناوينُ بلا ربط»
+   يصدق في كل دورة. وبلا حارسٍ يُستدلّ على الملفّ نفسِه كلَّ ساعة،
+   ويبتلع سقفَ الدورة فيُحرم التلخيصُ منه. */
+({ db, env } = readerSetup());
+let rereads = 0;
+env.AI = {
+  async run(model, input) {
+    if (input.messages[0].content.includes('قارئُ مستندات')) { rereads++; return { response: '{}' }; }
+    return { response: 'ملخّص.' };
+  },
+};
+docContent = `<div>
+  <div>اسم العميل: خالد الغامدي</div>
+  <div>المحامي المسؤول: سارة المطيري</div>
+</div>`;
+await runSync(env, connection, actor);
+const firstReads = rereads;
+check('يُقرأ الملفُّ آلياً أوّلَ مرّة', firstReads === 1, `reads=${rereads}`);
+await runSync(env, connection, actor);
+check('ولا يُعاد على ملفٍّ لم يتبدّل', rereads === firstReads, `reads=${rereads}`);
+docContent = docContent.replace('خالد الغامدي', 'خالد سعد الغامدي');
+await runSync(env, connection, actor);
+check('ويُعاد على ملفٍّ تبدّل', rereads === firstReads + 1, `reads=${rereads}`);
+
 /* ═══ ورقمُ القضية لا يُستخرج ═══
    هو مفتاحُ الربط: تُطابَق به القضيةُ القائمة ثم يُكتب فيها. وملفٌّ قد
    يذكر رقمَ قضيةٍ أخرى، فيُنقل نقلاً صحيحاً ويُربط المشروعُ بملفّ غيره. */

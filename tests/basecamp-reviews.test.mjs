@@ -157,6 +157,17 @@ globalThis.fetch = async (url) => {
 const { scanProjects } = await import('../worker/lib/basecamp/discover.js');
 await scanProjects(env, connection);
 
+/* ═══ وأوّلُ مسحٍ لحسابٍ كامل لا يُغرق الشاشة ═══
+   حسابٌ فيه ثلاثمئة مشروع كلُّها «جديدة» في المسح الأول. ولو سُئل عنها
+   لامتلأت الشاشةُ بثلاثمئة سؤالٍ دفعةً واحدة. */
+const virgin = { db: freshDatabase() };
+virgin.env = makeEnv(virgin.db);
+await scanProjects(virgin.env, connection);
+check('أوّلُ مسحٍ لحسابٍ فارغ لا يسأل عن التصنيف',
+  (await countOpen(virgin.env)) === 0, await listOpen(virgin.env));
+check('ومع ذلك يُصنَّف المشروع',
+  virgin.db.prepare(`SELECT kind FROM basecamp_projects WHERE project_id='202'`).get().kind === 'client');
+
 let kindReview = (await listOpen(env)).find((row) => row.kind === 'project_kind');
 check('مشروعٌ جديد يُسأل عن تصنيفه', Boolean(kindReview), (await listOpen(env)).map((r) => r.kind));
 check('ويُقال بمَ رُجّح', kindReview.detail.hasDocument === true, kindReview.detail);

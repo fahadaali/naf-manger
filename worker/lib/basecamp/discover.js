@@ -170,6 +170,8 @@ export async function scanProjects(env, connection) {
   const existing = new Map((existingRows ?? []).map((row) => [row.project_id, row]));
 
   const titles = await readDocTitles(env);
+  /* أهذا أوّلُ مسحٍ لهذا الحساب؟ يُقرأ قبل الحلقة، إذ تملأ هي الجدول. */
+  const firstScan = existing.size === 0;
 
   const summary = {
     scanned: 0, client: 0, internal: 0, failed: 0, incomplete: !active.complete,
@@ -224,9 +226,11 @@ export async function scanProjects(env, connection) {
        نموذجاً يصير «عميلاً» ولا يقول أحدٌ ذلك. فيُفتح له صفٌّ يُحسم في
        ضغطة ويثبت.
 
-       **وللجديد وحده**: حسابٌ فيه ثلاثمئة مشروعٍ قائم لا يُغرق شاشةَ
-       المراجعة بثلاثمئة سؤالٍ في أوّل نشرة. وما مضى صُنّف ومرّ. */
-    if (!previous) {
+       **وللجديد وحده، وبعد أوّل مسح**: حسابٌ فيه ثلاثمئة مشروع كلُّها
+       «جديدة» في المسح الأول — فلو سُئل عنها لامتلأت الشاشةُ بثلاثمئة
+       سؤالٍ دفعةً واحدة. والمسحُ الأول يُراجَع في جدول المشاريع نفسِه،
+       وما بعده هو الذي يحمل الجديدَ حقّاً. */
+    if (!previous && firstScan === false) {
       await openReview(env, {
         kind: 'project_kind',
         projectId,
