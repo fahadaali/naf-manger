@@ -3,7 +3,7 @@
 // ═══ ما يميّز مشروعَ العميل ═══
 //
 // حسابُ المكتب فيه مشاريعُ إدارةٍ داخلية ومشاريعُ عملاء، ولا يفرّق بينها
-// اسمٌ ولا مجلَّد. والذي يفرّق: **مشروعُ العميل فيه ملفّ «ملخص القضية»**،
+// اسمٌ ولا مجلَّد. والذي يفرّق: **مشروعُ العميل فيه ملفُّ «بيانات المشروع»**،
 // وهو موجودٌ في كل مشروعٍ يتعلّق بعملٍ لعميل.
 //
 // فوجودُ الملفّ يرجّح `client`، وغيابُه `internal`.
@@ -13,11 +13,27 @@
 // مشروعٌ داخليٌّ قد يحمل الملفّ نموذجاً، ومشروعُ عميلٍ قديم قد يخلو منه.
 // فالتصنيف الآليّ اقتراحٌ يراجعه من يفتح الشاشة — ومتى حكم بيده لم
 // يُنقَض حكمُه في مسحٍ لاحق. وذلك ما يقوله `decided_by` حين يمتلئ.
+//
+// ═══ والعنوانُ يتبدّل ═══
+//
+// كان الملفّ «ملخص القضية» فصار «بيانات المشروع». وعنوانٌ واحدٌ مكتوبٌ في
+// الشيفرة يجعل إعادةَ تسميةٍ في بيسكامب تُطفئ الاستيرادَ كلَّه صامتاً —
+// المشاريعُ تظهر بلا ملفّ، ولا يقول أحدٌ لِمَ.
+//
+// فالعناوينُ المقبولة قائمةٌ تُعدَّل من الشاشة، وفيها الاسمان معاً: الجاري
+// والقديم — لأنّ مشاريعَ سنينَ ماضية لم يُعَد تسميةُ ملفّاتها.
 
 import { getJson, listAll } from './api.js';
+import { openReview } from './reviews.js';
 
-/** عنوانُ الملفّ الذي يُبحث عنه. */
-export const SUMMARY_TITLE = 'ملخص القضية';
+/**
+ * العناوينُ المقبولة — أوّلُها الاسمُ الجاري وما بعده ما كان قبله.
+ *
+ * وهي افتراضٌ يُبنى عليه: المعتمَدُ ما في `system_settings` إن كُتب.
+ */
+export const DEFAULT_DOC_TITLES = ['بيانات المشروع', 'ملخص القضية'];
+
+const DOC_TITLES_KEY = 'basecamp_doc_titles';
 
 /**
  * توحيدُ النصّ العربي قبل المقارنة.
@@ -39,10 +55,40 @@ export function normalizeArabic(text) {
     .toLowerCase();
 }
 
-const SUMMARY_NORMALIZED = normalizeArabic(SUMMARY_TITLE);
+/** أهذا أحدُ عناوين ملفّ بيانات المشروع؟ */
+export function isDocumentTitle(title, titles = DEFAULT_DOC_TITLES) {
+  const normalized = normalizeArabic(title);
+  if (!normalized) return false;
+  return titles.some((accepted) => normalizeArabic(accepted) === normalized);
+}
 
-/** أهذا عنوانُ ملفّ ملخّص القضية؟ */
-export const isSummaryTitle = (title) => normalizeArabic(title) === SUMMARY_NORMALIZED;
+/** العناوينُ المقبولة كما ضبطها المكتب — أو الافتراض. */
+export async function readDocTitles(env) {
+  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
+    .bind(DOC_TITLES_KEY)
+    .first();
+  if (!row?.value) return [...DEFAULT_DOC_TITLES];
+  try {
+    const stored = JSON.parse(row.value);
+    const clean = Array.isArray(stored)
+      ? stored.map((title) => String(title ?? '').trim()).filter(Boolean)
+      : [];
+    return clean.length ? clean : [...DEFAULT_DOC_TITLES];
+  } catch {
+    return [...DEFAULT_DOC_TITLES];
+  }
+}
+
+export async function writeDocTitles(env, titles, userId) {
+  await env.DB.prepare(
+    `INSERT INTO system_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+                                    updated_by = excluded.updated_by,
+                                    updated_at = excluded.updated_at`,
+  )
+    .bind(DOC_TITLES_KEY, JSON.stringify(titles), userId, Math.floor(Date.now() / 1000))
+    .run();
+}
 
 /** أداةُ «Docs & Files» في رصيف المشروع. */
 export function findVault(project) {
@@ -56,13 +102,25 @@ export function findVault(project) {
  * ومستوىً واحدٌ من العمق لا أكثر: بعضُ المكاتب تضع الملفّ في مجلَّد
  * «المستندات»، وقليلٌ يُغرقه أعمق. والنزولُ بلا حدٍّ يضاعف النداءات على
  * كل مشروع ويبلغ حدَّ بيسكامب بلا طائل.
+ *
+ * ═══ وملفٌّ عُرف مرّةً لا يضيع بإعادة تسمية ═══
+ *
+ * معرّفُ الملفّ عند بيسكامب لا يتبدّل بتبدّل عنوانه. فإن لم يُطابق عنوانٌ،
+ * وكان لهذا المشروع ملفٌّ معروفٌ من مسحٍ سابق ولا يزال في الخزانة — فهو
+ * هو، أُعيدت تسميتُه. ويُردّ مع `renamed` ليُقال في الشاشة، فيُضاف
+ * العنوانُ الجديد إلى المقبولة بدل أن ينقطع الاستيراد بلا سبب ظاهر.
+ *
+ * ولا نداءَ إضافياً في ذلك: المسرَدُ نفسُه الذي بُحث فيه عن العنوان.
  */
-async function findSummaryDoc(accountId, token, projectId, vaultId) {
+async function findProjectDocument(accountId, token, projectId, vaultId, options = {}) {
+  const { titles = DEFAULT_DOC_TITLES, knownDocId = null } = options;
   const base = `/buckets/${projectId}/vaults/${vaultId}`;
+  const seen = [];
 
   const { items: documents } = await listAll(accountId, token, `${base}/documents.json`);
-  const direct = documents.find((document) => isSummaryTitle(document.title));
-  if (direct) return direct;
+  const direct = documents.find((document) => isDocumentTitle(document.title, titles));
+  if (direct) return { document: direct, renamed: false };
+  seen.push(...documents);
 
   const { items: folders } = await listAll(accountId, token, `${base}/vaults.json`);
   for (const folder of folders) {
@@ -71,11 +129,17 @@ async function findSummaryDoc(accountId, token, projectId, vaultId) {
       token,
       `/buckets/${projectId}/vaults/${folder.id}/documents.json`,
     );
-    const found = nested.find((document) => isSummaryTitle(document.title));
-    if (found) return found;
+    const found = nested.find((document) => isDocumentTitle(document.title, titles));
+    if (found) return { document: found, renamed: false };
+    seen.push(...nested);
   }
 
-  return null;
+  if (knownDocId) {
+    const same = seen.find((document) => String(document.id) === String(knownDocId));
+    if (same) return { document: same, renamed: true };
+  }
+
+  return { document: null, renamed: false };
 }
 
 /**
@@ -105,7 +169,17 @@ export async function scanProjects(env, connection) {
   ).all();
   const existing = new Map((existingRows ?? []).map((row) => [row.project_id, row]));
 
-  const summary = { scanned: 0, client: 0, internal: 0, failed: 0, incomplete: !active.complete };
+  const titles = await readDocTitles(env);
+  /* أهذا أوّلُ مسحٍ لهذا الحساب؟ يُقرأ قبل الحلقة، إذ تملأ هي الجدول. */
+  const firstScan = existing.size === 0;
+
+  const summary = {
+    scanned: 0, client: 0, internal: 0, failed: 0, incomplete: !active.complete,
+    /* ملفّاتٌ عُرفت بمعرّفها بعد أن تبدّل عنوانُها — تُعدّ لتُقال في الشاشة:
+       «هذه ملفّاتُها أُعيدت تسميتُها، فأضِف العنوان الجديد». */
+    renamed: 0,
+    renamedTitles: [],
+  };
 
   for (const { project, status } of projects) {
     const projectId = String(project.id);
@@ -118,7 +192,18 @@ export async function scanProjects(env, connection) {
 
     try {
       vaultId = findVault(project);
-      if (vaultId) document = await findSummaryDoc(accountId, token, projectId, vaultId);
+      if (vaultId) {
+        const found = await findProjectDocument(accountId, token, projectId, vaultId, {
+          titles,
+          knownDocId: previous?.doc_id ?? null,
+        });
+        document = found.document;
+        if (found.renamed) {
+          summary.renamed++;
+          const title = String(document?.title ?? '').trim();
+          if (title && !summary.renamedTitles.includes(title)) summary.renamedTitles.push(title);
+        }
+      }
     } catch (scanError) {
       /* مشروعٌ واحدٌ يسقط لا يوقف المسح: يُسجَّل سببُه ويُمضى إلى ما بعده.
          وحسابٌ فيه مشروعٌ لا يُقرأ يبقى بقيّتُه مقروءة. */
@@ -136,16 +221,38 @@ export async function scanProjects(env, connection) {
     if (kind === 'client') summary.client++;
     else summary.internal++;
 
+    /* ═══ ومشروعٌ جديد يُسأل عن تصنيفه مرّةً ═══
+       الترجيحُ بوجود الملفّ اقتراحٌ لا حكم — ومشروعٌ داخليٌّ يحمل الملفّ
+       نموذجاً يصير «عميلاً» ولا يقول أحدٌ ذلك. فيُفتح له صفٌّ يُحسم في
+       ضغطة ويثبت.
+
+       **وللجديد وحده، وبعد أوّل مسح**: حسابٌ فيه ثلاثمئة مشروع كلُّها
+       «جديدة» في المسح الأول — فلو سُئل عنها لامتلأت الشاشةُ بثلاثمئة
+       سؤالٍ دفعةً واحدة. والمسحُ الأول يُراجَع في جدول المشاريع نفسِه،
+       وما بعده هو الذي يحمل الجديدَ حقّاً. */
+    if (!previous && firstScan === false) {
+      await openReview(env, {
+        kind: 'project_kind',
+        projectId,
+        subject: project.name ?? '',
+        fingerprint: kind,
+        detail: { guessed: kind, hasDocument: Boolean(document) },
+      }).catch((error) => {
+        console.error('Basecamp: تعذّر فتح صفّ تصنيف —', error?.message ?? error);
+      });
+    }
+
     await env.DB.prepare(
       `INSERT INTO basecamp_projects
-         (project_id, name, app_url, status, vault_id, doc_id, doc_updated_at,
+         (project_id, name, app_url, status, vault_id, doc_id, doc_title, doc_updated_at,
           kind, last_error, created_on, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(project_id) DO UPDATE SET name           = excluded.name,
                                              app_url        = excluded.app_url,
                                              status         = excluded.status,
                                              vault_id       = excluded.vault_id,
                                              doc_id         = excluded.doc_id,
+                                             doc_title      = excluded.doc_title,
                                              doc_updated_at = excluded.doc_updated_at,
                                              kind           = excluded.kind,
                                              last_error     = excluded.last_error,
@@ -161,6 +268,7 @@ export async function scanProjects(env, connection) {
         status,
         vaultId,
         document ? String(document.id) : null,
+        document?.title ?? null,
         document?.updated_at ?? null,
         kind,
         error,
@@ -176,8 +284,8 @@ export async function scanProjects(env, connection) {
   return summary;
 }
 
-/** نصُّ ملفّ الملخّص كما هو — لبناء خريطة الحقول على الواقع لا على تخمين. */
-export async function readSummaryDocument(connection, projectId, documentId) {
+/** نصُّ ملفّ المشروع كما هو — لبناء خريطة الحقول على الواقع لا على تخمين. */
+export async function readProjectDocument(connection, projectId, documentId) {
   const { accountId, token } = connection;
   const document = await getJson(
     accountId,

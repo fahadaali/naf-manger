@@ -8,7 +8,8 @@ import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../ty
 import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
-import { BasecampConflict, BasecampMap, BasecampPreview, BasecampSummary } from '../types';
+import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
+import { BasecampReview } from '../types';
 import { BulkAction, BulkOutcome } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
@@ -346,11 +347,21 @@ export class LocalDatabase {
     return await api.read<BasecampMap>('/basecamp/map');
   }
 
-  async saveBasecampMap(map: Record<string, string>): Promise<{ map: Record<string, string> }> {
-    return await api.put('/basecamp/map', { map });
+  /* والعناوينُ تُحفظ مع الخريطة: اسمُ الملفّ وعناوينُ حقوله يُراجَعان معاً
+     في شاشةٍ واحدة، فحفظُهما في نداءين يترك أحدَهما محفوظاً والآخر لا. */
+  async saveBasecampMap(
+    map: Record<string, string>,
+    titles?: string[],
+  ): Promise<{ map: Record<string, string>; titles: string[] }> {
+    return await api.put('/basecamp/map', titles ? { map, titles } : { map });
   }
 
   /* المعاينة تقرأ ولا تكتب — و`POST` لأنها تُشغّل عملاً على بيسكامب. */
+  /* اقتراحُ ربطٍ لعناوينَ لا مقابل لها — يُقرأ ولا يُحفظ حتى يُراجَع. */
+  async suggestBasecampMap(): Promise<BasecampMapSuggestion> {
+    return await api.post<BasecampMapSuggestion>('/basecamp/map/suggest');
+  }
+
   async previewBasecamp(): Promise<BasecampPreview> {
     return await api.post<BasecampPreview>('/basecamp/preview');
   }
@@ -361,6 +372,31 @@ export class LocalDatabase {
 
   async setBasecampAutoSync(enabled: boolean): Promise<{ syncEnabled: boolean }> {
     return await api.put('/basecamp/auto-sync', { enabled });
+  }
+
+  /* التلخيصُ الآليّ: مفتاحُه هنا لأنّ ما يُلخَّص يأتي من الاستيراد. */
+  async setBasecampAi(enabled: boolean): Promise<{ aiEnabled: boolean }> {
+    return await api.put('/basecamp/ai', { enabled });
+  }
+
+  /* ═══ ما يستحقّ نظرَك ═══
+     تكتبه المزامنةُ وتمضي، ويُحسم متى فُتحت الشاشة — ومتى حُسم لم يعد. */
+  async getBasecampReviews(): Promise<BasecampReview[]> {
+    return await api.read<BasecampReview[]>('/basecamp/reviews');
+  }
+
+  async resolveBasecampReview(
+    id: string,
+    resolution: string,
+    value?: string,
+  ): Promise<{ id: string; resolution: string }> {
+    return await api.post(`/basecamp/reviews/${encodeURIComponent(id)}`, { resolution, value });
+  }
+
+  async setBasecampConflictPolicy(
+    policy: 'ask' | 'basecamp' | 'platform',
+  ): Promise<{ conflictPolicy: string }> {
+    return await api.put('/basecamp/conflict-policy', { policy });
   }
 
   async getBasecampConflicts(): Promise<BasecampConflict[]> {

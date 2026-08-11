@@ -49,22 +49,35 @@ const check = (name, condition, extra = '') => {
 };
 
 // ═══ ١) توحيد العنوان العربي ═══
-const { normalizeArabic, isSummaryTitle, findVault } = await import('../worker/lib/basecamp/discover.js');
+const { normalizeArabic, isDocumentTitle, findVault, DEFAULT_DOC_TITLES } =
+  await import('../worker/lib/basecamp/discover.js');
 
+/* والعنوانان مقبولان معاً: الملفّ صار «بيانات المشروع»، ومشاريعُ سنينَ
+   ماضية لا تزال تحمل «ملخص القضية» — وإسقاطُ أحدهما يُطفئ نصفَ الحساب. */
 for (const variant of [
+  'بيانات المشروع',
+  'بياناتُ المشروعِ',     // بالحركات
+  'بيانات المشـروع',      // بالتطويل
+  '  بيانات   المشروع  ', // بمسافاتٍ زائدة
   'ملخص القضية',
   'ملخّص القضيّة',      // بالشدّة
   'ملخص القضيه',         // بالهاء
   'ملخـص القضية',        // بالتطويل
-  '  ملخص   القضية  ',   // بمسافاتٍ زائدة
   'مُلَخَّص القَضِيَّة',        // بالحركات
 ]) {
-  check(`يُعرَف العنوان «${variant.trim()}»`, isSummaryTitle(variant));
+  check(`يُعرَف العنوان «${variant.trim()}»`, isDocumentTitle(variant));
 }
 
-for (const other of ['ملخص الجلسة', 'القضية', 'ملخص القضية القديمة', '', 'Case Summary']) {
-  check(`لا يُخلَط بـ«${other}»`, !isSummaryTitle(other));
+for (const other of ['ملخص الجلسة', 'القضية', 'ملخص القضية القديمة', '', 'Case Summary', 'بيانات العميل']) {
+  check(`لا يُخلَط بـ«${other}»`, !isDocumentTitle(other));
 }
+
+check('والاسمُ الجاري أوّلُ الافتراض', DEFAULT_DOC_TITLES[0] === 'بيانات المشروع', DEFAULT_DOC_TITLES);
+
+/* وقائمةٌ من عند المكتب تُحترم: من سمّى ملفَّه «ملف الموكل» يضيفه فيُقرأ،
+   ولا يُنتظر نشرُ شيفرة. */
+check('عنوانٌ يضيفه المكتب يُقرأ', isDocumentTitle('ملف الموكل', ['ملف الموكل']));
+check('وما ليس في قائمته لا يُقرأ', !isDocumentTitle('بيانات المشروع', ['ملف الموكل']));
 check('التوحيد يرفع الحركات والتطويل', normalizeArabic('مُلَخَّـص') === 'ملخص', normalizeArabic('مُلَخَّـص'));
 check('التوحيد يوحّد صور الألف', normalizeArabic('أحمد إبراهيم آدم') === 'احمد ابراهيم ادم');
 
@@ -142,6 +155,7 @@ const rows = () => db.prepare(`SELECT * FROM basecamp_projects ORDER BY project_
 let stored = rows();
 check('الملخّص وُجد في المجلَّد الفرعي', stored[0].doc_id === '901', JSON.stringify(stored[0]));
 check('وحُفظ تاريخُ تعديله', stored[0].doc_updated_at === '2026-03-01T10:00:00.000Z');
+check('وحُفظ عنوانُه كما هو عندهم', stored[0].doc_title === 'ملخّص القضيّة', stored[0].doc_title);
 check('المشروع الداخلي internal', stored[1].kind === 'internal');
 check('مشروعٌ بلا خزانة internal', stored[2].kind === 'internal' && stored[2].vault_id === null);
 check('رابط المشروع محفوظ', stored[0].app_url === 'https://3.basecamp.com/1/projects/101');
@@ -161,6 +175,45 @@ const firstSeen = stored[0].created_at;
 await scanProjects(env, connection);
 check('تاريخُ أوّل رؤية ثابت', rows()[0].created_at === firstSeen);
 
+/* ═══ ٧ب) إعادةُ تسمية الملفّ لا تقطع الربط ═══
+
+   وهو ما وقع فعلاً: سُمّي الملفّ «بيانات المشروع» بعد أن كان «ملخص
+   القضية»، فصار المسحُ لا يجده — تُفرَّغ `doc_id` وتقول المزامنةُ
+   «لا ملفّ» عن مشاريعَ كلِّها سليمة. ومعرّفُ الملفّ لا يتبدّل بتسميته،
+   فيُعرف به، ويُقال إنّ عنوانَه تبدّل ليُضاف إلى المقبولة. */
+DOCS['/buckets/101/vaults/111/documents.json'] = [
+  { id: 901, title: 'ملف الموكل — بيانات', updated_at: '2026-04-01T10:00:00.000Z' },
+];
+
+summary = await scanProjects(env, connection);
+stored = rows();
+check('ملفٌّ أُعيدت تسميتُه يُعرف بمعرّفه', stored[0].doc_id === '901', JSON.stringify(stored[0]));
+check('ويُقال إنّه أُعيدت تسميتُه', summary.renamed === 1, JSON.stringify(summary));
+check('ويُذكر عنوانُه الجديد',
+  summary.renamedTitles[0] === 'ملف الموكل — بيانات', JSON.stringify(summary.renamedTitles));
+check('ويُحفظ العنوانُ الجديد', stored[0].doc_title === 'ملف الموكل — بيانات', stored[0].doc_title);
+
+/* وحين يُضاف العنوانُ إلى المقبولة يعود المسحُ يجده بعنوانه لا بمعرّفه. */
+db.prepare(
+  `INSERT INTO system_settings (key, value, updated_at) VALUES ('basecamp_doc_titles', ?, 1)`,
+).run(JSON.stringify(['بيانات المشروع', 'ملف الموكل — بيانات']));
+
+summary = await scanProjects(env, connection);
+check('وبعد إضافته لا يُعدّ مُعاد التسمية', summary.renamed === 0, JSON.stringify(summary));
+check('ولا يزال مقروءاً', rows()[0].doc_id === '901');
+
+/* وملفٌّ حُذف فعلاً يُفرَّغ ولا يُتشبَّث بمعرّفٍ لا وجود له. */
+DOCS['/buckets/101/vaults/111/documents.json'] = [];
+await scanProjects(env, connection);
+check('وملفٌّ حُذف يُفرَّغ', rows()[0].doc_id === null, JSON.stringify(rows()[0]));
+
+db.prepare(`DELETE FROM system_settings WHERE key = 'basecamp_doc_titles'`).run();
+DOCS['/buckets/101/vaults/111/documents.json'] = [
+  { id: 901, title: 'بيانات المشروع', updated_at: '2026-04-01T10:00:00.000Z' },
+];
+await scanProjects(env, connection);
+check('والعنوانُ الجديد يُقرأ بلا ضبط', rows()[0].doc_id === '901', JSON.stringify(rows()[0]));
+
 // ═══ ٨) الحراسة: غيرُ المسؤول لا يمرّ ═══
 const handlers = await import('../worker/lib/basecamp/handlers.js');
 const staff = { id: 'u2', role: 'staff', name: 'موظّف', permissions: { settings: { update: true } } };
@@ -174,6 +227,9 @@ for (const [name, run] of [
   ['disconnect', () => handlers.disconnect(env, staff)],
   ['connect', () => handlers.startConnect({}, env, staff, url)],
   ['classify', () => handlers.classifyProject({}, env, staff, '101')],
+  /* ومفتاحُ التلخيص كذلك: هو قرارٌ بأنّ نصوص القضايا تُمرَّر إلى طراز،
+     وليس ذلك من `settings.update` — بل من ملكِ المنصة. */
+  ['ai', () => handlers.setAiImport({ json: async () => ({ enabled: true }) }, env, staff)],
 ]) {
   const r = await run();
   check(`${name} يردّ ٤٠٣ لغير المسؤول`, r.status === 403 && r.body.error === 'forbidden', JSON.stringify(r));

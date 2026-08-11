@@ -43,6 +43,9 @@ export interface Client {
   clientType: 'individual' | 'company' | 'association' | 'government';
   status: 'current' | 'former';
   notes: string;
+  /** ملخّصُ قضاياه مجتمعةً — يكتبه التلخيصُ الآليّ، ويُعرض تحت الملاحظات. */
+  aiSummary?: string | null;
+  aiSummaryAt?: string | null;
   /** لحظةُ الأرشفة نصّاً ISO — وغيابُها يعني «حاضر». */
   archivedAt?: string | null;
   attachments: Attachment[];
@@ -95,6 +98,23 @@ export interface Case {
   clientId: string;
   clientName: string;
   summary: string;
+  /**
+   * حاشيةٌ على القضية — غيرُ الملخّص.
+   *
+   * الملخّصُ موضوعُ القضية، والملاحظةُ ما يُكتب حولها: «الأوراق الأصلية عند
+   * وكيله». و«بيانات المشروع» في بيسكامب يحملها، فتُستورد إلى عمودها هي.
+   */
+  notes?: string;
+  /**
+   * ملخّصٌ صاغه طرازٌ عند الاستيراد — حقلٌ مستقلٌّ عن `notes` عمداً.
+   *
+   * فالملاحظاتُ يكتبها المحامي ويأتي فيها ما في «بيانات المشروع»، ونصٌّ
+   * آليٌّ لو دخلها لاختلط بما كتبه إنسان فقُرئ بعد شهرٍ كأنه منه.
+   * ويُعرض مسمّىً «ملخّصٌ آليّ»، ويُكتب من مصدره لا من الشاشة.
+   */
+  aiSummary?: string | null;
+  /** لحظةُ كتابته نصّاً ISO. */
+  aiSummaryAt?: string | null;
   status: 'pending' | 'completed' | 'postponed' | 'in-progress';
   outcome?: 'won' | 'lost' | 'settled';
   basecampUrl?: string;
@@ -237,6 +257,49 @@ export interface BasecampStatus {
   lastSyncError?: string | null;
   projects?: { total: number; client: number; internal: number; linked: number };
   openConflicts?: number;
+  /** أمشغَّلٌ التلخيصُ الآليّ عند الاستيراد؟ */
+  aiEnabled?: boolean;
+  /** ما يستحقّ نظرَ إنسان ولم يُحسم — ولا يحجب استيراداً. */
+  openReviews?: number;
+  conflictPolicy?: 'ask' | 'basecamp' | 'platform';
+}
+
+/**
+ * صفٌّ يستحقّ نظرَ إنسان — تكتبه المزامنةُ وتمضي.
+ *
+ * ولا يحجب شيئاً: الاستيرادُ وقع، وهذا سؤالٌ عنه. ويُحسم مرّةً فلا يعود —
+ * الصفُّ فريدٌ بـ(المشروع + نوع السؤال + القيمة المسؤول عنها).
+ */
+export interface BasecampReview {
+  id: string;
+  kind: 'project_kind' | 'case_type' | 'unresolved_value' | 'similar_client' | 'generated_number';
+  kindLabel: string;
+  projectId: string;
+  projectName: string;
+  appUrl: string;
+  /** تصنيفُ المشروع الآن — للسؤال عن تصنيفه. */
+  projectKind: 'client' | 'internal' | 'unknown' | null;
+  caseId: string | null;
+  caseNumber: string | null;
+  caseType: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  subject: string;
+  detail: {
+    guessed?: string;
+    hasDocument?: boolean;
+    suggestion?: string;
+    options?: string[];
+    target?: string;
+    field?: string;
+    value?: string;
+    codes?: Record<string, string>;
+    generated?: string;
+    newName?: string;
+    existingName?: string;
+    createdClientId?: string;
+  };
+  createdAt: number;
 }
 
 export interface BasecampProject {
@@ -244,8 +307,10 @@ export interface BasecampProject {
   name: string;
   appUrl: string;
   status: 'active' | 'archived' | 'trashed';
-  /** أفيه ملفّ «ملخص القضية»؟ وهو ما يرجّح أنّه مشروعُ عميل. */
-  hasSummary: boolean;
+  /** أفيه ملفّ «بيانات المشروع»؟ وهو ما يرجّح أنّه مشروعُ عميل. */
+  hasDocument: boolean;
+  /** واسمُه كما هو عندهم — الجاري أو ما كان قبله. */
+  docTitle: string | null;
   docUpdatedAt: string | null;
   kind: 'client' | 'internal' | 'unknown';
   /** صنّفه إنسانٌ بيده — فلا ينقضه مسحٌ لاحق. */
@@ -266,9 +331,13 @@ export interface BasecampScan {
   failed: number;
   /** بلغ المسرد سقفَ الصفحات ولم يكتمل — يُقال ولا يُبتلع. */
   incomplete: boolean;
+  /** ملفّاتٌ عُرفت بمعرّفها بعد أن تبدّل عنوانُها عندهم. */
+  renamed: number;
+  /** وعناوينُها الجديدة — تُعرض لتُضاف إلى المقبولة. */
+  renamedTitles: string[];
 }
 
-/** نصُّ «ملخص القضية» كما هو — تُبنى عليه خريطةُ الحقول. */
+/** نصُّ «بيانات المشروع» كما هو — تُبنى عليه خريطةُ الحقول. */
 export interface BasecampSample {
   projectId: string;
   projectName: string;
@@ -279,11 +348,21 @@ export interface BasecampSample {
   updatedAt: string | null;
 }
 
-/** خريطةُ الحقول: عنوانٌ في «ملخص القضية» ← حقلٌ في المنصة. */
+/** خريطةُ الحقول: عنوانٌ في «بيانات المشروع» ← حقلٌ في المنصة. */
 export interface BasecampMap {
   map: Record<string, string>;
   targets: Record<string, { label: string; entity: 'client' | 'case'; required?: boolean }>;
   defaults: Record<string, string>;
+  /** عناوينُ الملفّ المقبولة — أوّلُها الجاري وما بعده ما كان قبله. */
+  titles: string[];
+  defaultTitles: string[];
+}
+
+/** ربطٌ يقترحه الطراز لعنوانٍ لا مقابل له — يُراجَع ثم يُحفظ. */
+export interface BasecampMapSuggestion {
+  suggestions: { label: string; target: string }[];
+  /** كلُّ العناوين التي لا ربط لها — ومنها ما لم يجد الطرازُ له حقلاً. */
+  labels: string[];
 }
 
 /** ما سيقع لمشروعٍ واحد — تُعرض قبل أن يقع. */
@@ -296,9 +375,43 @@ export interface BasecampPlan {
   conflicts: { field: string; platformValue: string; basecampValue: string }[];
   /** عناوينُ في الملفّ بلا مقابلٍ في الخريطة — تُعرض لتُربط، فلا تضيع صامتة. */
   unmapped: string[];
-  client: { action: 'create_client' | 'link_client'; fullName: string; idNumber: string } | null;
+  /**
+   * حقولٌ قرأها الطرازُ حين عجزت القاعدة — «client.fullName» وأخواتها.
+   *
+   * وكلُّ قيمةٍ فيها منقولةٌ من نصّ الملفّ حرفاً ومرّت بمدقّق حقلها. ومع
+   * ذلك تُعرض مسمّاةً: أقربُ ما يُخطئ فيه الاستخلاص أن ينقل قيمةً صحيحة
+   * إلى الحقل الخطأ، وذلك يُرى في المعاينة قبل أن يُكتب.
+   */
+  aiFields: string[];
+  client:
+    | {
+        action: 'create_client' | 'link_client';
+        fullName: string;
+        idNumber: string | null;
+        idType: string | null;
+        phone: string | null;
+        clientType: string | null;
+        /** اسمُ مسؤول التواصل إن حمله الملفّ. */
+        representative: string | null;
+        /** مقصوصةٌ للعرض — والنصُّ كلُّه في الملفّ. */
+        notes: string | null;
+        contacts: number;
+        /** حقولٌ ستُكتب على عميلٍ قائم. */
+        changes: string[];
+      }
+    | null;
   case:
-    | { action: 'create_case' | 'update_case' | 'none'; caseNumber: string; caseType: string; changes: string[] }
+    | {
+        action: 'create_case' | 'update_case' | 'none';
+        caseNumber: string;
+        caseType: string;
+        /** نوعٌ اقترحه الطراز لأنّ الملفّ خلا منه — يُراجَع. */
+        caseTypeSuggested: boolean;
+        status: string | null;
+        outcome: string | null;
+        notes: string | null;
+        changes: string[];
+      }
     | null;
 }
 
@@ -306,6 +419,7 @@ export interface BasecampSummary {
   projects: number;
   createClients: number;
   linkClients: number;
+  updateClients: number;
   createCases: number;
   updateCases: number;
   unchanged: number;
@@ -314,8 +428,23 @@ export interface BasecampSummary {
   warnings: number;
   /** بعد التنفيذ وحده. */
   clientsCreated?: number;
+  clientsUpdated?: number;
   casesCreated?: number;
   casesUpdated?: number;
+  /**
+   * حصيلةُ التلخيص الآليّ.
+   *
+   * و`deferred` ليس عطلاً: للدورة سقفُ استدلالات، وما زاد يُلخَّص في
+   * التي تليها. ويُقال ليُعرف أنّ الباقي آتٍ لا ساقط.
+   */
+  ai?: {
+    enabled: boolean;
+    used?: number;
+    cases?: number;
+    clients?: number;
+    deferred?: number;
+    failed?: number;
+  };
 }
 
 export interface BasecampPreview {

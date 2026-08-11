@@ -17,14 +17,19 @@ import {
   finishConnect,
   listConflicts,
   listProjects,
+  listReviews,
   preview,
   readMap,
   readSample,
   readStatus,
   rescan,
   resolveConflict,
+  resolveReview,
+  setAiImport,
+  setConflictPolicy,
   setAutoSync,
   startConnect,
+  suggestMap,
   sync,
   writeMap,
 } from './lib/basecamp/handlers.js';
@@ -233,15 +238,28 @@ export default {
         }
         if (id === 'map' && request.method === 'GET') return readMap(env, user);
         if (id === 'map' && request.method === 'PUT') return writeMap(request, env, user);
+        if (id === 'map' && verb === 'suggest' && request.method === 'POST') {
+          return suggestMap(env, user);
+        }
         /* المعاينة تقرأ ولا تكتب — ومع ذلك `POST`: تُشغّل عملاً على
            بيسكامب وتُقرأ نتيجتُه مرّةً، فلا تُخبَّأ في وسيطٍ ولا تُعاد
            بضغطة رجوع. */
         if (id === 'preview' && request.method === 'POST') return preview(env, user);
         if (id === 'sync' && request.method === 'POST') return sync(env, user, { source: 'يدوي' });
         if (id === 'auto-sync' && request.method === 'PUT') return setAutoSync(request, env, user);
+        if (id === 'ai' && request.method === 'PUT') return setAiImport(request, env, user);
         if (id === 'conflicts' && !verb && request.method === 'GET') return listConflicts(env, user);
         if (id === 'conflicts' && verb && request.method === 'POST') {
           return resolveConflict(request, env, user, verb);
+        }
+        if (id === 'conflict-policy' && request.method === 'PUT') {
+          return setConflictPolicy(request, env, user);
+        }
+        /* ما يستحقّ نظرَ إنسان: يُقرأ مجموعاً ويُحسم صفّاً صفّاً. ولا يحجب
+           استيراداً — المزامنةُ كتبت ومضت، وهذه أسئلتُها تنتظر. */
+        if (id === 'reviews' && !verb && request.method === 'GET') return listReviews(env, user);
+        if (id === 'reviews' && verb && request.method === 'POST') {
+          return resolveReview(request, env, user, verb);
         }
       }
       if (name === 'export' && !id && request.method === 'GET') {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CircleCheck, Clock, LoaderCircle } from 'lucide-react';
+import { CircleCheck, Clock, LoaderCircle, Sparkles } from 'lucide-react';
 import { Attachment, Case, Client, ContactNumber } from '../../types';
 import { db } from '../../data/database';
 import ProfilePictureUpload from '../Common/ProfilePictureUpload';
@@ -248,6 +248,19 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-foreground">الملاحظات</label>
                   <p className="text-foreground">{client.notes}</p>
+                </div>
+              )}
+
+              {/* ═══ ملخّصُ قضاياه الآليّ ═══
+                  حقلٌ مستقلٌّ عن الملاحظات ومسمّىً بذلك: من يقرؤه يعرف أنّ
+                  طرازاً كتبه من صفوف قضاياه، لا يدٌ. */}
+              {client.aiSummary && (
+                <div className="mt-4 rounded-lg bg-info-soft p-3">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Sparkles className="w-4 h-4" aria-hidden="true" />
+                    ملخّصٌ آليّ لقضاياه
+                  </label>
+                  <p className="text-foreground mt-1">{client.aiSummary}</p>
                 </div>
               )}
             </div>

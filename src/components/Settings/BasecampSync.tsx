@@ -19,11 +19,12 @@ import { Alert } from '@/registry/naf/ui/alert';
 import { Badge } from '@/registry/naf/ui/badge';
 import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
 import { ConflictsPanel, FieldMapPanel, PreviewPanel } from './BasecampPanels';
+import BasecampReviews from './BasecampReviews';
 
 /* ═══ ربط بيسكامب ═══
  *
  * حسابُ المكتب فيه مشاريعُ إدارةٍ داخلية ومشاريعُ عملاء، ولا يفرّق بينها
- * اسم. والذي يفرّق: مشروعُ العميل فيه ملفّ «ملخص القضية».
+ * اسم. والذي يفرّق: مشروعُ العميل فيه ملفُّ «بيانات المشروع».
  *
  * وهذه الشاشة تُظهر التصنيف الآليّ **بوصفه اقتراحاً**، وتترك الحكم لمن
  * يفتحها. لأنّ التصنيف يقرّر أيَّ بياناتٍ تدخل قاعدةَ الموكّلين — وقرارٌ
@@ -44,7 +45,7 @@ const ERRORS: Record<string, string> = {
   forbidden: 'لا صلاحية لك على هذا',
   rate_limited: 'تجاوز المسح حدَّ نداءات بيسكامب. أعد المحاولة بعد قليل',
   provider_failed: 'ردّ بيسكامب بخطأ. أعد المحاولة',
-  no_summary: 'لا ملفّ «ملخص القضية» في هذا المشروع',
+  no_document: 'لا ملفّ «بيانات المشروع» في هذا المشروع',
 };
 
 /**
@@ -150,11 +151,21 @@ export default function BasecampSync() {
     try {
       const result = await db.scanBasecamp();
       setNotice({
-        tone: result.failed || result.incomplete ? 'warning' : 'success',
+        /* ═══ وملفٌّ أُعيدت تسميتُه يُقال صراحةً ═══
+           عُرف بمعرّفه فلم ينقطع الاستيراد، لكنّ عنوانَه الجديد ليس في
+           المقبولة — فيُذكر ليُضاف، وإلا بقي كلُّ مسحٍ يلتقطه بالمعرّف
+           وحده ولا يلتقط مشروعاً جديداً سُمّي بالاسم نفسه. */
+        tone: result.failed || result.incomplete || result.renamed ? 'warning' : 'success',
         text:
           `مُسح ${formatNumber(result.scanned)} مشروعاً — ` +
           `${formatNumber(result.client)} لعملاء و${formatNumber(result.internal)} داخلية` +
           (result.failed ? `، وتعذّر ${formatNumber(result.failed)}` : '') +
+          (result.renamed
+            ? `. و${formatNumber(result.renamed)} ملفّاً عُرف بمعرّفه بعد أن تبدّل عنوانُه` +
+              (result.renamedTitles?.length
+                ? ` — «${result.renamedTitles.slice(0, 3).join('»، «')}». أضِفه إلى العناوين المقبولة`
+                : '')
+            : '') +
           (result.incomplete ? '. ولم يكتمل المسرد — أعد المسح' : ''),
       });
       setProjects(await db.getBasecampProjects());
@@ -208,7 +219,7 @@ export default function BasecampSync() {
       <div className="text-center">
         <h3 className="text-2xl font-bold text-foreground mb-2">الربط ببيسكامب</h3>
         <p className="text-muted-foreground">
-          يُقرأ من بيسكامب ولا يُكتب فيه. ومشروعُ العميل يُعرف بملفّ «ملخص القضية».
+          يُقرأ من بيسكامب ولا يُكتب فيه. ومشروعُ العميل يُعرف بملفّ «بيانات المشروع».
         </p>
       </div>
 
@@ -286,12 +297,13 @@ export default function BasecampSync() {
         )}
 
         {status?.state === 'connected' && status.projects && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-border">
             {[
               { label: 'كل المشاريع', value: status.projects.total },
               { label: 'مشاريع عملاء', value: status.projects.client },
               { label: 'داخلية', value: status.projects.internal },
               { label: 'مربوطة بقضية', value: status.projects.linked },
+              { label: 'يستحقّ نظرك', value: status.openReviews ?? 0 },
             ].map((tile) => (
               <div key={tile.label} className="text-center">
                 <p className="text-2xl font-bold text-foreground">
@@ -318,7 +330,7 @@ export default function BasecampSync() {
           <div>
             <h4 className="font-semibold text-foreground">المشاريع وتصنيفها</h4>
             <p className="text-sm text-muted-foreground">
-              التصنيف الآليّ اقتراحٌ مبنيٌّ على وجود «ملخص القضية». والحكمُ لك — وما
+              التصنيف الآليّ اقتراحٌ مبنيٌّ على وجود «بيانات المشروع». والحكمُ لك — وما
               حكمتَ به لا ينقضه مسحٌ لاحق.
             </p>
           </div>
@@ -337,7 +349,7 @@ export default function BasecampSync() {
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
                     <th className="text-start py-2 font-medium">المشروع</th>
-                    <th className="text-start py-2 font-medium">ملخص القضية</th>
+                    <th className="text-start py-2 font-medium">ملفّ البيانات</th>
                     <th className="text-start py-2 font-medium">القضية</th>
                     <th className="text-start py-2 font-medium">التصنيف</th>
                   </tr>
@@ -368,15 +380,22 @@ export default function BasecampSync() {
                       </td>
 
                       <td className="py-3">
-                        {project.hasSummary ? (
-                          <button
-                            type="button"
-                            onClick={() => showSample(project)}
-                            className="text-primary hover:text-primary-strong inline-flex items-center gap-1"
-                          >
-                            <FileText className="h-4 w-4" aria-hidden="true" />
-                            اعرض
-                          </button>
+                        {project.hasDocument ? (
+                          <div className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => showSample(project)}
+                              className="text-primary hover:text-primary-strong inline-flex items-center gap-1"
+                            >
+                              <FileText className="h-4 w-4" aria-hidden="true" />
+                              اعرض
+                            </button>
+                            {/* واسمُه كما هو عندهم: مشروعٌ لم يُعَد تسميةُ
+                                ملفّه يُرى بلا فتحه. */}
+                            {project.docTitle && (
+                              <p className="text-xs text-muted-foreground">{project.docTitle}</p>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -436,13 +455,19 @@ export default function BasecampSync() {
           يَعِد بما لا يقع. */}
       {status?.state === 'connected' && (
         <>
-          <FieldMapPanel />
+          {/* ═══ ما يستحقّ نظرَك أوّلاً ═══
+              الاستيرادُ لا يقف عليه — المزامنةُ كتبت ومضت. لكنّه عملُ
+              المراجعة الدورية، فيسبق ما يُضبط مرّةً ثم يُنسى. */}
+          <BasecampReviews onChanged={() => load(true)} />
+          <ConflictsPanel onResolved={() => load(true)} />
           <PreviewPanel
             syncEnabled={status.syncEnabled === true}
             lastSyncAt={status.lastSyncAt ?? null}
+            aiEnabled={status.aiEnabled === true}
+            conflictPolicy={status.conflictPolicy ?? 'ask'}
             onChanged={() => load(true)}
           />
-          <ConflictsPanel onResolved={() => load(true)} />
+          <FieldMapPanel />
         </>
       )}
 
@@ -452,7 +477,7 @@ export default function BasecampSync() {
         <Card className="p-6 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h4 className="font-semibold text-foreground">
-              {sample ? `«ملخص القضية» — ${sample.projectName}` : 'تعذّرت القراءة'}
+              {sample ? `«${sample.title || 'بيانات المشروع'}» — ${sample.projectName}` : 'تعذّرت القراءة'}
             </h4>
             <Button
               onClick={() => { setSample(null); setSampleError(''); }}
