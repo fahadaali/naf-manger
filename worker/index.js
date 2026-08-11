@@ -17,13 +17,16 @@ import {
   finishConnect,
   listConflicts,
   listProjects,
+  listReviews,
   preview,
   readMap,
   readSample,
   readStatus,
   rescan,
   resolveConflict,
+  resolveReview,
   setAiImport,
+  setConflictPolicy,
   setAutoSync,
   startConnect,
   suggestMap,
@@ -248,6 +251,15 @@ export default {
         if (id === 'conflicts' && !verb && request.method === 'GET') return listConflicts(env, user);
         if (id === 'conflicts' && verb && request.method === 'POST') {
           return resolveConflict(request, env, user, verb);
+        }
+        if (id === 'conflict-policy' && request.method === 'PUT') {
+          return setConflictPolicy(request, env, user);
+        }
+        /* ما يستحقّ نظرَ إنسان: يُقرأ مجموعاً ويُحسم صفّاً صفّاً. ولا يحجب
+           استيراداً — المزامنةُ كتبت ومضت، وهذه أسئلتُها تنتظر. */
+        if (id === 'reviews' && !verb && request.method === 'GET') return listReviews(env, user);
+        if (id === 'reviews' && verb && request.method === 'POST') {
+          return resolveReview(request, env, user, verb);
         }
       }
       if (name === 'export' && !id && request.method === 'GET') {

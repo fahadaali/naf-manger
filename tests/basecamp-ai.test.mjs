@@ -24,7 +24,9 @@ const check = (name, condition, extra = '') => {
 };
 const group = (title) => console.log(`\n── ${title} ──`);
 
-globalThis.Response = globalThis.Response ?? class {
+/* والبديلُ يُثبَّت لا يُشترط: Node يحمل `Response` أصلاً، و`??` تتركه —
+   فيصير `response.body` مجرىً لا كائناً، ويُقرأ كلُّ فحصٍ عليه فارغاً. */
+globalThis.Response = class {
   static json(body, init) { return { body, status: init?.status ?? 200 }; }
 };
 

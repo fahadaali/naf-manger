@@ -19,6 +19,7 @@ import { Alert } from '@/registry/naf/ui/alert';
 import { Badge } from '@/registry/naf/ui/badge';
 import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
 import { ConflictsPanel, FieldMapPanel, PreviewPanel } from './BasecampPanels';
+import BasecampReviews from './BasecampReviews';
 
 /* ═══ ربط بيسكامب ═══
  *
@@ -296,12 +297,13 @@ export default function BasecampSync() {
         )}
 
         {status?.state === 'connected' && status.projects && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-border">
             {[
               { label: 'كل المشاريع', value: status.projects.total },
               { label: 'مشاريع عملاء', value: status.projects.client },
               { label: 'داخلية', value: status.projects.internal },
               { label: 'مربوطة بقضية', value: status.projects.linked },
+              { label: 'يستحقّ نظرك', value: status.openReviews ?? 0 },
             ].map((tile) => (
               <div key={tile.label} className="text-center">
                 <p className="text-2xl font-bold text-foreground">
@@ -453,14 +455,19 @@ export default function BasecampSync() {
           يَعِد بما لا يقع. */}
       {status?.state === 'connected' && (
         <>
-          <FieldMapPanel />
+          {/* ═══ ما يستحقّ نظرَك أوّلاً ═══
+              الاستيرادُ لا يقف عليه — المزامنةُ كتبت ومضت. لكنّه عملُ
+              المراجعة الدورية، فيسبق ما يُضبط مرّةً ثم يُنسى. */}
+          <BasecampReviews onChanged={() => load(true)} />
+          <ConflictsPanel onResolved={() => load(true)} />
           <PreviewPanel
             syncEnabled={status.syncEnabled === true}
             lastSyncAt={status.lastSyncAt ?? null}
             aiEnabled={status.aiEnabled === true}
+            conflictPolicy={status.conflictPolicy ?? 'ask'}
             onChanged={() => load(true)}
           />
-          <ConflictsPanel onResolved={() => load(true)} />
+          <FieldMapPanel />
         </>
       )}
 

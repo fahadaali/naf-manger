@@ -259,6 +259,47 @@ export interface BasecampStatus {
   openConflicts?: number;
   /** أمشغَّلٌ التلخيصُ الآليّ عند الاستيراد؟ */
   aiEnabled?: boolean;
+  /** ما يستحقّ نظرَ إنسان ولم يُحسم — ولا يحجب استيراداً. */
+  openReviews?: number;
+  conflictPolicy?: 'ask' | 'basecamp' | 'platform';
+}
+
+/**
+ * صفٌّ يستحقّ نظرَ إنسان — تكتبه المزامنةُ وتمضي.
+ *
+ * ولا يحجب شيئاً: الاستيرادُ وقع، وهذا سؤالٌ عنه. ويُحسم مرّةً فلا يعود —
+ * الصفُّ فريدٌ بـ(المشروع + نوع السؤال + القيمة المسؤول عنها).
+ */
+export interface BasecampReview {
+  id: string;
+  kind: 'project_kind' | 'case_type' | 'unresolved_value' | 'similar_client' | 'generated_number';
+  kindLabel: string;
+  projectId: string;
+  projectName: string;
+  appUrl: string;
+  /** تصنيفُ المشروع الآن — للسؤال عن تصنيفه. */
+  projectKind: 'client' | 'internal' | 'unknown' | null;
+  caseId: string | null;
+  caseNumber: string | null;
+  caseType: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  subject: string;
+  detail: {
+    guessed?: string;
+    hasDocument?: boolean;
+    suggestion?: string;
+    options?: string[];
+    target?: string;
+    field?: string;
+    value?: string;
+    codes?: Record<string, string>;
+    generated?: string;
+    newName?: string;
+    existingName?: string;
+    createdClientId?: string;
+  };
+  createdAt: number;
 }
 
 export interface BasecampProject {

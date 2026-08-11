@@ -274,16 +274,18 @@ export function PreviewPanel({
   syncEnabled,
   lastSyncAt,
   aiEnabled,
+  conflictPolicy,
   onChanged,
 }: {
   syncEnabled: boolean;
   lastSyncAt: number | null;
   aiEnabled: boolean;
+  conflictPolicy: 'ask' | 'basecamp' | 'platform';
   onChanged: () => void;
 }) {
   const [preview, setPreview] = useState<BasecampPreview | null>(null);
   const [applied, setApplied] = useState<BasecampSummary | null>(null);
-  const [busy, setBusy] = useState<'preview' | 'sync' | 'auto' | 'ai' | null>(null);
+  const [busy, setBusy] = useState<'preview' | 'sync' | 'auto' | 'ai' | 'policy' | null>(null);
   const [error, setError] = useState('');
 
   const run = async (which: 'preview' | 'sync') => {
@@ -300,6 +302,23 @@ export function PreviewPanel({
       }
     } catch (runError) {
       setError((runError as Error)?.message ?? 'تعذّر التنفيذ');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /* ═══ سياسةُ الاختلاف ═══
+     ليس فيها ما «يوقف الاستيراد»: التعارضُ حقلٌ واحد لا يُكتب، وبقيةُ
+     الحقول والقضايا والعملاء تُكتب كلُّها. وإنّما تُغني عن حسمِ كلِّ حقلٍ
+     بيدٍ لمن استقرّ عنده أيُّ الطرفين أصحّ. */
+  const setPolicy = async (policy: 'ask' | 'basecamp' | 'platform') => {
+    setBusy('policy');
+    setError('');
+    try {
+      await db.setBasecampConflictPolicy(policy);
+      onChanged();
+    } catch {
+      setError('تعذّر حفظ السياسة');
     } finally {
       setBusy(null);
     }
@@ -528,6 +547,36 @@ export function PreviewPanel({
           </div>
         </>
       )}
+
+      {/* ═══ حين يتبدّل الطرفان ═══
+          حقلٌ مسّته يدٌ في المنصة وتبدّل عندهم معاً. والافتراضُ أن يُسأل —
+          فتصحيحُ المحامي لا يُمحى صامتاً. ومن استقرّ عنده أيُّ الطرفين
+          أصحّ يختار، فلا يحسم حقلاً حقلاً. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
+        <div className="flex items-start gap-2">
+          <ArrowLeftRight className="h-5 w-5 text-muted-foreground mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-foreground">حين يتبدّل الطرفان في حقلٍ واحد</p>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              {conflictPolicy === 'ask'
+                ? 'يُسجَّل بالقيمتين وينتظر قرارك. وبقيةُ الحقول تُكتب — لا يقف الاستيراد.'
+                : conflictPolicy === 'basecamp'
+                  ? 'تُكتب قيمةُ بيسكامب. وما تكتبه في المنصة يُدهس في الدورة التالية.'
+                  : 'تبقى قيمةُ المنصة، ولا يُسأل عنها ثانيةً ما لم تتبدّل عندهم.'}
+            </p>
+          </div>
+        </div>
+        <Select
+          value={conflictPolicy}
+          onChange={(event) => setPolicy(event.target.value as 'ask' | 'basecamp' | 'platform')}
+          disabled={busy !== null}
+          className="min-w-52"
+        >
+          <option value="ask">اسألني — وهو الافتراض</option>
+          <option value="basecamp">خذ من بيسكامب دائماً</option>
+          <option value="platform">أبقِ ما في المنصة دائماً</option>
+        </Select>
+      </div>
 
       {/* ═══ التلخيصُ الآليّ ═══
           وهو الموضعُ الوحيد الذي يخرج فيه نصُّ قضيةٍ من القاعدة إلى طراز.

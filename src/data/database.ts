@@ -9,6 +9,7 @@ import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats 
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
+import { BasecampReview } from '../types';
 import { BulkAction, BulkOutcome } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
@@ -376,6 +377,26 @@ export class LocalDatabase {
   /* التلخيصُ الآليّ: مفتاحُه هنا لأنّ ما يُلخَّص يأتي من الاستيراد. */
   async setBasecampAi(enabled: boolean): Promise<{ aiEnabled: boolean }> {
     return await api.put('/basecamp/ai', { enabled });
+  }
+
+  /* ═══ ما يستحقّ نظرَك ═══
+     تكتبه المزامنةُ وتمضي، ويُحسم متى فُتحت الشاشة — ومتى حُسم لم يعد. */
+  async getBasecampReviews(): Promise<BasecampReview[]> {
+    return await api.read<BasecampReview[]>('/basecamp/reviews');
+  }
+
+  async resolveBasecampReview(
+    id: string,
+    resolution: string,
+    value?: string,
+  ): Promise<{ id: string; resolution: string }> {
+    return await api.post(`/basecamp/reviews/${encodeURIComponent(id)}`, { resolution, value });
+  }
+
+  async setBasecampConflictPolicy(
+    policy: 'ask' | 'basecamp' | 'platform',
+  ): Promise<{ conflictPolicy: string }> {
+    return await api.put('/basecamp/conflict-policy', { policy });
   }
 
   async getBasecampConflicts(): Promise<BasecampConflict[]> {

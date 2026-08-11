@@ -24,6 +24,7 @@
 // والقديم — لأنّ مشاريعَ سنينَ ماضية لم يُعَد تسميةُ ملفّاتها.
 
 import { getJson, listAll } from './api.js';
+import { openReview } from './reviews.js';
 
 /**
  * العناوينُ المقبولة — أوّلُها الاسمُ الجاري وما بعده ما كان قبله.
@@ -217,6 +218,25 @@ export async function scanProjects(env, connection) {
 
     if (kind === 'client') summary.client++;
     else summary.internal++;
+
+    /* ═══ ومشروعٌ جديد يُسأل عن تصنيفه مرّةً ═══
+       الترجيحُ بوجود الملفّ اقتراحٌ لا حكم — ومشروعٌ داخليٌّ يحمل الملفّ
+       نموذجاً يصير «عميلاً» ولا يقول أحدٌ ذلك. فيُفتح له صفٌّ يُحسم في
+       ضغطة ويثبت.
+
+       **وللجديد وحده**: حسابٌ فيه ثلاثمئة مشروعٍ قائم لا يُغرق شاشةَ
+       المراجعة بثلاثمئة سؤالٍ في أوّل نشرة. وما مضى صُنّف ومرّ. */
+    if (!previous) {
+      await openReview(env, {
+        kind: 'project_kind',
+        projectId,
+        subject: project.name ?? '',
+        fingerprint: kind,
+        detail: { guessed: kind, hasDocument: Boolean(document) },
+      }).catch((error) => {
+        console.error('Basecamp: تعذّر فتح صفّ تصنيف —', error?.message ?? error);
+      });
+    }
 
     await env.DB.prepare(
       `INSERT INTO basecamp_projects

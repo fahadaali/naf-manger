@@ -37,6 +37,7 @@ import {
 } from '../ai/extract.js';
 import { normalizeArabic } from './discover.js';
 import { fullerName, nameRelation } from './names.js';
+import { openReview } from './reviews.js';
 import {
   aiEnabled,
   fingerprint,
@@ -145,6 +146,49 @@ async function readVocabulary(env) {
   };
 }
 
+const POLICY_KEY = 'basecamp_conflict_policy';
+
+/**
+ * ═══ ماذا يقع حين يتبدّل الطرفان؟ ═══
+ *
+ * `ask` — يُسجَّل بالقيمتين ولا يُكتب، ويُحسم من الشاشة. وهو الافتراض،
+ *         واختاره صاحبُ المكتب صراحةً على «بيسكامب يفوز دائماً»: تصحيحٌ
+ *         يُمحى صامتاً في بيانات موكّلين أسوأُ من تعارضٍ ينتظر قراراً.
+ *
+ * `basecamp` — تُكتب قيمتُهم. لمكتبٍ يحرّر في بيسكامب ويقرأ في المنصة،
+ *         فبيسكامب مصدرُه وما في المنصة صورةٌ عنه.
+ *
+ * `platform` — تُترك قيمةُ المنصة وتُثبَّت الصورة، فلا يُسأل عنها ثانيةً.
+ *
+ * وليس في الثلاثة ما «يوقف الاستيراد»: التعارضُ حقلٌ واحد لا يُكتب،
+ * وبقيةُ الحقول والقضايا والعملاء تُكتب كلُّها. والسياسةُ إنما تُغني عن
+ * حسمِ كلِّ حقلٍ بيد لمن استقرّ عنده أيُّ الطرفين أصحّ.
+ */
+async function readConflictPolicy(env) {
+  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
+    .bind(POLICY_KEY)
+    .first();
+  try {
+    const stored = JSON.parse(row?.value ?? '{}');
+    return ['ask', 'basecamp', 'platform'].includes(stored?.policy) ? stored.policy : 'ask';
+  } catch {
+    return 'ask';
+  }
+}
+
+export async function writeConflictPolicy(env, policy, userId) {
+  await env.DB.prepare(
+    `INSERT INTO system_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+                                    updated_by = excluded.updated_by,
+                                    updated_at = excluded.updated_at`,
+  )
+    .bind(POLICY_KEY, JSON.stringify({ policy }), userId, nowSeconds())
+    .run();
+}
+
+export { readConflictPolicy };
+
 const safeJson = (text) => {
   try { return JSON.parse(text ?? 'null'); } catch { return null; }
 };
@@ -181,20 +225,26 @@ function readSnapshot(raw) {
  */
 const strictly = (one, other) => String(one ?? '') === String(other ?? '');
 
-function mergeField({ current, incoming, lastSynced, blank, firstContact, same = strictly }) {
+function mergeField({ current, incoming, lastSynced, blank, firstContact, same = strictly, policy = 'ask' }) {
   if (incoming === undefined || incoming === null || incoming === '') return { action: 'keep' };
   if (same(current, incoming)) return { action: 'keep' };
 
+  /* والسياسةُ تحسم ما كان يُسأل عنه: `basecamp` تكتب قيمتَهم، و`platform`
+     تُبقي ما عندنا وتثبّت الصورة فلا يُعاد السؤال. */
+  const settle = () => (policy === 'basecamp' ? { action: 'write' }
+    : policy === 'platform' ? { action: 'settle' }
+      : { action: 'conflict' });
+
   if (lastSynced === undefined) {
     if (blank) return { action: 'write' };
-    return { action: firstContact ? 'conflict' : 'write' };
+    return firstContact ? settle() : { action: 'write' };
   }
 
   const basecampChanged = !same(incoming, lastSynced);
   if (!basecampChanged) return { action: 'keep' };
 
   const platformTouched = !same(current, lastSynced);
-  return { action: platformTouched ? 'conflict' : 'write' };
+  return platformTouched ? settle() : { action: 'write' };
 }
 
 /**
@@ -386,6 +436,14 @@ async function resolveVocabulary(env, { parsed, plan, ai }) {
       if (asked) await rememberPhrase(env, { target: item.target, phrase: item.value, code, lexicon });
     } else {
       plan.warnings.push(`لفظٌ لم يُفهم في ${meaning}: «${item.value}» — لم يُكتب`);
+      /* ويُفتح له صفٌّ فيه القائمةُ المغلقة: يختار منها صاحبُ المكتب مرّةً،
+         فتُكتب ويُحفظ اللفظُ في المعجم — ولا يُسأل عنه ثانيةً. */
+      plan.reviews.push({
+        kind: 'unresolved_value',
+        subject: item.value,
+        fingerprint: `${item.target}:${item.value}`,
+        detail: { target: item.target, field: meaning, value: item.value, codes },
+      });
     }
   }
 
@@ -393,7 +451,7 @@ async function resolveVocabulary(env, { parsed, plan, ai }) {
 }
 
 /** خطّةُ مشروعٍ واحد: ماذا سيقع له ولماذا. */
-async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
+async function planProject(env, connection, row, fieldMap, seen, vocab, ai, policy) {
   const plan = {
     projectId: row.project_id,
     projectName: row.name,
@@ -407,6 +465,9 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
     createdOn: row.created_on ?? null,
     actions: [],       // create_client | link_client | create_case | update_case | none
     warnings: [],
+    /* وما يستحقّ نظرَ إنسان: يُكتب صفّاً بعد التنفيذ ولا يحجب كتابة.
+       فالمزامنةُ تمضي، والأسئلةُ تنتظر مجموعةً في شاشتها. */
+    reviews: [],
     conflicts: [],
     error: null,
     client: null,
@@ -478,6 +539,13 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
      مختلفين خطأٌ لا يُكشف إلا بعد أن يُبنى عليه. */
   if (found?.candidate) {
     plan.warnings.push(`يشبه عميلاً قائماً: «${found.candidate.full_name}» — راجِعه قبل الإنشاء`);
+    plan.reviews.push({
+      kind: 'similar_client',
+      subject: wanted.fullName,
+      fingerprint: `${wanted.fullName}→${found.candidate.id}`,
+      detail: { newName: wanted.fullName, existingName: found.candidate.full_name },
+      otherClientId: found.candidate.id,
+    });
   }
 
   /* ═══ وعميلٌ قائم يُدمَج لا يُترك ═══
@@ -523,6 +591,7 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
         lastSynced: synced.client[field],
         blank: isBlank(column, match.row[column]),
         firstContact: true,
+        policy,
       });
 
       if (verdict.action === 'write') clientChanges[field] = wanted[field];
@@ -551,6 +620,12 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
   if (!caseValues.caseNumber) {
     caseValues.caseNumber = fallbackNumber('بيسكامب', row.project_id);
     plan.warnings.push('رقم القضية مولَّد — يحتاج تصحيحاً');
+    plan.reviews.push({
+      kind: 'generated_number',
+      subject: caseValues.caseNumber,
+      fingerprint: caseValues.caseNumber,
+      detail: { generated: caseValues.caseNumber },
+    });
   }
   /* ═══ نوعُ القضية حين يخلو منه الملفّ ═══
 
@@ -569,6 +644,12 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
       caseValues.caseType = suggestion;
       plan.caseTypeSuggested = true;
       plan.warnings.push(`نوعُ القضية مقترحٌ آلياً: «${suggestion}» — راجِعه`);
+      plan.reviews.push({
+        kind: 'case_type',
+        subject: suggestion,
+        fingerprint: suggestion,
+        detail: { suggestion, options: vocab.caseTypes ?? [] },
+      });
     } else {
       ai.budget.failed++;
     }
@@ -617,6 +698,7 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
       lastSynced: synced.case[field],
       blank: isBlank(column, existingCase[column]),
       firstContact: false,
+      policy,
     });
 
     if (verdict.action === 'write') changes[field] = caseValues[field];
@@ -650,10 +732,11 @@ export async function buildPlan(env, connection) {
   /* سياقُ الاستدلال يُبنى مرّةً للدورة كلِّها: السقفُ سقفُ الدورة لا
      سقفُ المشروع الواحد، وإلا استدلّ حسابٌ فيه ثلاثمئة مشروعٍ ثلاثمئة مرّة. */
   const ai = { enabled: await aiEnabled(env), budget: newBudget() };
+  const policy = await readConflictPolicy(env);
   const seen = { clients: new Set(), cases: new Set() };
   const plans = [];
   for (const row of results ?? []) {
-    plans.push(await planProject(env, connection, row, fieldMap, seen, vocab, ai));
+    plans.push(await planProject(env, connection, row, fieldMap, seen, vocab, ai, policy));
   }
 
   const summary = {
@@ -672,6 +755,7 @@ export async function buildPlan(env, connection) {
        الدورة بلغت سقفَها وأنّ الباقي في التي تليها — لا يظنّ أنّ الميزة
        عطلت. */
     ai: { enabled: ai.enabled, used: ai.budget.used, deferred: ai.budget.deferred },
+    conflictPolicy: policy,
   };
 
   return { summary, plans, ai };
@@ -913,6 +997,26 @@ async function applyPlan(env, plan, actorId, ai) {
         ai.budget.failed++;
       }
     }
+  }
+
+  /* ═══ وما يستحقّ نظراً يُكتب صفّاً ═══
+     بعد الكتابة لا قبلها: الصفُّ يحمل معرّفَ القضية والعميل ليُحسم عليهما،
+     وهما لا يُعرفان قبل أن يُكتبا. ولا يحجب شيئاً — الكتابةُ وقعت. */
+  for (const review of plan.reviews ?? []) {
+    await openReview(env, {
+      ...review,
+      projectId: plan.projectId,
+      caseId,
+      /* و`similar_client` سؤالٌ عن عميلين: الباقي في `clientId` والمرشَّح
+         في التفصيل، فيُعرضان معاً ويُدمجان بضغطة. */
+      clientId: review.otherClientId ?? clientId,
+      detail: review.otherClientId
+        ? { ...review.detail, createdClientId: clientId }
+        : review.detail,
+    }).catch((error) => {
+      /* وصفُّ مراجعةٍ تعذّر فتحُه لا يُسقط استيراداً وقع. */
+      console.error('Basecamp: تعذّر فتح صفّ مراجعة —', error?.message ?? error);
+    });
   }
 
   // ── التعارضات: تُسجَّل ولا تُكتب ──

@@ -13,7 +13,16 @@ import {
   writeDocTitles,
 } from './discover.js';
 import { DEFAULT_FIELD_MAP, TARGETS, parseDocument } from './parse.js';
-import { buildPlan, readFieldMap, runSync, writeFieldMap } from './sync.js';
+import {
+  buildPlan,
+  readConflictPolicy,
+  readFieldMap,
+  runSync,
+  writeConflictPolicy,
+  writeFieldMap,
+} from './sync.js';
+import { closeReview, countOpen, listOpen, mergeClients } from './reviews.js';
+import { rememberPhrase, readLexicon } from '../ai/extract.js';
 import { aiEnabled, setAiEnabled } from '../ai/summarize.js';
 import { suggestMapping } from '../ai/extract.js';
 import {
@@ -88,8 +97,135 @@ export async function readStatus(env, user) {
       /* والتلخيصُ الآليّ: حالتُه تُقرأ مع حالة الربط لأنّ مفتاحَه في
          شاشتها — ونداءٌ ثانٍ لعلمٍ واحد نداءٌ زائد. */
       aiEnabled: await aiEnabled(env),
+      /* وما يستحقّ نظراً: عددٌ يُقرأ مع الحالة، فيُعرف أنّ هناك ما يُسوَّى
+         بلا فتح لوحٍ ثانٍ. ولا يحجب شيئاً — الاستيرادُ وقع. */
+      openReviews: await countOpen(env),
+      conflictPolicy: await readConflictPolicy(env),
     },
   });
+}
+
+/** سياسةُ الاختلاف — «اسألني» أو «خذ من بيسكامب» أو «أبقِ ما في المنصة». */
+export async function setConflictPolicy(request, env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+  const policy = body?.policy;
+  if (!['ask', 'basecamp', 'platform'].includes(policy)) return fail('invalid_policy', 400);
+
+  await writeConflictPolicy(env, policy, user.id);
+  await logActivity(env, user, `سياسةُ اختلاف بيسكامب: ${policy}`);
+  return Response.json({ ok: true, data: { conflictPolicy: policy } });
+}
+
+/* ═══ ما يستحقّ نظرَك ═══
+   تكتبه المزامنةُ وتمضي، ويُحسم متى فُتحت الشاشة — ومتى حُسم لم يعد. */
+export async function listReviews(env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+  return Response.json({ ok: true, data: await listOpen(env) });
+}
+
+const CASE_FIELD_COLUMN = { 'case.caseType': 'case_type', 'case.status': 'status', 'case.outcome': 'outcome' };
+
+/**
+ * حسمُ صفٍّ — ضغطةٌ واحدة تكتب وتُثبت.
+ *
+ * و«تُثبت» هي المقصودة: الصفُّ لا يُعاد فتحُه بعد حسمه (قيدُ التفرّد على
+ * المشروع والنوع والبصمة)، والقرارُ يُكتب حيث يبقى — تصنيفُ المشروع في
+ * `decided_by`، واللفظُ في المعجم، والقيمةُ في عمودها.
+ */
+export async function resolveReview(request, env, user, reviewId) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+
+  const row = await env.DB.prepare(
+    `SELECT * FROM basecamp_reviews WHERE id = ? AND resolved_at IS NULL`,
+  )
+    .bind(reviewId)
+    .first();
+  if (!row) return fail('not_found', 404);
+
+  let detail = {};
+  try { detail = JSON.parse(row.detail ?? '{}') ?? {}; } catch { detail = {}; }
+
+  const choice = String(body?.resolution ?? '');
+  const value = body?.value === undefined ? null : String(body.value).trim();
+  const now = nowSeconds();
+
+  /* ═══ تصنيفُ المشروع — وهو الذي طُلب صراحةً: يُحسم مرّةً وينتهي ═══ */
+  if (row.kind === 'project_kind') {
+    if (choice !== 'client' && choice !== 'internal') return fail('invalid_resolution', 400);
+    await env.DB.prepare(
+      `UPDATE basecamp_projects SET kind = ?, decided_by = ?, updated_at = ? WHERE project_id = ?`,
+    )
+      .bind(choice, user.id, now, row.project_id)
+      .run();
+  } else if (row.kind === 'unresolved_value') {
+    /* لفظٌ لم يُفهم: يُختار رمزُه مرّةً، فيُكتب **ويُحفظ في المعجم** — فلا
+       يُسأل عنه في مشروعٍ آخر ولا في دورةٍ قادمة. */
+    if (choice === 'set') {
+      const codes = detail.codes ?? {};
+      if (!value || !Object.keys(codes).includes(value)) return fail('invalid_value', 400);
+      const column = CASE_FIELD_COLUMN[detail.target];
+      if (column && row.case_id) {
+        await env.DB.prepare(`UPDATE cases SET ${column} = ?, updated_at = ? WHERE id = ?`)
+          .bind(value, now, row.case_id)
+          .run();
+      }
+      await rememberPhrase(env, {
+        target: detail.target,
+        phrase: detail.value ?? row.subject,
+        code: value,
+        lexicon: await readLexicon(env),
+      });
+    } else if (choice !== 'ignore') {
+      return fail('invalid_resolution', 400);
+    }
+  } else if (row.kind === 'case_type' || row.kind === 'generated_number') {
+    /* اقتراحٌ أو رقمٌ مولَّد: يُقبل كما هو، أو يُكتب بدلُه. */
+    if (choice === 'set') {
+      if (!value) return fail('invalid_value', 400);
+      const column = row.kind === 'case_type' ? 'case_type' : 'case_number';
+      if (!row.case_id) return fail('not_found', 404);
+      try {
+        await env.DB.prepare(`UPDATE cases SET ${column} = ?, updated_at = ? WHERE id = ?`)
+          .bind(value, now, row.case_id)
+          .run();
+      } catch {
+        /* ورقمُ القضية فريدٌ في المخطَّط: رقمٌ مأخوذٌ يُردّ ولا يُسقط الطلب. */
+        return fail('duplicate_case_number', 409);
+      }
+    } else if (choice !== 'accept') {
+      return fail('invalid_resolution', 400);
+    }
+  } else if (row.kind === 'similar_client') {
+    /* «هما واحد» تدمج المُنشأ حديثاً في القائم، و«مختلفان» تُغلق السؤال. */
+    if (choice === 'merge') {
+      const merged = await mergeClients(env, {
+        keepId: row.client_id,
+        mergeId: detail.createdClientId,
+      });
+      if (!merged) return fail('merge_failed', 409);
+    } else if (choice !== 'separate') {
+      return fail('invalid_resolution', 400);
+    }
+  } else {
+    return fail('invalid_kind', 400);
+  }
+
+  await closeReview(env, reviewId, { resolution: value ? `${choice}:${value}` : choice, userId: user.id });
+  return Response.json({ ok: true, data: { id: reviewId, resolution: choice } });
 }
 
 /**
