@@ -231,6 +231,60 @@ function translate(target, value) {
 }
 
 /**
+ * قيمةٌ خامٌ من الملفّ إلى ما يقبله الحقل.
+ *
+ * ═══ ولماذا هي دالّةٌ مكشوفة ═══
+ *
+ * لهذه القراءة طريقان: العنوانُ المعروف في الخريطة، والقارئُ الآليّ حين
+ * يتبدّل شكلُ الملفّ فلا تجد الخريطةُ عنواناً. والطريقان يجب أن ينتهيا
+ * إلى التوحيد نفسه — «منجزة» تصير `completed` سواءٌ جاءت من عنوانٍ معروف
+ * أو من استخلاصٍ آليّ. ونسختان من هذا المنطق تفترقان بعد شهر، فيصير
+ * ما يأتي من طريقٍ غيرَ ما يأتي من الآخر وهو هو.
+ *
+ * وتردّ `null` لقيمةٍ لا تصلح للحقل — رقمُ جوّالٍ ليس رقماً، واسمُ مسؤولٍ
+ * ليس إلا رقماً.
+ */
+export function coerceTarget(target, rawValue, vocab = {}) {
+  const relations = vocab.contactRelations ?? DEFAULT_RELATIONS;
+  const idTypes = vocab.idTypes ?? DEFAULT_ID_TYPES;
+
+  const [entity, field] = String(target).split('.');
+  const value = String(rawValue ?? '').trim();
+  if (!entity || !field || !value || !(target in TARGETS)) return null;
+
+  /* ═══ القيمةُ تُوحَّد إن كان هدفُها رقماً ═══
+     «الجوال: 050… وجوال أخيه 055…» سطرٌ واحد، وأخذُه كما هو يجعل حقلَ
+     الجوّال يحمل جملةً. فيُؤخذ أوّلُ رقمٍ صالحٍ فيه، ويُترك الباقي
+     للمسح الديناميكي يلتقطه بصفته. */
+  if (target === 'client.phone') {
+    const first = extractPhones(value, relations)[0];
+    return first ? { entity, values: { phone: first.number } } : null;
+  }
+
+  if (target === 'client.idNumber') {
+    const first = extractIdentities(value, idTypes)[0];
+    if (!first) return null;
+    const values = { idNumber: first.number };
+    if (first.type) values.idType = first.type;
+    return { entity, values };
+  }
+
+  /* ═══ مسؤولُ التواصل سطرٌ واحد فيه ثلاثة ═══
+     «مسؤول التواصل: أحمد الغامدي - 0551234567» — اسمٌ ورقمٌ وربما هوية.
+     فيُقرأ الثلاثةُ إلى العمود الذي يقبلها (`legal_representative`)،
+     ولا يُحشر السطرُ كلُّه في خانة الاسم. */
+  if (target === 'client.legalRepresentative') {
+    const representative = readRepresentative(value, relations, idTypes);
+    return representative ? { entity, values: { legalRepresentative: representative } } : null;
+  }
+
+  /* والملاحظاتُ تُترك كما كُتبت: لا مفرداتِ توحيدٍ لها، وقصُّها تشويه. */
+  if (field === 'notes') return { entity, values: { notes: value } };
+
+  return { entity, values: { [field]: translate(target, value) } };
+}
+
+/**
  * يقرأ المستند إلى `{ client, case, unmapped, labels }`.
  *
  * و`unmapped` عناوينُ وُجدت في الملفّ ولا مقابل لها في الخريطة — تُعرض في
@@ -271,37 +325,9 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
       continue;
     }
 
-    /* ═══ مسؤولُ التواصل سطرٌ واحد فيه ثلاثة ═══
-       «مسؤول التواصل: أحمد الغامدي - 0551234567» — اسمٌ ورقمٌ وربما هوية.
-       فيُقرأ الثلاثةُ إلى العمود الذي يقبلها (`legal_representative`)،
-       ولا يُحشر السطرُ كلُّه في خانة الاسم. */
-    if (field === 'legalRepresentative') {
-      const representative = readRepresentative(line.value, relations, idTypes);
-      if (representative) client.legalRepresentative = representative;
-      continue;
-    }
-
-    /* ═══ القيمةُ المعنونة تُوحَّد إن كان هدفُها رقماً ═══
-       «الجوال: 050… وجوال أخيه 055…» سطرٌ واحد، وأخذُه كما هو يجعل حقلَ
-       الجوّال يحمل جملةً. فيُؤخذ أوّلُ رقمٍ صالحٍ فيه، ويُترك الباقي
-       للمسح الديناميكي أدناه يلتقطه بصفته. */
-    if (target === 'client.phone') {
-      const first = extractPhones(line.value, relations)[0];
-      if (first) client.phone = first.number;
-      continue;
-    }
-    if (target === 'client.idNumber') {
-      const first = extractIdentities(line.value, idTypes)[0];
-      if (first) {
-        client.idNumber = first.number;
-        if (first.type) client.idType = first.type;
-      }
-      continue;
-    }
-
-    const value = translate(target, line.value);
-    if (entity === 'client') client[field] = value;
-    else kase[field] = value;
+    const coerced = coerceTarget(target, line.value, { contactRelations: relations, idTypes });
+    if (!coerced) continue;
+    Object.assign(coerced.entity === 'client' ? client : kase, coerced.values);
   }
 
   /* وملاحظةٌ واحدة تُكتب كما هي، وأكثرُ يُصدَّر كلٌّ منها بعنوانه — وإلا

@@ -8,7 +8,7 @@ import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../ty
 import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
-import { BasecampConflict, BasecampMap, BasecampPreview, BasecampSummary } from '../types';
+import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
 import { BulkAction, BulkOutcome } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
@@ -356,6 +356,11 @@ export class LocalDatabase {
   }
 
   /* المعاينة تقرأ ولا تكتب — و`POST` لأنها تُشغّل عملاً على بيسكامب. */
+  /* اقتراحُ ربطٍ لعناوينَ لا مقابل لها — يُقرأ ولا يُحفظ حتى يُراجَع. */
+  async suggestBasecampMap(): Promise<BasecampMapSuggestion> {
+    return await api.post<BasecampMapSuggestion>('/basecamp/map/suggest');
+  }
+
   async previewBasecamp(): Promise<BasecampPreview> {
     return await api.post<BasecampPreview>('/basecamp/preview');
   }

@@ -295,5 +295,150 @@ docContent = FULL_NAME_DOC;
 applied = await runSync(env, connection, actor);
 check('وبلا ارتباطٍ يمضي الاستيراد', db.prepare(`SELECT COUNT(*) n FROM cases`).get().n === 1, applied);
 
+// ═══════════════════════════════════════════════════════════
+group('القراءةُ الآلية حين يتبدّل شكلُ الملفّ');
+
+/* ═══ ما يُحرَس هنا ═══
+ *
+ * ملفٌّ كُتب فقرةً لا حقولاً، أو بُدّلت أسماءُ بنوده، كان يُردّ كلُّه
+ * `no_client_name` وفيه اسمُ الموكّل مكتوبٌ في سطره الأول.
+ *
+ * فالطراز يقرأ، **والقواعدُ تحكم**: ما لا يظهر في نصّ الملفّ حرفاً يُطرح
+ * مهما بدا معقولاً، وما يظهر يمرّ على مدقّق حقله، ولا يُدهس ما قرأته
+ * القاعدة.
+ */
+const { appearsIn } = await import('../worker/lib/ai/extract.js');
+
+check('ما ليس في النصّ يُطرح', !appearsIn('اسم العميل: محمد', 'خالد الغامدي'));
+check('وما فيه يُقبل', appearsIn('اسم العميل: محمد الغامدي', 'محمد الغامدي'));
+check('والتشكيلُ لا يفرّق', appearsIn('اسم العميل: محمّد الغامدي', 'محمد الغامدي'));
+/* والرقمُ يُقارن أرقاماً مجرّدة: النصّ «+966 55 123 4567» والردُّ «0551234567». */
+check('والرقمُ برسمٍ آخر يُقبل', appearsIn('للتواصل: +966 55 123 4567', '0551234567'));
+check('ورقمٌ ليس فيه يُطرح', !appearsIn('للتواصل: 0551234567', '0509999999'));
+
+/* ملفٌّ بلا حقولٍ معنونة أصلاً — فقرةٌ يكتبها محامٍ. */
+const PROSE_DOC = `<div>
+  <p>وكّلنا الأستاذ محمد خالد عبدالله القحطاني، هوية 1012345678، في مطالبةٍ
+  عمالية ضدّ شركة الأفق. رقم جواله 0551234567، والقضية لا تزال منظورة.</p>
+</div>`;
+
+let answers = {};
+const readerAI = {
+  async run(model, input) {
+    const system = input.messages[0].content;
+    if (system.includes('قارئُ مستندات')) return { response: JSON.stringify(answers) };
+    if (system.includes('تربط عناوين')) return { response: JSON.stringify(answers) };
+    if (system.includes('مصنِّف')) return { response: 'لا-أعرف' };
+    return { response: 'ملخّص.' };
+  },
+};
+
+const readerSetup = () => {
+  const db = freshDatabase();
+  const env = makeEnv(db, { AI: readerAI });
+  db.prepare(
+    `INSERT INTO basecamp_projects (project_id, name, app_url, status, vault_id, doc_id, kind,
+                                    created_at, updated_at)
+     VALUES ('101', 'مشروع', 'https://3.basecamp.com/1/projects/101', 'active', '11', '901',
+             'client', ?, ?)`,
+  ).run(now, now);
+  db.prepare(
+    `INSERT INTO basecamp_connection (id, account_id, account_name, access_token, refresh_token,
+                                      expires_at, connected_by, connected_at)
+     VALUES (1, '9', 'ناف', 'a', 'r', 9999999999, 'u1', ?)`,
+  ).run(now);
+  return { db, env };
+};
+
+({ db, env } = readerSetup());
+docContent = PROSE_DOC;
+answers = {
+  'client.fullName': 'محمد خالد عبدالله القحطاني',
+  'client.idNumber': '1012345678',
+  'case.status': 'منظورة',
+};
+plan = await buildPlan(env, connection);
+
+check('ملفٌّ بلا حقولٍ معنونة يُقرأ ولا يُردّ',
+  plan.plans[0].error === null, plan.plans[0].error);
+check('ويُستخرج اسمُ الموكّل',
+  plan.plans[0].client.values.fullName === 'محمد خالد عبدالله القحطاني', plan.plans[0].client?.values);
+/* والقيمةُ تمرّ بمدقّق حقلها: «منظورة» تصير `pending` كما لو جاءت من عنوان. */
+check('والمفرداتُ تُوحَّد كما من عنوانٍ معروف',
+  plan.plans[0].case.values.status === 'pending', plan.plans[0].case.values);
+check('ويُسمّى ما قرأه الطراز',
+  plan.plans[0].aiFields.includes('client.fullName'), plan.plans[0].aiFields);
+
+/* ═══ والحدُّ الفاصل: ما ليس في الملفّ لا يُكتب ═══ */
+({ db, env } = readerSetup());
+docContent = PROSE_DOC;
+answers = {
+  'client.fullName': 'سعد بن ناصر الدوسري',   // اسمٌ لا وجود له في الملفّ
+  'client.email': 'saad@example.com',          // ولا بريد فيه
+};
+plan = await buildPlan(env, connection);
+check('اسمٌ ليس في الملفّ يُطرح ولو بدا معقولاً',
+  plan.plans[0].error === 'no_client_name', plan.plans[0].client?.values);
+check('وبريدٌ مؤلَّف لا يُكتب', !plan.plans[0].client, plan.plans[0].client);
+
+/* ═══ ولا يُدهس ما قرأته القاعدة ═══ */
+({ db, env } = readerSetup());
+docContent = `<div>
+  <div>اسم العميل: خالد الغامدي</div>
+  <div>بندٌ لا تعرفه الخريطة: قيمةٌ ما</div>
+  <div>وفي الملفّ اسمٌ آخر: محمد القحطاني</div>
+</div>`;
+answers = { 'client.fullName': 'محمد القحطاني' };
+plan = await buildPlan(env, connection);
+check('ما قرأته القاعدة سيّدٌ لا يُنقَض',
+  plan.plans[0].client.values.fullName === 'خالد الغامدي', plan.plans[0].client.values);
+check('ولا يُعدّ مستخرَجاً آلياً',
+  !plan.plans[0].aiFields.includes('client.fullName'), plan.plans[0].aiFields);
+
+/* ═══ ولا يُنادى الطرازُ على ملفٍّ سليمِ الشكل ═══
+   نداءٌ على حسابٍ فيه ثلاثمئة مشروعٍ سليم ثمنٌ بلا مقابل. */
+let reads = 0;
+({ db, env } = readerSetup());
+env.AI = {
+  async run(model, input) {
+    if (input.messages[0].content.includes('قارئُ مستندات')) reads++;
+    return { response: '{}' };
+  },
+};
+docContent = FULL_NAME_DOC;
+await buildPlan(env, connection);
+check('ملفٌّ تامٌّ لا يُستدلّ عليه', reads === 0, `reads=${reads}`);
+
+/* ═══ ورقمُ القضية لا يُستخرج ═══
+   هو مفتاحُ الربط: تُطابَق به القضيةُ القائمة ثم يُكتب فيها. وملفٌّ قد
+   يذكر رقمَ قضيةٍ أخرى، فيُنقل نقلاً صحيحاً ويُربط المشروعُ بملفّ غيره. */
+({ db, env } = readerSetup());
+docContent = PROSE_DOC;
+answers = { 'client.fullName': 'محمد خالد عبدالله القحطاني', 'case.caseNumber': '1012345678' };
+plan = await buildPlan(env, connection);
+check('ورقمُ القضية لا يُؤخذ من استخلاص',
+  plan.plans[0].case.values.caseNumber === 'بيسكامب-101', plan.plans[0].case.values);
+
+// ── اقتراحُ الربط: من القائمة وحدها، ولا يُحفظ ──
+group('اقتراحُ ربط العناوين');
+
+const { suggestMapping } = await import('../worker/lib/ai/extract.js');
+const { TARGETS } = await import('../worker/lib/basecamp/parse.js');
+
+answers = { 'جوال الموكل': 'client.phone', 'صفة الخصم': 'client.لا-يوجد' };
+let suggestions = await suggestMapping(
+  { AI: readerAI },
+  { labels: ['جوال الموكل', 'صفة الخصم'], targets: TARGETS },
+);
+check('يُقترح ربطٌ لعنوانٍ معروف',
+  suggestions.some((entry) => entry.label === 'جوال الموكل' && entry.target === 'client.phone'),
+  suggestions);
+check('وحقلٌ لا وجود له يُطرح',
+  !suggestions.some((entry) => entry.label === 'صفة الخصم'), suggestions);
+
+answers = { 'عنوانٌ لم يُعطَ': 'client.phone' };
+suggestions = await suggestMapping({ AI: readerAI }, { labels: ['جوال الموكل'], targets: TARGETS });
+check('وعنوانٌ لم يُعطَ يُطرح', suggestions.length === 0, suggestions);
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

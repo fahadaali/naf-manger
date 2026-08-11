@@ -26,6 +26,7 @@ import {
   setAiImport,
   setAutoSync,
   startConnect,
+  suggestMap,
   sync,
   writeMap,
 } from './lib/basecamp/handlers.js';
@@ -234,6 +235,9 @@ export default {
         }
         if (id === 'map' && request.method === 'GET') return readMap(env, user);
         if (id === 'map' && request.method === 'PUT') return writeMap(request, env, user);
+        if (id === 'map' && verb === 'suggest' && request.method === 'POST') {
+          return suggestMap(env, user);
+        }
         /* المعاينة تقرأ ولا تكتب — ومع ذلك `POST`: تُشغّل عملاً على
            بيسكامب وتُقرأ نتيجتُه مرّةً، فلا تُخبَّأ في وسيطٍ ولا تُعاد
            بضغطة رجوع. */

@@ -86,6 +86,47 @@ export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
 
   if (!data) return null;
 
+  /* ═══ اقتراحُ ربطٍ لما لا ربط له ═══
+     بنودُ الملفّ تتبدّل، فتظهر عناوينُ بلا ربط ويُترك ربطُها لمن يفتح
+     الشاشة — وهو عملٌ يُؤجَّل فتضيع الحقول ما دام أُجِّل. فتُقرأ ملفّاتٌ
+     حقيقية ويُقترح، **وتُضاف مسوّدةً لا محفوظة**: خطأٌ واحد في الخريطة
+     يتكرّر على الحساب كلِّه، وذلك قرارٌ لا يُترك لاستدلال. */
+  const suggest = async () => {
+    setBusy(true);
+    setNote('');
+    try {
+      const result = await db.suggestBasecampMap();
+      if (!result.labels.length) {
+        setNote('لا عناوينَ بلا ربط في آخر الملفّات');
+        return;
+      }
+      if (!result.suggestions.length) {
+        setNote(`عناوينُ بلا ربط: ${result.labels.slice(0, 6).join('، ')} — ولم يترجّح لها حقل`);
+        return;
+      }
+      /* وما هو في المسوّدة لا يُكرَّر: اقتراحٌ على عنوانٍ كُتب سطرُه بيدٍ
+         يُنتج سطرين لعنوانٍ واحد. */
+      const have = new Set(draft.map(([label]) => label.trim()));
+      const added = result.suggestions.filter((entry) => !have.has(entry.label));
+      setDraft([...draft, ...added.map((entry) => [entry.label, entry.target] as [string, string])]);
+      setNote(
+        `أُضيف ${formatNumber(added.length)} اقتراحاً — راجِعها ثم احفظ` +
+          (result.labels.length > result.suggestions.length
+            ? `. ولم يترجّح حقلٌ لـ${formatNumber(result.labels.length - result.suggestions.length)} عنواناً`
+            : ''),
+      );
+    } catch (suggestError) {
+      const code = (suggestError as { code?: string })?.code;
+      setNote(
+        code === 'ai_disabled' ? 'التلخيصُ الآليّ مطفأ — شغّله أوّلاً'
+          : code === 'no_document' ? 'لا ملفّاتٍ مقروءةً بعد — امسح الحساب أوّلاً'
+            : 'تعذّر الاقتراح',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const save = async () => {
     setBusy(true);
     setNote('');
@@ -211,6 +252,10 @@ export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
         </Button>
         <Button onClick={() => setDraft(Object.entries(data.defaults))} variant="outline" size="sm">
           أعد الافتراضي
+        </Button>
+        <Button onClick={suggest} disabled={busy} variant="outline" size="sm">
+          <Sparkles className="h-4 w-4" />
+          اقترح ربطاً من ملفّاتي
         </Button>
         <Button onClick={save} disabled={busy} size="sm">
           {busy ? 'جارٍ الحفظ' : 'احفظ الخريطة'}
@@ -457,6 +502,18 @@ export function PreviewPanel({
                           {`اختلافٌ في ${FIELD_LABEL[conflict.field] ?? conflict.field}`}
                         </p>
                       ))}
+                      {/* حقولٌ قرأها الطراز حين عجزت القاعدة: منقولةٌ من
+                          الملفّ حرفاً ومرّت بمدقّق حقلها — ومع ذلك تُسمَّى،
+                          إذ أقربُ ما يُخطئ فيه الاستخلاص وضعُ قيمةٍ صحيحةٍ
+                          في الحقل الخطأ. */}
+                      {plan.aiFields?.length > 0 && (
+                        <p className="text-info-strong text-xs flex items-start gap-1">
+                          <Sparkles className="h-3 w-3 mt-0.5 flex-none" aria-hidden="true" />
+                          {`قرأها الطراز: ${plan.aiFields
+                            .map((field) => FIELD_LABEL[field] ?? FIELD_LABEL[field.split('.')[1]] ?? field)
+                            .join('، ')} — راجِعها`}
+                        </p>
+                      )}
                       {plan.unmapped.length > 0 && (
                         <p className="text-muted-foreground text-xs flex items-start gap-1">
                           <Lightbulb className="h-3 w-3 mt-0.5 flex-none" aria-hidden="true" />

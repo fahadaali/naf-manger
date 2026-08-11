@@ -12,9 +12,10 @@ import {
   scanProjects,
   writeDocTitles,
 } from './discover.js';
-import { DEFAULT_FIELD_MAP, TARGETS } from './parse.js';
+import { DEFAULT_FIELD_MAP, TARGETS, parseDocument } from './parse.js';
 import { buildPlan, readFieldMap, runSync, writeFieldMap } from './sync.js';
 import { aiEnabled, setAiEnabled } from '../ai/summarize.js';
+import { suggestMapping } from '../ai/extract.js';
 import {
   activeConnection,
   beginAuthorization,
@@ -373,6 +374,59 @@ export async function writeMap(request, env, user) {
   return Response.json({ ok: true, data: { map: clean, titles: titles ?? await readDocTitles(env) } });
 }
 
+/**
+ * ═══ اقتراحُ ربطٍ للعناوين التي لا مقابل لها ═══
+ *
+ * بنودُ الملفّ تتبدّل: يُضاف بندٌ، ويُعاد تسميةُ آخر. فتظهر في المعاينة
+ * «بلا ربط: كذا وكذا» ويُترك لمن يفتح الشاشة أن يكتب العنوان بيده في
+ * الخريطة — وهو عملٌ يُؤجَّل فتضيع الحقول ما دام أُجِّل.
+ *
+ * فتُقرأ ملفّاتٌ حقيقية (ثلاثةٌ لا أكثر — نداءاتُ بيسكامب ثمنُها وقت)،
+ * وتُجمع عناوينُها التي لا ربط لها، ويُقترح لكلٍّ حقلُه.
+ *
+ * **ولا يُحفظ شيء.** الاقتراحُ صفوفٌ تُضاف إلى الشاشة مسوَّدةً، تُراجَع ثم
+ * تُحفظ بضغطة صاحبِها: خطأٌ واحد في الخريطة يتكرّر على الحساب كلِّه، وذلك
+ * قرارٌ لا يُترك لاستدلال.
+ */
+export async function suggestMap(env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+  if (!env.AI) return fail('not_connected', 503);
+  if (!(await aiEnabled(env))) return fail('ai_disabled', 409);
+
+  const connection = await activeConnection(env);
+  if (connection.error) {
+    return fail(connection.error, CONNECTION_ERRORS.has(connection.error) ? 503 : 502);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT project_id, doc_id FROM basecamp_projects
+     WHERE kind = 'client' AND doc_id IS NOT NULL
+     ORDER BY doc_updated_at DESC LIMIT 3`,
+  ).all();
+  if (!results?.length) return fail('no_document', 404);
+
+  const fieldMap = await readFieldMap(env);
+  const labels = [];
+
+  for (const row of results) {
+    try {
+      const document = await readProjectDocument(connection, row.project_id, row.doc_id);
+      const parsed = parseDocument(document.content, fieldMap);
+      for (const entry of parsed.unmapped) {
+        if (!labels.includes(entry.label)) labels.push(entry.label);
+      }
+    } catch (readError) {
+      /* ملفٌّ لا يُقرأ لا يوقف البقية: الاقتراحُ يُبنى على ما قُرئ. */
+      console.error('Basecamp: تعذّرت قراءة ملفٍّ للاقتراح —', readError?.code ?? readError?.message);
+    }
+  }
+
+  if (!labels.length) return Response.json({ ok: true, data: { suggestions: [], labels: [] } });
+
+  const suggestions = await suggestMapping(env, { labels, targets: TARGETS });
+  return Response.json({ ok: true, data: { suggestions, labels } });
+}
+
 /* ═══ المعاينة ═══
    تشغيلٌ جافّ: تقرأ الملفّات وتبني الخطّة وتردّها، ولا تكتب في `clients`
    ولا `cases` حرفاً. وهي الشرط قبل أول كتابة. */
@@ -589,6 +643,9 @@ function shapePlan(plan) {
     warnings: plan.warnings,
     conflicts: plan.conflicts,
     unmapped: (plan.unmapped ?? []).map((entry) => entry.label),
+    /* وحقولٌ قرأها الطرازُ حين عجزت القاعدة — تُعرض مسمّاةً لتُراجَع قبل
+       أن تُكتب، فلا يدخل ملفَّ موكّلٍ حقلٌ لم يره أحد. */
+    aiFields: plan.aiFields ?? [],
     client: plan.client
       ? {
           action: plan.client.action,

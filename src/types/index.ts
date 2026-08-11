@@ -317,6 +317,13 @@ export interface BasecampMap {
   defaultTitles: string[];
 }
 
+/** ربطٌ يقترحه الطراز لعنوانٍ لا مقابل له — يُراجَع ثم يُحفظ. */
+export interface BasecampMapSuggestion {
+  suggestions: { label: string; target: string }[];
+  /** كلُّ العناوين التي لا ربط لها — ومنها ما لم يجد الطرازُ له حقلاً. */
+  labels: string[];
+}
+
 /** ما سيقع لمشروعٍ واحد — تُعرض قبل أن يقع. */
 export interface BasecampPlan {
   projectId: string;
@@ -327,6 +334,14 @@ export interface BasecampPlan {
   conflicts: { field: string; platformValue: string; basecampValue: string }[];
   /** عناوينُ في الملفّ بلا مقابلٍ في الخريطة — تُعرض لتُربط، فلا تضيع صامتة. */
   unmapped: string[];
+  /**
+   * حقولٌ قرأها الطرازُ حين عجزت القاعدة — «client.fullName» وأخواتها.
+   *
+   * وكلُّ قيمةٍ فيها منقولةٌ من نصّ الملفّ حرفاً ومرّت بمدقّق حقلها. ومع
+   * ذلك تُعرض مسمّاةً: أقربُ ما يُخطئ فيه الاستخلاص أن ينقل قيمةً صحيحة
+   * إلى الحقل الخطأ، وذلك يُرى في المعاينة قبل أن يُكتب.
+   */
+  aiFields: string[];
   client:
     | {
         action: 'create_client' | 'link_client';

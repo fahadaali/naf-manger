@@ -20,7 +20,8 @@
 
 import { BasecampError } from './api.js';
 import { readProjectDocument } from './discover.js';
-import { DEFAULT_FIELD_MAP, htmlToText, parseDocument } from './parse.js';
+import { DEFAULT_FIELD_MAP, TARGETS, coerceTarget, htmlToText, parseDocument } from './parse.js';
+import { extractFields } from '../ai/extract.js';
 import { normalizeArabic } from './discover.js';
 import { fullerName, nameRelation } from './names.js';
 import {
@@ -234,6 +235,87 @@ async function findClient(env, { idNumber, fullName }) {
   return similar ? { row: null, matchedBy: null, candidate: similar } : null;
 }
 
+/* ═══ ما يُسأل عنه الطراز، وما لا يُسأل ═══
+ *
+ * `client.idType` خارجَه: يُرجَّح من رقم الهوية نفسِه، وذلك أوثقُ من سؤال.
+ *
+ * و**`case.caseNumber` خارجَه بقصد**، وهو الاستثناء الذي يستحقّ سببَه:
+ * رقمُ القضية مفتاحُ الربط — تُطابَق به القضيةُ القائمة ثم يُكتب فيها.
+ * وملفُّ مشروعٍ قد يذكر رقمَ قضيةٍ أخرى (قضيةٌ مرتبطة، أو حكمٌ سابق)،
+ * فينقله الطراز منقولاً صحيحاً من النصّ — ويُربط المشروعُ بقضية موكّلٍ
+ * آخر فتُكتب حقولُه فيها.
+ *
+ * فالشرطُ الثاني (النقلُ الحرفي) يمنع الاختراع ولا يمنع أخذَ الرقم
+ * الخطأ من الملفّ. والبديلُ عن ذلك رقمٌ مولَّدٌ يُعلَّم «يحتاج تصحيحاً» —
+ * وهو ظاهرٌ يُصحَّح، لا ربطٌ صامتٌ بملفّ غيره.
+ */
+const RECOVERABLE = Object.keys(TARGETS).filter(
+  (key) => key !== 'client.idType' && key !== 'case.caseNumber',
+);
+
+/** أهذا الحقلُ مملوءٌ في ما قرأته القاعدة؟ */
+const already = (parsed, target) => {
+  const [entity, field] = target.split('.');
+  const bag = entity === 'client' ? parsed.client : parsed.case;
+  return bag[field] !== undefined && bag[field] !== '';
+};
+
+/**
+ * ═══ القراءةُ الآلية حين يتبدّل شكلُ الملفّ ═══
+ *
+ * ولا تُنادى في كل مشروع: نداءٌ على حسابٍ فيه ثلاثمئة مشروعٍ سليمِ الشكل
+ * ثمنٌ بلا مقابل. فشرطُها أن يدلّ الظاهرُ على أنّ القاعدة عجزت:
+ *
+ *   • لا اسمَ عميل — وهو ما كان يردّ المشروعَ كلَّه `no_client_name`.
+ *   • أو لم يُقرأ سطرٌ معنونٌ واحد — ملفٌّ كُتب فقرةً لا حقولاً.
+ *   • أو بقيت حقولٌ فارغة **ومعها عناوينُ بلا ربط** — أي أنّ البنود
+ *     تبدّلت أسماؤها، والقيمُ حاضرةٌ تحت عناوينَ لا تعرفها الخريطة.
+ *
+ * وما عدا ذلك: القاعدةُ قرأت ما في الملفّ، والفارغُ فارغٌ فيه حقّاً.
+ */
+async function recoverMissing(env, { parsed, text, vocab, ai }) {
+  if (!ai?.enabled || !text) return [];
+
+  const missing = RECOVERABLE.filter((target) => !already(parsed, target));
+  if (!missing.length) return [];
+
+  const blind = !parsed.client.fullName;
+  const noLabels = (parsed.labels ?? []).length === 0;
+  const shifted = parsed.unmapped.length > 0;
+  if (!blind && !noLabels && !shifted) return [];
+
+  if (!ai.budget.spend()) return [];
+
+  const raw = await extractFields(env, {
+    text,
+    wanted: missing,
+    labels: Object.fromEntries(missing.map((key) => [key, TARGETS[key].label])),
+  });
+  if (!Object.keys(raw).length) {
+    ai.budget.failed++;
+    return [];
+  }
+
+  /* وما رُدَّ يمرّ على المدقّقين أنفسِهم: `normalizePhone` للجوّال،
+     و`normalizeIdNumber` للهوية، وجدولِ المفردات للحالة والنتيجة — كما لو
+     جاء من عنوانٍ معروف. فلا يدخل عمودَ الهوية ما ليس هوية. */
+  const taken = [];
+  for (const [target, value] of Object.entries(raw)) {
+    const coerced = coerceTarget(target, value, vocab);
+    if (!coerced) continue;
+
+    const bag = coerced.entity === 'client' ? parsed.client : parsed.case;
+    for (const [field, coercedValue] of Object.entries(coerced.values)) {
+      /* ولا يُدهس شيء: القاعدةُ سيّدة، وقيمةٌ التقطها المسحُ الديناميكي
+         (رقمٌ في سطرٍ بلا عنوان) أوثقُ من استخلاص. */
+      if (bag[field] !== undefined && bag[field] !== '') continue;
+      bag[field] = coercedValue;
+      taken.push(`${coerced.entity}.${field}`);
+    }
+  }
+  return taken;
+}
+
 /** خطّةُ مشروعٍ واحد: ماذا سيقع له ولماذا. */
 async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
   const plan = {
@@ -271,6 +353,12 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
   const parsed = parseDocument(document.content, fieldMap, vocab);
   plan.unmapped = parsed.unmapped;
   const synced = readSnapshot(row.synced_values);
+
+  /* ═══ وحين تعجز القاعدة يُسأل الطراز ═══
+     ما قرأته الخريطةُ سيّدٌ لا يُنقَض — والسؤالُ عمّا بقي فارغاً وحده،
+     ولا يُنادى إلا حين يدلّ الظاهرُ على أنّ شكلَ الملفّ تبدّل. */
+  const text = htmlToText(document.content ?? '');
+  plan.aiFields = await recoverMissing(env, { parsed, text, vocab, ai });
 
   if (!parsed.client.fullName) {
     plan.error = 'no_client_name';
