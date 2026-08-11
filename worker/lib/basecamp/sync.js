@@ -19,8 +19,8 @@
 // يُمحى صامتاً في بيانات موكّلين أسوأُ من تعارضٍ ينتظر قراراً.
 
 import { BasecampError } from './api.js';
-import { readSummaryDocument } from './discover.js';
-import { DEFAULT_FIELD_MAP, parseSummary } from './parse.js';
+import { readProjectDocument } from './discover.js';
+import { DEFAULT_FIELD_MAP, parseDocument } from './parse.js';
 import { normalizeArabic } from './discover.js';
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
@@ -41,12 +41,40 @@ const FIELD_MAP_KEY = 'basecamp_field_map';
 
 /** الحقول التي تملكها المزامنة. وما عداها للمنصة وحدها. */
 export const CLIENT_FIELDS = [
-  'fullName', 'idNumber', 'idType', 'phone', 'contacts', 'email', 'clientType', 'commercialRegister',
+  'fullName', 'idNumber', 'idType', 'phone', 'contacts', 'email', 'clientType',
+  'commercialRegister', 'notes',
 ];
-export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome'];
+export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome', 'notes'];
 
-/* الأتعاب والعمولات والمسوّق لا تُمسّ: ليست في «ملخص القضية»، وتُدار في
+/* و`contacts` خارج الدمج: مصفوفةٌ تُضمّ ضمّاً — أرقامٌ تُزاد ولا يُحذف
+   منها رقم — فلا معنى لمقارنةِ «قبلُ وبعدُ» فيها ولا لتعارضٍ عليها. */
+const CLIENT_MERGE_FIELDS = CLIENT_FIELDS.filter((field) => field !== 'contacts');
+
+/* الأتعاب والعمولات والمسوّق لا تُمسّ: ليست في «بيانات المشروع»، وتُدار في
    المنصة وحدها. وذكرُها هنا صراحةً أوضحُ من أن تُعرف بغيابها. */
+
+const CLIENT_COLUMN = {
+  fullName: 'full_name', idNumber: 'id_number', idType: 'id_type', phone: 'phone',
+  email: 'email', clientType: 'client_type', commercialRegister: 'commercial_register',
+  notes: 'notes',
+};
+const CASE_COLUMN = {
+  caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
+  status: 'status', outcome: 'outcome', notes: 'notes',
+};
+
+/**
+ * عمودٌ في المنصة يُقرأ فارغاً وإن كان مملوءاً.
+ *
+ * `client_type` عمودٌ `NOT NULL DEFAULT 'individual'` — فكلُّ عميلٍ أُنشئ
+ * قبل أن يحمل ملفُّه «نوع العميل» يحمل «فرد» لا لأنّ أحداً قرّرها، بل لأنّ
+ * العمود لا يقبل الفراغ. ولو عُدَّت قيمةً منطوقة لَما نزل «شركة» من
+ * «بيانات المشروع» على عميلٍ قائم أبداً — وهو أوّلُ ما يُنتظر من هذا العمل.
+ */
+const COLUMN_DEFAULT = { client_type: 'individual' };
+const isBlank = (column, value) =>
+  value === null || value === undefined || String(value) === '' ||
+  String(value) === COLUMN_DEFAULT[column];
 
 export async function readFieldMap(env) {
   const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
@@ -94,6 +122,60 @@ async function readVocabulary(env) {
 const safeJson = (text) => {
   try { return JSON.parse(text ?? 'null'); } catch { return null; }
 };
+
+/**
+ * صورةُ آخرِ مزامنة — الطرفُ الثالث في الدمج.
+ *
+ * وكانت حقولَ القضية مبسوطةً في الجذر، فصارت `{ case, client }` حين دخل
+ * العميلُ الدمج. والقديمة تُقرأ كما هي: صفوفُ الإنتاج تحملها، وقراءتُها
+ * فارغةً تجعل أوّلَ مزامنةٍ بعد النشر تظنّ أنّ كلَّ حقلٍ جديد.
+ */
+function readSnapshot(raw) {
+  const stored = safeJson(raw) ?? {};
+  if (stored && typeof stored === 'object' && ('case' in stored || 'client' in stored)) {
+    return { case: stored.case ?? {}, client: stored.client ?? {} };
+  }
+  return { case: stored ?? {}, client: {} };
+}
+
+/**
+ * ═══ الدمجُ الثلاثي لحقلٍ واحد ═══
+ *
+ * ثلاثُ قيم: ما في المنصة، وما كتبته المزامنة آخرَ مرّة، وما في بيسكامب
+ * الآن. والناتجُ واحدٌ من ثلاثة: `write` أو `keep` أو `conflict`.
+ *
+ * و`firstContact` هو الفرق بين العميل والقضية:
+ *
+ *   القضيةُ تُطابَق برقمها، ورقمُها من الملفّ — فصفٌّ قائمٌ بلا صورةٍ محفوظة
+ *   قضيةٌ كتبها استيرادٌ سابق، وبيسكامب مصدرُها.
+ *
+ *   والعميلُ يُطابَق بهويته أو باسمه، وقد يكون أُنشئ في المنصة يدوياً قبل
+ *   بيسكامب بسنة. فالكتابةُ فوق قيمةٍ مكتوبةٍ بلا صورةٍ تشهد لا تجوز:
+ *   يُملأ الفارغُ صامتاً، ويُسأل عمّا فيه قيمةٌ تخالف.
+ */
+const strictly = (one, other) => String(one ?? '') === String(other ?? '');
+
+function mergeField({ current, incoming, lastSynced, blank, firstContact, same = strictly }) {
+  if (incoming === undefined || incoming === null || incoming === '') return { action: 'keep' };
+  if (same(current, incoming)) return { action: 'keep' };
+
+  if (lastSynced === undefined) {
+    if (blank) return { action: 'write' };
+    return { action: firstContact ? 'conflict' : 'write' };
+  }
+
+  const basecampChanged = !same(incoming, lastSynced);
+  if (!basecampChanged) return { action: 'keep' };
+
+  const platformTouched = !same(current, lastSynced);
+  return { action: platformTouched ? 'conflict' : 'write' };
+}
+
+/* ═══ والاسمُ يُقارن موحَّداً ═══
+   العميلُ قد يُطابَق باسمه موحَّداً — «شركة الأفق» و«شركة الافق» واحد. ثم
+   تُقارن الحقولُ حرفاً، فيقف الاسمُ نفسُه اختلافاً في كل مزامنة: صفٌّ في
+   الشاشة يسأل عن فرقٍ في همزة. فما طوبق به يُقارن به. */
+const sameName = (one, other) => normalizeArabic(one ?? '') === normalizeArabic(other ?? '');
 
 /**
  * رقمُ قضيةٍ بديلٌ ثابت حين لا يحمله الملفّ.
@@ -152,20 +234,21 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
   };
 
   if (!row.doc_id) {
-    plan.error = 'no_summary';
+    plan.error = 'no_document';
     return plan;
   }
 
   let document;
   try {
-    document = await readSummaryDocument(connection, row.project_id, row.doc_id);
+    document = await readProjectDocument(connection, row.project_id, row.doc_id);
   } catch (readError) {
     plan.error = readError instanceof BasecampError ? readError.code : 'read_failed';
     return plan;
   }
 
-  const parsed = parseSummary(document.content, fieldMap, vocab);
+  const parsed = parseDocument(document.content, fieldMap, vocab);
   plan.unmapped = parsed.unmapped;
+  const synced = readSnapshot(row.synced_values);
 
   if (!parsed.client.fullName) {
     plan.error = 'no_client_name';
@@ -194,10 +277,45 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
   if (match?.matchedBy === 'fullName') plan.warnings.push('طوبق العميل بالاسم لا بالهوية');
   if (pending) plan.warnings.push('يُربط بعميلٍ يُنشئه مشروعٌ آخر في هذه الدفعة');
 
+  /* ═══ وعميلٌ قائم يُدمَج لا يُترك ═══
+
+     كان الاستيراد يكتب حقولَ العميل مرّةً — عند إنشائه — ثم لا يعود
+     إليها أبداً. فمكتبٌ يضيف اليوم «نوع العميل» و«الملاحظات» إلى ملفّاتِ
+     موكّليه القدامى يزامن فلا يقع شيء، ولا يُقال لِمَ.
+
+     فحقولُ العميل تُدمج كحقول القضية: يُملأ الفارغ، ويُكتب ما تبدّل عندهم
+     وحدهم، ويقف ما تبدّل عند الطرفين تعارضاً ينتظر قراراً. */
+  const clientChanges = {};
+  if (match?.row) {
+    for (const field of CLIENT_MERGE_FIELDS) {
+      const column = CLIENT_COLUMN[field];
+      if (!column) continue;
+
+      const verdict = mergeField({
+        current: match.row[column],
+        incoming: wanted[field],
+        lastSynced: synced.client[field],
+        blank: isBlank(column, match.row[column]),
+        firstContact: true,
+        same: field === 'fullName' ? sameName : undefined,
+      });
+
+      if (verdict.action === 'write') clientChanges[field] = wanted[field];
+      else if (verdict.action === 'conflict') {
+        plan.conflicts.push({
+          field: `client.${field}`,
+          platformValue: String(match.row[column] ?? ''),
+          basecampValue: String(wanted[field]),
+        });
+      }
+    }
+  }
+
   plan.client = {
     id: match?.row?.id ?? null,
     values: wanted,
     action: match || pending ? 'link_client' : 'create_client',
+    changes: clientChanges,
   };
   plan.actions.push(plan.client.action);
   seen.clients.add(pendingKey);
@@ -231,40 +349,38 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
     if (existingCase) plan.warnings.push('تبدّل رقم القضية في الملفّ');
   }
 
-  const synced = safeJson(row.synced_values) ?? {};
-
   if (!existingCase) {
     plan.case = { id: null, values: caseValues, action: 'create_case', changes: caseValues };
     plan.actions.push('create_case');
     return plan;
   }
 
-  /* ═══ الدمجُ الثلاثي ═══ */
+  /* ═══ الدمجُ الثلاثي ═══
+     والقضيةُ تُطابَق برقمها، ورقمُها من الملفّ — فصفٌّ قائمٌ بلا صورةٍ
+     محفوظة كتبه استيرادٌ سابق، وبيسكامب مصدرُه. ولذلك لا `firstContact`
+     هنا كما في العميل: تُكتب قيمتُهم ولا يُسأل. */
   const changes = {};
-  const COLUMN = {
-    caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
-    status: 'status', outcome: 'outcome',
-  };
 
   for (const field of CASE_FIELDS) {
-    const incoming = caseValues[field];
-    if (incoming === undefined) continue;
+    const column = CASE_COLUMN[field];
+    if (!column) continue;
 
-    const current = existingCase[COLUMN[field]] ?? '';
-    const lastSynced = synced[field];
+    const verdict = mergeField({
+      current: existingCase[column] ?? '',
+      incoming: caseValues[field],
+      lastSynced: synced.case[field],
+      blank: isBlank(column, existingCase[column]),
+      firstContact: false,
+    });
 
-    if (String(current) === String(incoming)) continue;   // لا فرق
-
-    const platformTouched = lastSynced !== undefined && String(current) !== String(lastSynced);
-    const basecampChanged = lastSynced === undefined || String(incoming) !== String(lastSynced);
-
-    if (!basecampChanged) continue;                        // بيسكامب كما هو
-
-    if (platformTouched) {
-      plan.conflicts.push({ field, platformValue: String(current), basecampValue: String(incoming) });
-      continue;
+    if (verdict.action === 'write') changes[field] = caseValues[field];
+    else if (verdict.action === 'conflict') {
+      plan.conflicts.push({
+        field,
+        platformValue: String(existingCase[column] ?? ''),
+        basecampValue: String(caseValues[field]),
+      });
     }
-    changes[field] = incoming;
   }
 
   plan.case = {
@@ -295,6 +411,8 @@ export async function buildPlan(env, connection) {
     projects: plans.length,
     createClients: plans.filter((p) => p.client?.action === 'create_client').length,
     linkClients: plans.filter((p) => p.client?.action === 'link_client').length,
+    /* وعملاءُ سيُحدَّثون — عددٌ كان غائباً لأنّ العميل لم يكن يُحدَّث أصلاً. */
+    updateClients: plans.filter((p) => Object.keys(p.client?.changes ?? {}).length).length,
     createCases: plans.filter((p) => p.case?.action === 'create_case').length,
     updateCases: plans.filter((p) => p.case?.action === 'update_case').length,
     unchanged: plans.filter((p) => p.case?.action === 'none').length,
@@ -308,18 +426,17 @@ export async function buildPlan(env, connection) {
 
 /* ═══ التنفيذ ═══ */
 
-const CLIENT_COLUMN = {
-  fullName: 'full_name', idNumber: 'id_number', phone: 'phone', email: 'email',
-  clientType: 'client_type', commercialRegister: 'commercial_register',
-};
-const CASE_COLUMN = {
-  caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
-  status: 'status', outcome: 'outcome',
-};
-
 async function applyPlan(env, plan, actorId) {
   const now = nowSeconds();
-  const result = { projectId: plan.projectId, created: [], updated: [], error: plan.error };
+  /* وما حُدِّث يُفصَل بصاحبه: «حُدِّثت قضية» كان يُعدّ على أي كتابةٍ وقعت
+     — ولو كانت رقمَ هاتفِ عميلها. والعميلُ يُحدَّث الآن فعلاً، فخلطُهما
+     يجعل العدّادَ في الشاشة يقول ما لم يقع. */
+  const result = {
+    projectId: plan.projectId,
+    created: [],
+    updated: { client: [], case: [] },
+    error: plan.error,
+  };
   if (plan.error) return result;
 
   // ── العميل ──
@@ -340,9 +457,9 @@ async function applyPlan(env, plan, actorId) {
     const values = plan.client.values;
     await env.DB.prepare(
       `INSERT INTO clients (id, full_name, id_number, id_type, phone, contacts, email,
-                            client_type, commercial_register, join_date, status,
+                            client_type, commercial_register, notes, join_date, status,
                             created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?, ?)`,
     )
       .bind(
         clientId,
@@ -354,6 +471,8 @@ async function applyPlan(env, plan, actorId) {
         values.email ?? '',
         values.clientType ?? 'individual',
         values.commercialRegister ?? null,
+        /* والعمود `NOT NULL DEFAULT ''` — فالغيابُ نصٌّ فارغ لا `NULL`. */
+        values.notes ?? '',
         /* «عميلٌ منذ» تاريخُ إنشاء مشروعه عندهم — لا تاريخُ الاستيراد.
            و`COALESCE` في العمود يعطي اليوم حين يغيب. */
         plan.joinDate ?? new Date(now * 1000).toISOString().slice(0, 10),
@@ -364,9 +483,12 @@ async function applyPlan(env, plan, actorId) {
     result.created.push('client');
   }
 
-  /* ═══ عميلٌ قائم: يُملأ الفارغُ ولا يُدهس المكتوب ═══
-     مشروعٌ ثانٍ لعميلٍ موجود قد يحمل رقمَ هويته أو أرقامَ أهله وهي ناقصةٌ
-     عندنا. فتُملأ حين تغيب — وما فيه قيمةٌ لا يُمسّ، فقد تكون يدٌ كتبتها.
+  /* ═══ عميلٌ قائم: ما حكمت به الخطّة، وما فات الخطّةَ يُملأ فارغُه ═══
+
+     الخطّةُ دمجت حقولَه دمجاً ثلاثياً حين وجدت صفَّه — فيُكتب ما حكمت به.
+     أمّا العميلُ الذي وجده البحثُ المتأخّر (أنشأه مشروعٌ آخر في هذه الدفعة
+     بعد أن بُنيت هذه الخطّة) فلا حكمَ له، ويُملأ فارغُه وحدَه: أرقامٌ
+     وهويةٌ ينقصانه، وما فيه قيمةٌ لا يُمسّ.
 
      والشرطُ «لم يُنشأ الآن» لا «كان في الخطّة»: مشروعان لعميلٍ واحد في
      دفعةٍ واحدة يُنشئ أوّلُهما العميل، وثانيهما يجده بالبحث المتأخّر —
@@ -379,9 +501,18 @@ async function applyPlan(env, plan, actorId) {
 
     const fill = {};
     const values = plan.client.values;
-    if (current && !current.id_number && values.idNumber) fill.id_number = values.idNumber;
-    if (current && !current.id_type && values.idType) fill.id_type = values.idType;
-    if (current && !current.phone && values.phone) fill.phone = values.phone;
+
+    if (clientId === plan.client.id) {
+      for (const [field, value] of Object.entries(plan.client.changes ?? {})) {
+        const column = CLIENT_COLUMN[field];
+        if (column) fill[column] = value;
+      }
+    } else {
+      if (current && !current.id_number && values.idNumber) fill.id_number = values.idNumber;
+      if (current && !current.id_type && values.idType) fill.id_type = values.idType;
+      if (current && !current.phone && values.phone) fill.phone = values.phone;
+      if (current && !current.notes && values.notes) fill.notes = values.notes;
+    }
 
     /* ═══ «عميلٌ منذ» أقدمُ قضاياه ═══
        للموكّل قضايا، ولكلٍّ مشروعُها وتاريخُ إنشائه. وصفتُه عميلاً بدأت
@@ -410,7 +541,7 @@ async function applyPlan(env, plan, actorId) {
       )
         .bind(...columns.map((c) => fill[c]), now, clientId)
         .run();
-      result.updated.push(...columns);
+      result.updated.client.push(...columns);
     }
   }
 
@@ -421,8 +552,8 @@ async function applyPlan(env, plan, actorId) {
     const values = plan.case.values;
     await env.DB.prepare(
       `INSERT INTO cases (id, case_number, case_type, client_id, client_name, summary, status,
-                          outcome, basecamp_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                          outcome, notes, basecamp_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         caseId,
@@ -433,6 +564,7 @@ async function applyPlan(env, plan, actorId) {
         values.summary ?? '',
         values.status ?? 'pending',
         values.outcome ?? null,
+        values.notes ?? '',
         plan.appUrl,
         /* ═══ القضيةُ أُنشئت يومَ أُنشئ مشروعُها ═══
            كانت تُختم بلحظة الاستيراد، فتظهر قضيةٌ من ٢٠٢١ منشأةً اليوم —
@@ -452,7 +584,7 @@ async function applyPlan(env, plan, actorId) {
     await env.DB.prepare(`UPDATE cases SET ${assignments} WHERE id = ?`)
       .bind(...Object.keys(changes).map((f) => changes[f]), plan.appUrl, now, caseId)
       .run();
-    result.updated.push(...Object.keys(changes));
+    result.updated.case.push(...Object.keys(changes));
   } else if (caseId) {
     await env.DB.prepare(`UPDATE cases SET basecamp_url = ? WHERE id = ?`)
       .bind(plan.appUrl, caseId)
@@ -471,7 +603,7 @@ async function applyPlan(env, plan, actorId) {
     )
       .bind(projectStart, caseId, projectStart)
       .run();
-    if (fixed?.meta?.changes) result.updated.push('createdDate');
+    if (fixed?.meta?.changes) result.updated.case.push('createdDate');
   }
 
   // ── التعارضات: تُسجَّل ولا تُكتب ──
@@ -505,10 +637,16 @@ async function applyPlan(env, plan, actorId) {
   }
 
   /* صورةُ ما كُتب — وهي الطرف الثالث في الدمج القادم. وتُحفظ قيمُ بيسكامب
-     كلُّها لا المتبدّلة وحدها: بها يُعرف لاحقاً ما تحرّك عندهم وما سكن. */
-  const snapshot = {};
+     كلُّها لا المتبدّلة وحدها: بها يُعرف لاحقاً ما تحرّك عندهم وما سكن.
+
+     وحقولُ العميل معها الآن: بلا صورةٍ له لا يُعرف أنّ «نوع العميل» تبدّل
+     عندهم أم أنّ يداً بدّلته عندنا، فتُدهس اليدُ أو يُهمَل تبدُّلُهم. */
+  const snapshot = { case: {}, client: {} };
   for (const field of CASE_FIELDS) {
-    if (plan.case?.values?.[field] !== undefined) snapshot[field] = plan.case.values[field];
+    if (plan.case?.values?.[field] !== undefined) snapshot.case[field] = plan.case.values[field];
+  }
+  for (const field of CLIENT_MERGE_FIELDS) {
+    if (plan.client?.values?.[field] !== undefined) snapshot.client[field] = plan.client.values[field];
   }
 
   await env.DB.prepare(
@@ -551,7 +689,8 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
     failed: summary.failed + failed,
     clientsCreated: results.filter((r) => r.created?.includes('client')).length,
     casesCreated: results.filter((r) => r.created?.includes('case')).length,
-    casesUpdated: results.filter((r) => r.updated?.length).length,
+    clientsUpdated: results.filter((r) => r.updated?.client?.length).length,
+    casesUpdated: results.filter((r) => r.updated?.case?.length).length,
   };
 
   await env.DB.prepare(
@@ -566,7 +705,8 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
   )
     .bind(
       crypto.randomUUID(),
-      `مزامنةُ بيسكامب (${source}): ${applied.clientsCreated} عميلاً و${applied.casesCreated} قضيةً جديدة، و${applied.casesUpdated} محدَّثة`,
+      `مزامنةُ بيسكامب (${source}): ${applied.clientsCreated} عميلاً و${applied.casesCreated} قضيةً جديدة،` +
+        ` و${applied.casesUpdated} قضيةً و${applied.clientsUpdated} عميلاً محدَّثين`,
       actorId,
       actorName ?? '',
       JSON.stringify(applied),

@@ -29,6 +29,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     caseType: existingCase?.caseType || 'قضية تجارية',
     clientId: existingCase?.clientId || '',
     summary: existingCase?.summary || '',
+    /* حاشيةٌ على القضية غيرُ موضوعها — ويستوردها ربطُ بيسكامب من
+       «بيانات المشروع». وحقلٌ يُستورَد ولا تُظهره شاشةٌ بيانٌ مخبوء. */
+    notes: existingCase?.notes || '',
     status: existingCase?.status || 'pending',
     basecampUrl: existingCase?.basecampUrl || '',
     outcome: existingCase?.outcome || '',
@@ -258,6 +261,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <h3 className="text-lg font-semibold text-foreground mb-3">ملخص القضية</h3>
               <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
             </div>
+
+            {existingCase.notes && (
+              <div className="bg-muted rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-3">الملاحظات</h3>
+                <p className="text-foreground whitespace-pre-wrap">{existingCase.notes}</p>
+              </div>
+            )}
 
             {/* أوراق القضية */}
             <div className="bg-muted rounded-lg p-4">
@@ -618,6 +628,18 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             {errors.summary && (
               <p className="text-destructive text-sm mt-1">{errors.summary}</p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              الملاحظات
+            </label>
+            <Textarea
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              rows={3}
+              placeholder="حاشيةٌ على القضية — غيرُ الملخّص..."
+            />
           </div>
 
           <div>

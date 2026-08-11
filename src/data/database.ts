@@ -346,8 +346,13 @@ export class LocalDatabase {
     return await api.read<BasecampMap>('/basecamp/map');
   }
 
-  async saveBasecampMap(map: Record<string, string>): Promise<{ map: Record<string, string> }> {
-    return await api.put('/basecamp/map', { map });
+  /* والعناوينُ تُحفظ مع الخريطة: اسمُ الملفّ وعناوينُ حقوله يُراجَعان معاً
+     في شاشةٍ واحدة، فحفظُهما في نداءين يترك أحدَهما محفوظاً والآخر لا. */
+  async saveBasecampMap(
+    map: Record<string, string>,
+    titles?: string[],
+  ): Promise<{ map: Record<string, string>; titles: string[] }> {
+    return await api.put('/basecamp/map', titles ? { map, titles } : { map });
   }
 
   /* المعاينة تقرأ ولا تكتب — و`POST` لأنها تُشغّل عملاً على بيسكامب. */

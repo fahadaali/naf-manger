@@ -19,21 +19,33 @@ import { Alert } from '@/registry/naf/ui/alert';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Select } from '@/registry/naf/ui/select';
 import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
+import { caseOutcomeLabel, caseStatusLabel, clientTypeLabel } from '../../lib/labels';
 
 /* ألواحُ المراحل الثلاث بعد الاكتشاف: خريطةُ الحقول، والمعاينة والتنفيذ،
    والاختلافات. وهي في ملفٍّ ثانٍ لأنّ `BasecampSync` صار طويلاً — ولوحُ
    الاتّصال والتصنيف عملٌ آخرُ عن هذا. */
 
+/* وحقولُ العميل بسابقةِ `client.` كما تصل من الخادم: الجدولُ واحدٌ للطرفين،
+   والسابقةُ تفرّق «الملاحظات» عن «ملاحظات العميل». */
 const FIELD_LABEL: Record<string, string> = {
   caseNumber: 'رقم القضية',
-  caseType: 'نوع القضية',
-  summary: 'ملخص القضية',
-  status: 'حالة القضية',
-  outcome: 'نتيجة القضية',
+  caseType: 'نوع المشروع',
+  summary: 'موضوع المشروع',
+  status: 'حالة المشروع',
+  outcome: 'نتيجة المشروع',
+  notes: 'ملاحظات المشروع',
+  'client.fullName': 'اسم العميل',
+  'client.idNumber': 'رقم الهوية',
+  'client.idType': 'نوع الهوية',
+  'client.phone': 'رقم الجوال',
+  'client.email': 'البريد الإلكتروني',
+  'client.clientType': 'نوع العميل',
+  'client.commercialRegister': 'السجل التجاري',
+  'client.notes': 'ملاحظات العميل',
 };
 
 const PLAN_ERROR: Record<string, string> = {
-  no_summary: 'لا ملفّ ملخّص',
+  no_document: 'لا ملفّ بيانات في المشروع',
   no_client_name: 'الملفّ بلا اسم عميل',
   duplicate_case_number: 'رقم القضية مكرّر بين مشروعين',
   read_failed: 'تعذّرت قراءة الملفّ',
@@ -49,10 +61,11 @@ const ACTION_LABEL: Record<string, { text: string; variant: 'success' | 'primary
   none: { text: 'بلا تغيير', variant: 'outline' },
 };
 
-/* ═══ خريطة الحقول ═══ */
+/* ═══ اسمُ الملفّ وخريطة الحقول ═══ */
 export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
   const [data, setData] = useState<BasecampMap | null>(null);
   const [draft, setDraft] = useState<[string, string][]>([]);
+  const [titles, setTitles] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   /* مطويٌّ ابتداءً: الخريطة تُضبط مرّةً ثم تُنسى، وسبعةَ عشرَ سطراً
@@ -63,6 +76,7 @@ export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
     const next = await db.getBasecampMap();
     setData(next);
     setDraft(Object.entries(next.map));
+    setTitles(next.titles ?? []);
   };
 
   useEffect(() => {
@@ -80,8 +94,8 @@ export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
         const name = label.trim();
         if (name && target) map[name] = target;
       }
-      await db.saveBasecampMap(map);
-      setNote('حُفظت الخريطة');
+      await db.saveBasecampMap(map, titles.map((title) => title.trim()).filter(Boolean));
+      setNote('حُفظت الخريطة والعناوين');
       onSaved?.();
     } catch {
       setNote('تعذّر الحفظ');
@@ -94,9 +108,9 @@ export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
     <Card className="p-6 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h4 className="font-semibold text-foreground">خريطة الحقول</h4>
+          <h4 className="font-semibold text-foreground">اسمُ الملفّ وخريطةُ الحقول</h4>
           <p className="text-sm text-muted-foreground">
-            العنوانُ كما هو مكتوبٌ في «ملخص القضية»، يقابله حقلٌ في المنصة. والتشكيلُ
+            العنوانُ كما هو مكتوبٌ في «بيانات المشروع»، يقابله حقلٌ في المنصة. والتشكيلُ
             والتطويلُ لا يُهمّان — تُطابَق موحَّدةً.
           </p>
         </div>
@@ -108,6 +122,47 @@ export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
 
       {!open ? null : (
       <>
+      {/* ═══ عناوينُ الملفّ المقبولة ═══
+          كان العنوان مكتوباً في الشيفرة، فلمّا صار الملفّ «بيانات المشروع»
+          توقّف الاستيرادُ كلُّه صامتاً. وهي قائمةٌ لا واحد: مشاريعُ سنينَ
+          ماضية لا تزال تحمل «ملخص القضية». */}
+      <div className="space-y-2 pb-4 border-b border-border">
+        <p className="text-sm font-medium text-foreground">عناوينُ الملفّ المقبولة</p>
+        <p className="text-xs text-muted-foreground">
+          كلُّ مشروعٍ فيه ملفٌّ بأحد هذه العناوين يُرجَّح أنّه لعميل. والأوّلُ هو الجاري،
+          وما بعده أسماءٌ قديمةٌ لم تُعَد تسميتُها.
+        </p>
+        {titles.map((title, index) => (
+          <div key={index} className="flex flex-wrap items-center gap-2">
+            <input
+              value={title}
+              onChange={(event) => {
+                const next = [...titles];
+                next[index] = event.target.value;
+                setTitles(next);
+              }}
+              placeholder="عنوان الملفّ في بيسكامب"
+              className="flex-1 min-w-40 h-9 px-3 rounded-md border border-border bg-card text-sm"
+            />
+            <Button
+              onClick={() => setTitles(titles.filter((_, position) => position !== index))}
+              variant="outline"
+              size="sm"
+            >
+              احذف
+            </Button>
+          </div>
+        ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => setTitles([...titles, ''])} variant="outline" size="sm">
+            أضف عنواناً
+          </Button>
+          <Button onClick={() => setTitles([...data.defaultTitles])} variant="outline" size="sm">
+            أعد الافتراضي
+          </Button>
+        </div>
+      </div>
+
       <div className="space-y-2">
         {draft.map(([label, target], index) => (
           <div key={index} className="flex flex-wrap items-center gap-2">
@@ -222,6 +277,9 @@ export function PreviewPanel({
   const tiles = preview
     ? [
         { label: 'عملاء جدد', value: preview.summary.createClients },
+        /* وعملاءُ يُحدَّثون: بلاطةٌ جديدة لأنّ العميل صار يُدمَج بعد إنشائه —
+           فنوعُه وملاحظاتُه تنزل على ملفّه القائم لا على الجديد وحده. */
+        { label: 'عملاء يُحدَّثون', value: preview.summary.updateClients ?? 0 },
         { label: 'قضايا جديدة', value: preview.summary.createCases },
         { label: 'قضايا تُحدَّث', value: preview.summary.updateCases },
         { label: 'بلا تغيير', value: preview.summary.unchanged },
@@ -263,7 +321,7 @@ export function PreviewPanel({
           <CircleCheck aria-hidden="true" />
           <span>
             {`أُنشئ ${formatNumber(applied.clientsCreated ?? 0)} عميلاً و${formatNumber(applied.casesCreated ?? 0)} قضية، ` +
-              `وحُدّثت ${formatNumber(applied.casesUpdated ?? 0)}` +
+              `وحُدّثت ${formatNumber(applied.casesUpdated ?? 0)} قضيةً و${formatNumber(applied.clientsUpdated ?? 0)} عميلاً` +
               (applied.conflicts ? `، و${formatNumber(applied.conflicts)} اختلافاً ينتظر قرارك` : '')}
           </span>
         </Alert>
@@ -289,7 +347,9 @@ export function PreviewPanel({
                   <th className="text-start py-2 font-medium">المشروع</th>
                   <th className="text-start py-2 font-medium">العميل</th>
                   <th className="text-start py-2 font-medium">القضية</th>
-                  <th className="text-start py-2 font-medium">ملاحظات</th>
+                  {/* «تنبيهات» لا «ملاحظات»: للملفّ حقلُ ملاحظاتٍ يُستورد
+                      الآن، واسمان واحدٌ في شاشةٍ واحدة يُقرآن شيئاً واحداً. */}
+                  <th className="text-start py-2 font-medium">تنبيهات</th>
                 </tr>
               </thead>
               <tbody>
@@ -303,6 +363,21 @@ export function PreviewPanel({
                             {ACTION_LABEL[plan.client.action].text}
                           </Badge>
                           <p className="text-foreground">{plan.client.fullName}</p>
+                          {plan.client.clientType && (
+                            <p className="text-xs text-muted-foreground">
+                              {clientTypeLabel(plan.client.clientType)}
+                            </p>
+                          )}
+                          {/* وما سيُكتب على عميلٍ قائم يُسمّى حقلاً حقلاً: من
+                              يرى «نوع العميل، ملاحظات العميل» يعرف ما يقع
+                              على ملفٍّ قائمٍ قبل أن يقع. */}
+                          {plan.client.changes?.length > 0 && (
+                            <p className="text-xs text-primary">
+                              {plan.client.changes
+                                .map((field) => FIELD_LABEL[`client.${field}`] ?? field)
+                                .join('، ')}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -315,8 +390,23 @@ export function PreviewPanel({
                             {ACTION_LABEL[plan.case.action].text}
                           </Badge>
                           <p className="text-foreground"><bdi>{plan.case.caseNumber}</bdi></p>
+                          <p className="text-xs text-muted-foreground">
+                            {[
+                              plan.case.status ? caseStatusLabel(plan.case.status) : null,
+                              plan.case.outcome ? caseOutcomeLabel(plan.case.outcome) : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                          {/* والملاحظاتُ تُعرض مقصوصة: بها يُرى أنّها
+                              التُقطت من الملفّ قبل أن تُكتب. */}
+                          {plan.case.notes && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {plan.case.notes}
+                            </p>
+                          )}
                           {plan.case.changes.length > 0 && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-primary">
                               {plan.case.changes.map((f) => FIELD_LABEL[f] ?? f).join('، ')}
                             </p>
                           )}

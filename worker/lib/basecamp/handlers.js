@@ -5,7 +5,13 @@
 // من `settings.update` ولا من `clients.create` — بل من ملكِ المنصة.
 
 import { BasecampError } from './api.js';
-import { readSummaryDocument, scanProjects } from './discover.js';
+import {
+  DEFAULT_DOC_TITLES,
+  readDocTitles,
+  readProjectDocument,
+  scanProjects,
+  writeDocTitles,
+} from './discover.js';
 import { DEFAULT_FIELD_MAP, TARGETS } from './parse.js';
 import { buildPlan, readFieldMap, runSync, writeFieldMap } from './sync.js';
 import {
@@ -169,7 +175,8 @@ export async function rescan(env, user) {
     await logActivity(
       env,
       user,
-      `مُسحت مشاريع بيسكامب: ${summary.scanned} مشروعاً، منها ${summary.client} لعملاء`,
+      `مُسحت مشاريع بيسكامب: ${summary.scanned} مشروعاً، منها ${summary.client} لعملاء` +
+        (summary.renamed ? `، و${summary.renamed} ملفّاً أُعيدت تسميتُه` : ''),
     );
     return Response.json({ ok: true, data: summary });
   } catch (scanError) {
@@ -187,7 +194,7 @@ export async function listProjects(env, user) {
   if (!isAdmin(user)) return fail('forbidden', 403);
 
   const { results } = await env.DB.prepare(
-    `SELECT p.project_id, p.name, p.app_url, p.status, p.doc_id, p.doc_updated_at,
+    `SELECT p.project_id, p.name, p.app_url, p.status, p.doc_id, p.doc_title, p.doc_updated_at,
             p.kind, p.decided_by, p.client_id, p.case_id, p.last_synced_at, p.last_error,
             c.case_number, c.client_name
      FROM basecamp_projects p
@@ -202,7 +209,10 @@ export async function listProjects(env, user) {
       name: row.name,
       appUrl: row.app_url,
       status: row.status,
-      hasSummary: Boolean(row.doc_id),
+      hasDocument: Boolean(row.doc_id),
+      /* واسمُ الملفّ كما هو عندهم: مشروعان أحدُهما «بيانات المشروع»
+         والآخر «ملخص القضية» — والفرقُ يُرى بدل أن يُخمَّن. */
+      docTitle: row.doc_title ?? null,
       docUpdatedAt: row.doc_updated_at ?? null,
       kind: row.kind,
       decidedByHand: Boolean(row.decided_by),
@@ -241,7 +251,7 @@ export async function classifyProject(request, env, user, projectId) {
 }
 
 /**
- * نصُّ «ملخص القضية» كما هو.
+ * نصُّ «بيانات المشروع» كما هو.
  *
  * وهو ما تُبنى عليه خريطةُ الحقول: عناوينُ الحقول تُقرأ من ملفٍّ حقيقي لا
  * تُخمَّن. والمسار يخدم شاشةَ الإعدادات في مرحلة الإعداد وحدها.
@@ -259,7 +269,7 @@ export async function readSample(env, user, url) {
     .first();
 
   if (!row) return fail('not_found', 404);
-  if (!row.doc_id) return fail('no_summary', 404);
+  if (!row.doc_id) return fail('no_document', 404);
 
   const connection = await activeConnection(env);
   if (connection.error) {
@@ -267,7 +277,7 @@ export async function readSample(env, user, url) {
   }
 
   try {
-    const document = await readSummaryDocument(connection, row.project_id, row.doc_id);
+    const document = await readProjectDocument(connection, row.project_id, row.doc_id);
     return Response.json({
       ok: true,
       data: { projectId: row.project_id, projectName: row.name, ...document },
@@ -279,14 +289,21 @@ export async function readSample(env, user, url) {
   }
 }
 
-/* ═══ خريطةُ الحقول ═══
-   عناوينُ «ملخص القضية» تختلف بين مكتبٍ وآخر، فتُعدَّل من الشاشة لا
-   بنشرِ شيفرة. */
+/* ═══ خريطةُ الحقول وعناوينُ الملفّ ═══
+   اسمُ الملفّ في بيسكامب وعناوينُ حقوله يبدّلهما المكتب — وقد بدّل الاسم
+   من «ملخص القضية» إلى «بيانات المشروع». فيُضبطان من الشاشة لا بنشرِ
+   شيفرة، وفي نداءٍ واحد لأنهما يُراجَعان معاً. */
 export async function readMap(env, user) {
   if (!isAdmin(user)) return fail('forbidden', 403);
   return Response.json({
     ok: true,
-    data: { map: await readFieldMap(env), targets: TARGETS, defaults: DEFAULT_FIELD_MAP },
+    data: {
+      map: await readFieldMap(env),
+      targets: TARGETS,
+      defaults: DEFAULT_FIELD_MAP,
+      titles: await readDocTitles(env),
+      defaultTitles: DEFAULT_DOC_TITLES,
+    },
   });
 }
 
@@ -311,7 +328,22 @@ export async function writeMap(request, env, user) {
   }
 
   await writeFieldMap(env, clean, user.id);
-  return Response.json({ ok: true, data: { map: clean } });
+
+  /* والعناوين اختيارية في الجسم: من يحفظ الخريطة وحدها لا تُمحى عناوينُه.
+     وقائمةٌ فارغة تُردّ إلى الافتراض — لا تُحفظ فارغةً، فحسابٌ بلا عنوانٍ
+     مقبول لا يجد ملفّاً في مشروعٍ واحد. */
+  let titles = null;
+  if (Array.isArray(body.titles)) {
+    const cleanTitles = [];
+    for (const title of body.titles) {
+      const name = String(title ?? '').trim().slice(0, 120);
+      if (name && !cleanTitles.includes(name)) cleanTitles.push(name);
+    }
+    titles = cleanTitles.length ? cleanTitles : [...DEFAULT_DOC_TITLES];
+    await writeDocTitles(env, titles, user.id);
+  }
+
+  return Response.json({ ok: true, data: { map: clean, titles: titles ?? await readDocTitles(env) } });
 }
 
 /* ═══ المعاينة ═══
@@ -430,7 +462,15 @@ export async function listConflicts(env, user) {
 
 const CASE_COLUMN = {
   caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
-  status: 'status', outcome: 'outcome',
+  status: 'status', outcome: 'outcome', notes: 'notes',
+};
+
+/* وحقولُ العميل تُسمّى في صفّ التعارض بسابقةِ `client.` — فالجدول واحد
+   لهما، والسابقةُ تقول أيَّ صفٍّ يُكتب حين يُحسم. */
+const CLIENT_COLUMN = {
+  fullName: 'full_name', idNumber: 'id_number', idType: 'id_type', phone: 'phone',
+  email: 'email', clientType: 'client_type', commercialRegister: 'commercial_register',
+  notes: 'notes',
 };
 
 /**
@@ -462,22 +502,40 @@ export async function resolveConflict(request, env, user, conflictId) {
   if (!row) return fail('not_found', 404);
 
   const now = nowSeconds();
-
-  if (choice === 'basecamp' && row.case_id && CASE_COLUMN[row.field]) {
-    await env.DB.prepare(`UPDATE cases SET ${CASE_COLUMN[row.field]} = ?, updated_at = ? WHERE id = ?`)
-      .bind(row.basecamp_value, now, row.case_id)
-      .run();
-  }
+  const isClientField = row.field.startsWith('client.');
+  const field = isClientField ? row.field.slice('client.'.length) : row.field;
 
   const project = await env.DB.prepare(
-    `SELECT synced_values FROM basecamp_projects WHERE project_id = ?`,
+    `SELECT synced_values, client_id FROM basecamp_projects WHERE project_id = ?`,
   )
     .bind(row.project_id)
     .first();
 
-  let snapshot = {};
-  try { snapshot = JSON.parse(project?.synced_values ?? '{}') ?? {}; } catch { snapshot = {}; }
-  snapshot[row.field] = row.basecamp_value;
+  if (choice === 'basecamp') {
+    if (isClientField && project?.client_id && CLIENT_COLUMN[field]) {
+      await env.DB.prepare(
+        `UPDATE clients SET ${CLIENT_COLUMN[field]} = ?, updated_at = ? WHERE id = ?`,
+      )
+        .bind(row.basecamp_value, now, project.client_id)
+        .run();
+    } else if (!isClientField && row.case_id && CASE_COLUMN[field]) {
+      await env.DB.prepare(`UPDATE cases SET ${CASE_COLUMN[field]} = ?, updated_at = ? WHERE id = ?`)
+        .bind(row.basecamp_value, now, row.case_id)
+        .run();
+    }
+  }
+
+  /* والصورةُ تُحدَّث في بابها: حقلُ العميل في `client` وحقلُ القضية في
+     `case`. وصورةٌ قديمة (حقولُ قضيةٍ مبسوطة) تُرفع إلى الشكل الجديد هنا
+     كما ترفعها المزامنة. */
+  let stored = {};
+  try { stored = JSON.parse(project?.synced_values ?? '{}') ?? {}; } catch { stored = {}; }
+  const snapshot = ('case' in stored || 'client' in stored)
+    ? { case: stored.case ?? {}, client: stored.client ?? {} }
+    : { case: stored, client: {} };
+
+  if (isClientField) snapshot.client[field] = row.basecamp_value;
+  else snapshot.case[field] = row.basecamp_value;
 
   await env.DB.prepare(
     `UPDATE basecamp_projects SET synced_values = ?, updated_at = ? WHERE project_id = ?`,
@@ -511,17 +569,32 @@ function shapePlan(plan) {
           idNumber: plan.client.values.idNumber ?? null,
           idType: plan.client.values.idType ?? null,
           phone: plan.client.values.phone ?? null,
+          clientType: plan.client.values.clientType ?? null,
+          /* الملاحظاتُ تُعرض مقصوصة: المعاينةُ جدولٌ، وفقرةٌ كاملة فيه
+             تدفع بقيّةَ الصفوف تحت الطيّ. والنصُّ كلُّه في الملفّ. */
+          notes: shorten(plan.client.values.notes),
           /* عددُ الأرقام يُعرض: من يرى «٣ أرقام» يعرف أنّ أرقام الأهل
              التُقطت، ومن يرى «١» يراجع ملفَّه. */
           contacts: (plan.client.values.contacts ?? []).length,
+          changes: Object.keys(plan.client.changes ?? {}),
         }
       : null,
     case: plan.case
       ? { action: plan.case.action, caseNumber: plan.case.values.caseNumber,
-          caseType: plan.case.values.caseType, changes: Object.keys(plan.case.changes ?? {}) }
+          caseType: plan.case.values.caseType,
+          status: plan.case.values.status ?? null,
+          outcome: plan.case.values.outcome ?? null,
+          notes: shorten(plan.case.values.notes),
+          changes: Object.keys(plan.case.changes ?? {}) }
       : null,
   };
 }
+
+const shorten = (text, limit = 120) => {
+  const value = String(text ?? '').replace(/\s+/g, ' ').trim();
+  if (!value) return null;
+  return value.length > limit ? `${value.slice(0, limit)}…` : value;
+};
 
 /* سجلُّ الأنشطة القائم يحمل عملَ المزامنة كذلك — فلا جدولَ سجلٍّ ثانٍ،
    وما يقع في المنصة يُقرأ كلُّه من شاشةٍ واحدة. */

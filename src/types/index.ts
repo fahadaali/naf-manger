@@ -95,6 +95,13 @@ export interface Case {
   clientId: string;
   clientName: string;
   summary: string;
+  /**
+   * حاشيةٌ على القضية — غيرُ الملخّص.
+   *
+   * الملخّصُ موضوعُ القضية، والملاحظةُ ما يُكتب حولها: «الأوراق الأصلية عند
+   * وكيله». و«بيانات المشروع» في بيسكامب يحملها، فتُستورد إلى عمودها هي.
+   */
+  notes?: string;
   status: 'pending' | 'completed' | 'postponed' | 'in-progress';
   outcome?: 'won' | 'lost' | 'settled';
   basecampUrl?: string;
@@ -244,8 +251,10 @@ export interface BasecampProject {
   name: string;
   appUrl: string;
   status: 'active' | 'archived' | 'trashed';
-  /** أفيه ملفّ «ملخص القضية»؟ وهو ما يرجّح أنّه مشروعُ عميل. */
-  hasSummary: boolean;
+  /** أفيه ملفّ «بيانات المشروع»؟ وهو ما يرجّح أنّه مشروعُ عميل. */
+  hasDocument: boolean;
+  /** واسمُه كما هو عندهم — الجاري أو ما كان قبله. */
+  docTitle: string | null;
   docUpdatedAt: string | null;
   kind: 'client' | 'internal' | 'unknown';
   /** صنّفه إنسانٌ بيده — فلا ينقضه مسحٌ لاحق. */
@@ -266,9 +275,13 @@ export interface BasecampScan {
   failed: number;
   /** بلغ المسرد سقفَ الصفحات ولم يكتمل — يُقال ولا يُبتلع. */
   incomplete: boolean;
+  /** ملفّاتٌ عُرفت بمعرّفها بعد أن تبدّل عنوانُها عندهم. */
+  renamed: number;
+  /** وعناوينُها الجديدة — تُعرض لتُضاف إلى المقبولة. */
+  renamedTitles: string[];
 }
 
-/** نصُّ «ملخص القضية» كما هو — تُبنى عليه خريطةُ الحقول. */
+/** نصُّ «بيانات المشروع» كما هو — تُبنى عليه خريطةُ الحقول. */
 export interface BasecampSample {
   projectId: string;
   projectName: string;
@@ -279,11 +292,14 @@ export interface BasecampSample {
   updatedAt: string | null;
 }
 
-/** خريطةُ الحقول: عنوانٌ في «ملخص القضية» ← حقلٌ في المنصة. */
+/** خريطةُ الحقول: عنوانٌ في «بيانات المشروع» ← حقلٌ في المنصة. */
 export interface BasecampMap {
   map: Record<string, string>;
   targets: Record<string, { label: string; entity: 'client' | 'case'; required?: boolean }>;
   defaults: Record<string, string>;
+  /** عناوينُ الملفّ المقبولة — أوّلُها الجاري وما بعده ما كان قبله. */
+  titles: string[];
+  defaultTitles: string[];
 }
 
 /** ما سيقع لمشروعٍ واحد — تُعرض قبل أن يقع. */
@@ -296,9 +312,31 @@ export interface BasecampPlan {
   conflicts: { field: string; platformValue: string; basecampValue: string }[];
   /** عناوينُ في الملفّ بلا مقابلٍ في الخريطة — تُعرض لتُربط، فلا تضيع صامتة. */
   unmapped: string[];
-  client: { action: 'create_client' | 'link_client'; fullName: string; idNumber: string } | null;
+  client:
+    | {
+        action: 'create_client' | 'link_client';
+        fullName: string;
+        idNumber: string | null;
+        idType: string | null;
+        phone: string | null;
+        clientType: string | null;
+        /** مقصوصةٌ للعرض — والنصُّ كلُّه في الملفّ. */
+        notes: string | null;
+        contacts: number;
+        /** حقولٌ ستُكتب على عميلٍ قائم. */
+        changes: string[];
+      }
+    | null;
   case:
-    | { action: 'create_case' | 'update_case' | 'none'; caseNumber: string; caseType: string; changes: string[] }
+    | {
+        action: 'create_case' | 'update_case' | 'none';
+        caseNumber: string;
+        caseType: string;
+        status: string | null;
+        outcome: string | null;
+        notes: string | null;
+        changes: string[];
+      }
     | null;
 }
 
@@ -306,6 +344,7 @@ export interface BasecampSummary {
   projects: number;
   createClients: number;
   linkClients: number;
+  updateClients: number;
   createCases: number;
   updateCases: number;
   unchanged: number;
@@ -314,6 +353,7 @@ export interface BasecampSummary {
   warnings: number;
   /** بعد التنفيذ وحده. */
   clientsCreated?: number;
+  clientsUpdated?: number;
   casesCreated?: number;
   casesUpdated?: number;
 }

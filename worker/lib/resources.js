@@ -92,6 +92,9 @@ export const RESOURCES = {
       clientId: ['client_id'],
       clientName: ['client_name'],
       summary: ['summary'],
+      /* والملاحظاتُ غيرُ الملخّص: الملخّصُ موضوعُ القضية، والملاحظةُ حاشيةٌ
+         عليه — وخلطُهما يجعل تعديلَ إحداهما يمحو الأخرى. */
+      notes: ['notes'],
       status: ['status'],
       outcome: ['outcome'],
       basecampUrl: ['basecamp_url'],
@@ -106,7 +109,7 @@ export const RESOURCES = {
          مكشوفان معاً أدناه، فلا يُمسّ مكوّن منها. */
     },
     required: ['case_number', 'case_type', 'client_id'],
-    defaults: { summary: '', client_name: '', attachments: '[]' },
+    defaults: { summary: '', notes: '', client_name: '', attachments: '[]' },
   },
 
   marketers: {

@@ -1,4 +1,4 @@
-// قراءةُ «ملخص القضية» — من HTML محرّر بيسكامب إلى حقولٍ مفهومة.
+// قراءةُ «بيانات المشروع» — من HTML محرّر بيسكامب إلى حقولٍ مفهومة.
 //
 // ═══ لماذا قواعدُ لا استخلاصٌ ذكي ═══
 //
@@ -23,17 +23,26 @@ export const TARGETS = {
   'client.email': { label: 'البريد الإلكتروني', entity: 'client' },
   'client.clientType': { label: 'نوع العميل', entity: 'client' },
   'client.commercialRegister': { label: 'السجل التجاري', entity: 'client' },
+  'client.notes': { label: 'ملاحظات العميل', entity: 'client' },
   'case.caseNumber': { label: 'رقم القضية', entity: 'case' },
   'case.caseType': { label: 'نوع القضية', entity: 'case' },
-  'case.summary': { label: 'ملخص القضية', entity: 'case' },
-  'case.status': { label: 'حالة القضية', entity: 'case' },
-  'case.outcome': { label: 'نتيجة القضية', entity: 'case' },
+  'case.summary': { label: 'موضوع المشروع', entity: 'case' },
+  'case.status': { label: 'حالة المشروع', entity: 'case' },
+  'case.outcome': { label: 'نتيجة المشروع', entity: 'case' },
+  'case.notes': { label: 'ملاحظات المشروع', entity: 'case' },
 };
 
-/** خريطةٌ افتراضية — اقتراحٌ يُصحَّح من الشاشة بعد رؤية ملفٍّ حقيقي. */
+/**
+ * خريطةٌ افتراضية — اقتراحٌ يُصحَّح من الشاشة بعد رؤية ملفٍّ حقيقي.
+ *
+ * وفيها عناوينُ «المشروع» و«القضية» معاً: الملفّ صار «بيانات المشروع»
+ * وعناوينُه تبعته، ومشاريعُ سنينَ ماضية لا تزال تقول «القضية». وخريطةٌ
+ * تعرف الاثنين تقرأ القديمَ والجديد بلا أن يُعاد ضبطُها.
+ */
 export const DEFAULT_FIELD_MAP = {
   'اسم العميل': 'client.fullName',
   'العميل': 'client.fullName',
+  'الموكل': 'client.fullName',
   'رقم الهوية': 'client.idNumber',
   'الهوية': 'client.idNumber',
   'رقم الإقامة': 'client.idNumber',
@@ -45,12 +54,29 @@ export const DEFAULT_FIELD_MAP = {
   'البريد الإلكتروني': 'client.email',
   'البريد': 'client.email',
   'نوع العميل': 'client.clientType',
+  'تصنيف العميل': 'client.clientType',
+  'صفة العميل': 'client.clientType',
+  'ملاحظات العميل': 'client.notes',
   'رقم القضية': 'case.caseNumber',
+  'رقم المشروع': 'case.caseNumber',
+  'رقم الملف': 'case.caseNumber',
   'نوع القضية': 'case.caseType',
+  'نوع المشروع': 'case.caseType',
   'موضوع القضية': 'case.summary',
+  'موضوع المشروع': 'case.summary',
   'ملخص القضية': 'case.summary',
+  'ملخص المشروع': 'case.summary',
+  'وصف المشروع': 'case.summary',
   'حالة القضية': 'case.status',
+  'حالة المشروع': 'case.status',
   'نتيجة القضية': 'case.outcome',
+  'نتيجة المشروع': 'case.outcome',
+  'النتيجة': 'case.outcome',
+  'ملاحظات': 'case.notes',
+  'الملاحظات': 'case.notes',
+  'ملاحظات المشروع': 'case.notes',
+  'ملاحظات القضية': 'case.notes',
+  'ملاحظات إضافية': 'case.notes',
 };
 
 /** مفرداتٌ افتراضية — والمعتمَدُ ما في «تكوين النظام». */
@@ -59,23 +85,39 @@ export const DEFAULT_ID_TYPES = ['هوية وطنية', 'إقامة', 'سجل ت
 
 const ENTITIES = {
   /* مفرداتُ المنصة كما في `roles.js` و«تكوين النظام» — والملفّ يكتبها
-     بالعربية، فتُترجَم إلى ما يقبله العمود. */
+     بالعربية، فتُترجَم إلى ما يقبله العمود.
+
+     والمفرداتُ كثيرةٌ عمداً: من يكتب «بيانات المشروع» يكتب «شركة» مرّةً
+     و«مؤسسة» أخرى و«قطاع خاص» ثالثة، وكلُّها واحد. وما لا يُعرف يبقى كما
+     كُتب — لا يُطمس إلى الافتراضي. */
   clientType: {
     'فرد': 'individual', 'أفراد': 'individual', 'شخص': 'individual',
+    'فردي': 'individual', 'عميل فرد': 'individual', 'شخص طبيعي': 'individual',
     'شركة': 'company', 'مؤسسة': 'company', 'منشأة': 'company',
-    'جمعية': 'association',
-    'جهة حكومية': 'government', 'حكومي': 'government',
+    'شركات': 'company', 'مؤسسة فردية': 'company', 'قطاع خاص': 'company',
+    'شخص اعتباري': 'company',
+    'جمعية': 'association', 'جمعية خيرية': 'association', 'جهة غير ربحية': 'association',
+    'مؤسسة خيرية': 'association',
+    'جهة حكومية': 'government', 'حكومي': 'government', 'حكومية': 'government',
+    'قطاع حكومي': 'government', 'جهة رسمية': 'government',
   },
   status: {
     'منظورة': 'pending', 'جديدة': 'pending', 'قيد النظر': 'pending',
+    'لم تبدأ': 'pending', 'بانتظار': 'pending',
     'قيد المعالجة': 'in-progress', 'جارية': 'in-progress', 'قيد العمل': 'in-progress',
+    'قائمة': 'in-progress', 'تحت الإجراء': 'in-progress', 'مستمرة': 'in-progress',
     'مكتملة': 'completed', 'منتهية': 'completed', 'مغلقة': 'completed',
-    'مؤجلة': 'postponed',
+    'منجزة': 'completed', 'تم': 'completed', 'انتهت': 'completed',
+    'مؤجلة': 'postponed', 'متوقفة': 'postponed', 'معلقة': 'postponed',
   },
   outcome: {
     'ربح': 'won', 'كسب': 'won', 'رابحة': 'won', 'لصالحنا': 'won',
+    'لصالح العميل': 'won', 'لصالح الموكل': 'won', 'ناجحة': 'won', 'حكم لنا': 'won',
+    'مكسوبة': 'won',
     'خسارة': 'lost', 'خاسرة': 'lost', 'ضدنا': 'lost',
-    'تسوية': 'settled', 'صلح': 'settled',
+    'ضد العميل': 'lost', 'مرفوضة': 'lost', 'حكم علينا': 'lost',
+    'تسوية': 'settled', 'صلح': 'settled', 'تصالح': 'settled',
+    'اتفاق': 'settled', 'تسوية ودية': 'settled', 'صلح ودي': 'settled',
   },
 };
 
@@ -118,18 +160,43 @@ const LINE = /^\s*[*_\-•]*\s*([^:：]{1,60}?)\s*[:：]\s*(.*)$/;
  *
  * ويُحتفظ بالعنوان كما كُتب وبصورته الموحَّدة معاً: الأول يُعرض في الشاشة
  * ليتعرّفه صاحبُه، والثاني يُطابَق به فلا يُسقط حقلاً شدّد كاتبُه حرفاً.
+ *
+ * ═══ وعنوانٌ تُرك فارغاً يأخذ ما تحته ═══
+ *
+ * الملاحظاتُ تُكتب هكذا في ملفّات المكتب:
+ *
+ *     الملاحظات:
+ *     - العميل يفضّل التواصل مساءً
+ *     - الأوراق الأصلية عند وكيله
+ *
+ * فالسطر الأول عنوانٌ بلا قيمة، وما تحته أسطرٌ بلا نقطتين — وكانت تُطرح
+ * كلُّها صامتةً فتصل الملاحظاتُ فارغة. فيُلحَق ما بعد العنوان الفارغ به
+ * حتى العنوان التالي.
+ *
+ * والشرطُ «فارغاً» لا يُتجاوز: عنوانٌ حمل قيمةً قد يتلوه ذيلُ الملفّ أو
+ * توقيعٌ أو فقرةٌ لا تخصّه — وابتلاعُها في حقلٍ أسوأُ من إسقاطها، إذ
+ * تُكتب في ملفّ موكّلٍ كأنها منه.
  */
 export function readLabelledLines(text) {
   const found = [];
+  let open = null;
+
   for (const line of String(text ?? '').split('\n')) {
     const match = line.match(LINE);
-    if (!match) continue;
+
+    if (!match) {
+      const trailing = line.replace(/[*_]/g, '').trim();
+      if (open && trailing) open.value = open.value ? `${open.value}\n${trailing}` : trailing;
+      continue;
+    }
 
     const label = match[1].replace(/[*_]/g, '').trim();
     const value = match[2].replace(/[*_]+$/, '').trim();
     if (!label) continue;
 
-    found.push({ label, key: normalizeArabic(label), value });
+    const entry = { label, key: normalizeArabic(label), value };
+    found.push(entry);
+    open = value ? null : entry;
   }
   return found;
 }
@@ -158,7 +225,7 @@ function translate(target, value) {
  * و`unmapped` عناوينُ وُجدت في الملفّ ولا مقابل لها في الخريطة — تُعرض في
  * الشاشة لتُربط، فلا يضيع حقلٌ صامتاً لأنّ أحداً لم يعرف أنه هناك.
  */
-export function parseSummary(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
+export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
   const relations = vocab.contactRelations ?? DEFAULT_RELATIONS;
   const idTypes = vocab.idTypes ?? DEFAULT_ID_TYPES;
   const primaryRelation = relations[0] ?? 'أصيل';
@@ -174,6 +241,9 @@ export function parseSummary(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
   const client = {};
   const kase = {};
   const unmapped = [];
+  /* الملاحظاتُ تُجمَع ولا تُدهس: «الملاحظات» و«ملاحظات إضافية» عنوانان
+     يشيران إلى حقلٍ واحد، وآخِرُهما كان يمحو أوّلَهما. */
+  const notes = { client: [], case: [] };
 
   for (const line of lines) {
     const target = byKey.get(line.key);
@@ -184,6 +254,11 @@ export function parseSummary(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
     if (!line.value) continue;
 
     const [entity, field] = target.split('.');
+
+    if (field === 'notes') {
+      notes[entity].push({ label: line.label, value: line.value });
+      continue;
+    }
 
     /* ═══ القيمةُ المعنونة تُوحَّد إن كان هدفُها رقماً ═══
        «الجوال: 050… وجوال أخيه 055…» سطرٌ واحد، وأخذُه كما هو يجعل حقلَ
@@ -206,6 +281,17 @@ export function parseSummary(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
     const value = translate(target, line.value);
     if (entity === 'client') client[field] = value;
     else kase[field] = value;
+  }
+
+  /* وملاحظةٌ واحدة تُكتب كما هي، وأكثرُ يُصدَّر كلٌّ منها بعنوانه — وإلا
+     التصق كلامان لعنوانين مختلفين فقُرئا واحداً. */
+  for (const [entity, entries] of Object.entries(notes)) {
+    if (!entries.length) continue;
+    const text = entries.length === 1
+      ? entries[0].value
+      : entries.map((entry) => `${entry.label}: ${entry.value}`).join('\n');
+    if (entity === 'client') client.notes = text;
+    else kase.notes = text;
   }
 
   /* ═══ ثمّ المسحُ الديناميكي على النصّ كلِّه ═══
