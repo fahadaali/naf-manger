@@ -227,6 +227,9 @@ for (const [name, run] of [
   ['disconnect', () => handlers.disconnect(env, staff)],
   ['connect', () => handlers.startConnect({}, env, staff, url)],
   ['classify', () => handlers.classifyProject({}, env, staff, '101')],
+  /* ومفتاحُ التلخيص كذلك: هو قرارٌ بأنّ نصوص القضايا تُمرَّر إلى طراز،
+     وليس ذلك من `settings.update` — بل من ملكِ المنصة. */
+  ['ai', () => handlers.setAiImport({ json: async () => ({ enabled: true }) }, env, staff)],
 ]) {
   const r = await run();
   check(`${name} يردّ ٤٠٣ لغير المسؤول`, r.status === 403 && r.body.error === 'forbidden', JSON.stringify(r));

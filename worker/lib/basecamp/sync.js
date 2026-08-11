@@ -20,8 +20,17 @@
 
 import { BasecampError } from './api.js';
 import { readProjectDocument } from './discover.js';
-import { DEFAULT_FIELD_MAP, parseDocument } from './parse.js';
+import { DEFAULT_FIELD_MAP, htmlToText, parseDocument } from './parse.js';
 import { normalizeArabic } from './discover.js';
+import { fullerName, nameRelation } from './names.js';
+import {
+  aiEnabled,
+  fingerprint,
+  newBudget,
+  suggestCaseType,
+  summarizeCase,
+  summarizeClient,
+} from '../ai/summarize.js';
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -42,7 +51,7 @@ const FIELD_MAP_KEY = 'basecamp_field_map';
 /** الحقول التي تملكها المزامنة. وما عداها للمنصة وحدها. */
 export const CLIENT_FIELDS = [
   'fullName', 'idNumber', 'idType', 'phone', 'contacts', 'email', 'clientType',
-  'commercialRegister', 'notes',
+  'commercialRegister', 'legalRepresentative', 'notes',
 ];
 export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome', 'notes'];
 
@@ -56,7 +65,7 @@ const CLIENT_MERGE_FIELDS = CLIENT_FIELDS.filter((field) => field !== 'contacts'
 const CLIENT_COLUMN = {
   fullName: 'full_name', idNumber: 'id_number', idType: 'id_type', phone: 'phone',
   email: 'email', clientType: 'client_type', commercialRegister: 'commercial_register',
-  notes: 'notes',
+  legalRepresentative: 'legal_representative', notes: 'notes',
 };
 const CASE_COLUMN = {
   caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
@@ -116,6 +125,9 @@ async function readVocabulary(env) {
   return {
     contactRelations: Array.isArray(stored.contactRelations) ? stored.contactRelations : undefined,
     idTypes: Array.isArray(stored.idTypes) ? stored.idTypes : undefined,
+    /* وأنواعُ القضايا: منها وحدَها يختار الاقتراحُ الآليّ. فما يقترحه
+       الطراز نوعٌ يعرفه المكتب ويراه في منسدلاته، لا مفردةٌ من عنده. */
+    caseTypes: Array.isArray(stored.caseTypes) ? stored.caseTypes : undefined,
   };
 }
 
@@ -171,12 +183,6 @@ function mergeField({ current, incoming, lastSynced, blank, firstContact, same =
   return { action: platformTouched ? 'conflict' : 'write' };
 }
 
-/* ═══ والاسمُ يُقارن موحَّداً ═══
-   العميلُ قد يُطابَق باسمه موحَّداً — «شركة الأفق» و«شركة الافق» واحد. ثم
-   تُقارن الحقولُ حرفاً، فيقف الاسمُ نفسُه اختلافاً في كل مزامنة: صفٌّ في
-   الشاشة يسأل عن فرقٍ في همزة. فما طوبق به يُقارن به. */
-const sameName = (one, other) => normalizeArabic(one ?? '') === normalizeArabic(other ?? '');
-
 /**
  * رقمُ قضيةٍ بديلٌ ثابت حين لا يحمله الملفّ.
  *
@@ -195,6 +201,17 @@ const fallbackNumber = (prefix, projectId) => `${prefix}-${projectId}`;
  * والاسمُ ثانياً لا أوّلاً: الهويةُ فريدةٌ في المخطَّط، والاسمُ يتشابه.
  * لكنّ ملفّاً بلا رقمِ هوية لا يعني عميلاً جديداً — وهو ما يفعله إنسانٌ
  * حين يقرأ اسماً يعرفه.
+ *
+ * ═══ والاسمُ المختصر يُقترح ولا يُدمج ═══
+ *
+ * «محمد خالد عبدالله القحطاني» و«محمد خالد القحطاني»: إن اتّحد رقمُ
+ * الهوية فهما واحد — والمطابقةُ بالهوية تكفّلت بذلك قبل أن يُنظر في
+ * الاسم أصلاً.
+ *
+ * أمّا بلا هوية فالاحتواءُ **مرشَّحٌ لا حكم**: «محمد القحطاني» اسمُ عشرة،
+ * ودمجُ ملفَّي موكّلين مختلفين خطأٌ لا يُكشف إلا بعد أن يُبنى عليه —
+ * توكيلٌ في ملفّ غيره، وقضيةٌ تُنسب إلى من ليس صاحبَها. فيُردّ في
+ * `candidate` ليُقال في المعاينة، ويبقى الحكمُ لمن يقرأ.
  */
 async function findClient(env, { idNumber, fullName }) {
   if (idNumber) {
@@ -209,11 +226,16 @@ async function findClient(env, { idNumber, fullName }) {
   if (!target) return null;
 
   const byName = (results ?? []).find((client) => normalizeArabic(client.full_name) === target);
-  return byName ? { row: byName, matchedBy: 'fullName' } : null;
+  if (byName) return { row: byName, matchedBy: 'fullName' };
+
+  const similar = (results ?? []).find(
+    (client) => nameRelation(client.full_name, fullName) === 'abbreviation',
+  );
+  return similar ? { row: null, matchedBy: null, candidate: similar } : null;
 }
 
 /** خطّةُ مشروعٍ واحد: ماذا سيقع له ولماذا. */
-async function planProject(env, connection, row, fieldMap, seen, vocab) {
+async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
   const plan = {
     projectId: row.project_id,
     projectName: row.name,
@@ -262,6 +284,12 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
   const wanted = { ...parsed.client };
   if (!wanted.idNumber) plan.warnings.push('بلا رقم هوية — يُملأ في الشاشة');
 
+  /* مسؤولُ التواصل بنيةٌ، وعمودُه نصُّ JSON. فيُسلسَل هنا — عند حدّ
+     القاعدة — لا في القارئ: القارئُ يقرأ ملفّاً، ولا يعرف شكلَ عمود. */
+  if (wanted.legalRepresentative && typeof wanted.legalRepresentative === 'object') {
+    wanted.legalRepresentative = JSON.stringify(wanted.legalRepresentative);
+  }
+
   /* ═══ ما ستُنشئه خطّةٌ سابقة موجودٌ في حكم هذه ═══
 
      الخطط تُبنى كلُّها على حالةِ القاعدة قبل أي كتابة. فمشروعان لعميلٍ
@@ -270,12 +298,18 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
 
      فما تنوي خطّةٌ سابقة إنشاءه يُحسب موجوداً: يصير الثاني «ربطاً»،
      فتصدق المعاينةُ ويصحّ التنفيذ. وهي حالةُ «قضاياه المتعددة» نفسها. */
-  const match = await findClient(env, wanted);
+  const found = await findClient(env, wanted);
+  const match = found?.row ? found : null;
   const pendingKey = normalizeArabic(wanted.fullName);
   const pending = !match && seen.clients.has(pendingKey);
 
   if (match?.matchedBy === 'fullName') plan.warnings.push('طوبق العميل بالاسم لا بالهوية');
   if (pending) plan.warnings.push('يُربط بعميلٍ يُنشئه مشروعٌ آخر في هذه الدفعة');
+  /* مرشَّحٌ بالاسم بلا هوية: يُقال ولا يُدمج. ودمجُ ملفَّي موكّلين
+     مختلفين خطأٌ لا يُكشف إلا بعد أن يُبنى عليه. */
+  if (found?.candidate) {
+    plan.warnings.push(`يشبه عميلاً قائماً: «${found.candidate.full_name}» — راجِعه قبل الإنشاء`);
+  }
 
   /* ═══ وعميلٌ قائم يُدمَج لا يُترك ═══
 
@@ -287,9 +321,32 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
      وحدهم، ويقف ما تبدّل عند الطرفين تعارضاً ينتظر قراراً. */
   const clientChanges = {};
   if (match?.row) {
+    /* ═══ الاسمُ حالةٌ بذاتها ═══
+
+       طوبق العميلُ بهويته، ثم يُقارن اسمُه حرفاً — فيقف «محمد خالد
+       القحطاني» عند «محمد خالد عبدالله القحطاني» اختلافاً في كل مزامنة،
+       وهما رجلٌ واحد بيقينِ الهوية.
+
+       فما كان أحدُهما اختصاراً للآخر يُكتب أتمُّهما ولا يُسأل: مكتبُ
+       محاماة يريد الاسم الكامل — هو ما يُكتب في الوكالة والصحيفة. وما
+       كان اسماً آخر بحقٍّ يمضي إلى الدمج كبقية الحقول. */
+    const relation = wanted.fullName
+      ? nameRelation(match.row.full_name, wanted.fullName)
+      : 'same';
+
+    if (relation === 'abbreviation') {
+      const fuller = fullerName(match.row.full_name, wanted.fullName);
+      if (fuller !== match.row.full_name) {
+        clientChanges.fullName = fuller;
+        plan.warnings.push(`اسمُ الملفّ أتمُّ — يُكتب «${fuller}»`);
+      }
+    }
+
     for (const field of CLIENT_MERGE_FIELDS) {
       const column = CLIENT_COLUMN[field];
       if (!column) continue;
+      /* والاسمُ حُسم فوق — إلا أن يكون اسماً آخر لا اختصاراً. */
+      if (field === 'fullName' && relation !== 'different') continue;
 
       const verdict = mergeField({
         current: match.row[column],
@@ -297,7 +354,6 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
         lastSynced: synced.client[field],
         blank: isBlank(column, match.row[column]),
         firstContact: true,
-        same: field === 'fullName' ? sameName : undefined,
       });
 
       if (verdict.action === 'write') clientChanges[field] = wanted[field];
@@ -326,6 +382,27 @@ async function planProject(env, connection, row, fieldMap, seen, vocab) {
   if (!caseValues.caseNumber) {
     caseValues.caseNumber = fallbackNumber('بيسكامب', row.project_id);
     plan.warnings.push('رقم القضية مولَّد — يحتاج تصحيحاً');
+  }
+  /* ═══ نوعُ القضية حين يخلو منه الملفّ ═══
+
+     كان يُكتب «غير محدّد» ويبقى كذلك في مئات القضايا المستوردة. والطراز
+     يقترح نوعاً **من قائمة المكتب وحدها** — فما ليس في «تكوين النظام»
+     يُردّ، وأسوأُ ما يقع أن يبقى الحقلُ كما كان.
+
+     وهو اقتراحٌ يُقال في المعاينة قبل أن يُكتب: يُقرأ في الشاشة ويُصحَّح.
+     ولا يُقترح فوق نوعٍ كتبه الملفّ أو كتبته يد — الاقتراحُ لمن لا شيءَ له. */
+  if (!caseValues.caseType && ai?.enabled && ai.budget.spend()) {
+    const suggestion = await suggestCaseType(env, {
+      text: htmlToText(document.content ?? '').slice(0, 2000),
+      options: vocab.caseTypes ?? [],
+    });
+    if (suggestion) {
+      caseValues.caseType = suggestion;
+      plan.caseTypeSuggested = true;
+      plan.warnings.push(`نوعُ القضية مقترحٌ آلياً: «${suggestion}» — راجِعه`);
+    } else {
+      ai.budget.failed++;
+    }
   }
   if (!caseValues.caseType) caseValues.caseType = 'غير محدّد';
 
@@ -401,10 +478,13 @@ export async function buildPlan(env, connection) {
   ).all();
 
   const vocab = await readVocabulary(env);
+  /* سياقُ الاستدلال يُبنى مرّةً للدورة كلِّها: السقفُ سقفُ الدورة لا
+     سقفُ المشروع الواحد، وإلا استدلّ حسابٌ فيه ثلاثمئة مشروعٍ ثلاثمئة مرّة. */
+  const ai = { enabled: await aiEnabled(env), budget: newBudget() };
   const seen = { clients: new Set(), cases: new Set() };
   const plans = [];
   for (const row of results ?? []) {
-    plans.push(await planProject(env, connection, row, fieldMap, seen, vocab));
+    plans.push(await planProject(env, connection, row, fieldMap, seen, vocab, ai));
   }
 
   const summary = {
@@ -419,20 +499,28 @@ export async function buildPlan(env, connection) {
     conflicts: plans.reduce((n, p) => n + p.conflicts.length, 0),
     failed: plans.filter((p) => p.error).length,
     warnings: plans.reduce((n, p) => n + p.warnings.length, 0),
+    /* والاستدلالُ يُقال عددُه: من يرى «٢٥ استدلالاً و٤٠ مؤجَّلاً» يعرف أنّ
+       الدورة بلغت سقفَها وأنّ الباقي في التي تليها — لا يظنّ أنّ الميزة
+       عطلت. */
+    ai: { enabled: ai.enabled, used: ai.budget.used, deferred: ai.budget.deferred },
   };
 
-  return { summary, plans };
+  return { summary, plans, ai };
 }
 
 /* ═══ التنفيذ ═══ */
 
-async function applyPlan(env, plan, actorId) {
+async function applyPlan(env, plan, actorId, ai) {
   const now = nowSeconds();
   /* وما حُدِّث يُفصَل بصاحبه: «حُدِّثت قضية» كان يُعدّ على أي كتابةٍ وقعت
      — ولو كانت رقمَ هاتفِ عميلها. والعميلُ يُحدَّث الآن فعلاً، فخلطُهما
      يجعل العدّادَ في الشاشة يقول ما لم يقع. */
   const result = {
     projectId: plan.projectId,
+    /* ومعرّفُ العميل يُردّ: ملخّصُ قضاياه يُكتب بعد أن تُطبَّق الدفعة
+       كلُّها — فقضاياه قد تتوزّع على مشاريعَ عدّة، وتلخيصُها بعد كلِّ
+       مشروعٍ يلخّص نصفَها ثم يعيد. */
+    clientId: null,
     created: [],
     updated: { client: [], case: [] },
     error: plan.error,
@@ -449,7 +537,9 @@ async function applyPlan(env, plan, actorId) {
   let createdNow = false;
   if (!clientId) {
     const late = await findClient(env, plan.client.values);
-    if (late) clientId = late.row.id;
+    /* و`late.row` قد تكون فارغةً: البحثُ يردّ مرشَّحاً بالاسم كذلك، وهو
+       اقتراحٌ لا مطابقة — فلا يُربط به موكّل. */
+    if (late?.row) clientId = late.row.id;
   }
   if (!clientId) {
     clientId = crypto.randomUUID();
@@ -457,9 +547,9 @@ async function applyPlan(env, plan, actorId) {
     const values = plan.client.values;
     await env.DB.prepare(
       `INSERT INTO clients (id, full_name, id_number, id_type, phone, contacts, email,
-                            client_type, commercial_register, notes, join_date, status,
-                            created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?, ?)`,
+                            client_type, commercial_register, legal_representative, notes,
+                            join_date, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?, ?)`,
     )
       .bind(
         clientId,
@@ -471,6 +561,8 @@ async function applyPlan(env, plan, actorId) {
         values.email ?? '',
         values.clientType ?? 'individual',
         values.commercialRegister ?? null,
+        /* وهو نصُّ JSON — سُلسِل في الخطّة عند حدّ القاعدة. */
+        values.legalRepresentative ?? null,
         /* والعمود `NOT NULL DEFAULT ''` — فالغيابُ نصٌّ فارغ لا `NULL`. */
         values.notes ?? '',
         /* «عميلٌ منذ» تاريخُ إنشاء مشروعه عندهم — لا تاريخُ الاستيراد.
@@ -512,6 +604,9 @@ async function applyPlan(env, plan, actorId) {
       if (current && !current.id_type && values.idType) fill.id_type = values.idType;
       if (current && !current.phone && values.phone) fill.phone = values.phone;
       if (current && !current.notes && values.notes) fill.notes = values.notes;
+      if (current && !current.legal_representative && values.legalRepresentative) {
+        fill.legal_representative = values.legalRepresentative;
+      }
     }
 
     /* ═══ «عميلٌ منذ» أقدمُ قضاياه ═══
@@ -606,6 +701,51 @@ async function applyPlan(env, plan, actorId) {
     if (fixed?.meta?.changes) result.updated.case.push('createdDate');
   }
 
+  result.clientId = clientId;
+
+  /* ═══ ملخّصُ القضية — نصٌّ يُصاغ لا حقلٌ يُملأ ═══
+
+     يُكتب في `ai_summary`، لا في `notes`: الملاحظاتُ يكتبها المحامي ويأتي
+     فيها ما في «بيانات المشروع»، ونصٌّ صاغه طرازٌ لو دخلها لاختلط بما
+     كتبه إنسان — ودخل الدمجَ الثلاثي، فبدا أنّ «يداً مسّت الحقل» في كل
+     دورة.
+
+     والبصمةُ تمنع الإعادة: ما دام المصدرُ هو هو فالملخّصُ هو هو. */
+  if (ai?.enabled && caseId) {
+    const written = await env.DB.prepare(
+      `SELECT case_type, client_name, summary, status, outcome, notes, ai_summary_hash
+       FROM cases WHERE id = ?`,
+    )
+      .bind(caseId)
+      .first();
+
+    const facts = {
+      clientName: written?.client_name ?? '',
+      caseType: written?.case_type ?? '',
+      summary: written?.summary ?? '',
+      status: written?.status ?? '',
+      outcome: written?.outcome ?? '',
+      notes: written?.notes ?? '',
+    };
+    const hash = await fingerprint(facts);
+
+    if (written && written.ai_summary_hash !== hash && ai.budget.spend()) {
+      const text = await summarizeCase(env, facts);
+      if (text) {
+        await env.DB.prepare(
+          `UPDATE cases SET ai_summary = ?, ai_summary_hash = ?, ai_summary_at = ? WHERE id = ?`,
+        )
+          .bind(text, hash, now, caseId)
+          .run();
+        result.summarized = true;
+      } else {
+        /* وسقوطُ الاستدلال لا يُثبَّت في البصمة: تُترك فارغةً ليُعاد في
+           الدورة القادمة، بدل أن تُقرأ «لُخِّص» وليس فيه ملخّص. */
+        ai.budget.failed++;
+      }
+    }
+  }
+
   // ── التعارضات: تُسجَّل ولا تُكتب ──
   for (const conflict of plan.conflicts) {
     /* الصفُّ المفتوح على الحقل نفسه يُحدَّث لا يُكرَّر: مزامنةٌ كلَّ ساعة
@@ -661,15 +801,73 @@ async function applyPlan(env, plan, actorId) {
   return result;
 }
 
+/**
+ * ملخّصُ قضايا الموكّلين الذين مسّتهم هذه الدفعة.
+ *
+ * ويُبنى من صفوف قضاياه في المنصة لا من ملفٍّ واحد: «ثلاثُ قضايا تجارية،
+ * اثنتان مكتملتان» جملةٌ لا يعرفها مشروعٌ واحد. والبصمةُ على القائمة
+ * كلِّها — فقضيةٌ رابعة تبدّلها، وإعادةُ مزامنةٍ بلا تبدّلٍ لا تبدّلها.
+ */
+async function summarizeClients(env, results, ai) {
+  if (!ai?.enabled) return 0;
+
+  const ids = [...new Set(results.map((entry) => entry.clientId).filter(Boolean))];
+  let written = 0;
+
+  for (const clientId of ids) {
+    const client = await env.DB.prepare(
+      `SELECT full_name, client_type, ai_summary_hash FROM clients WHERE id = ?`,
+    )
+      .bind(clientId)
+      .first();
+    if (!client) continue;
+
+    const { results: cases } = await env.DB.prepare(
+      `SELECT case_type, status, outcome, summary FROM cases
+       WHERE client_id = ? AND archived_at IS NULL ORDER BY created_at`,
+    )
+      .bind(clientId)
+      .all();
+
+    const facts = {
+      fullName: client.full_name,
+      clientType: client.client_type,
+      cases: (cases ?? []).map((row) => ({
+        caseType: row.case_type,
+        status: row.status,
+        outcome: row.outcome,
+        summary: row.summary,
+      })),
+    };
+    if (!facts.cases.length) continue;
+
+    const hash = await fingerprint(facts);
+    if (client.ai_summary_hash === hash) continue;
+    if (!ai.budget.spend()) continue;
+
+    const text = await summarizeClient(env, facts);
+    if (!text) { ai.budget.failed++; continue; }
+
+    await env.DB.prepare(
+      `UPDATE clients SET ai_summary = ?, ai_summary_hash = ?, ai_summary_at = ? WHERE id = ?`,
+    )
+      .bind(text, hash, nowSeconds(), clientId)
+      .run();
+    written++;
+  }
+
+  return written;
+}
+
 /** ينفّذ الخطّة كلَّها. والمشروعُ الساقط لا يوقف من بعده. */
 export async function runSync(env, connection, { actorId, actorName, source }) {
-  const { summary, plans } = await buildPlan(env, connection);
+  const { summary, plans, ai } = await buildPlan(env, connection);
   const results = [];
   let failed = 0;
 
   for (const plan of plans) {
     try {
-      results.push(await applyPlan(env, plan, actorId));
+      results.push(await applyPlan(env, plan, actorId, ai));
     } catch (applyError) {
       failed++;
       const reason = applyError?.message ?? String(applyError);
@@ -684,6 +882,11 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
     }
   }
 
+  /* ═══ ثمّ ملخّصُ قضايا كلِّ موكّل ═══
+     بعد الدفعة كلِّها لا بعد كل مشروع: للموكّل قضايا موزّعةٌ على مشاريع،
+     وتلخيصُها عند أوّلها يلخّص نصفَها ثم يعيد عند ثانيها. */
+  const summarizedClients = await summarizeClients(env, results, ai);
+
   const applied = {
     ...summary,
     failed: summary.failed + failed,
@@ -691,6 +894,13 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
     casesCreated: results.filter((r) => r.created?.includes('case')).length,
     clientsUpdated: results.filter((r) => r.updated?.client?.length).length,
     casesUpdated: results.filter((r) => r.updated?.case?.length).length,
+    ai: {
+      enabled: ai.enabled,
+      cases: results.filter((r) => r.summarized).length,
+      clients: summarizedClients,
+      deferred: ai.budget.deferred,
+      failed: ai.budget.failed,
+    },
   };
 
   await env.DB.prepare(

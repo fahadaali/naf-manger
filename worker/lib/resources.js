@@ -41,12 +41,16 @@ export const RESOURCES = {
       clientType: ['client_type'],
       status: ['status'],
       notes: ['notes'],
+      /* ملخّصُ قضاياه الذي يكتبه التلخيصُ الآليّ — يُقرأ ولا يُكتب هنا. */
+      aiSummary: ['ai_summary'],
+      aiSummaryAt: ['ai_summary_at', 'epoch'],
       profilePicture: ['profile_picture'],
       commercialRegister: ['commercial_register'],
       legalRepresentative: ['legal_representative', 'json'],
       attachments: ['attachments', 'json'],
       archivedAt: ['archived_at', 'epoch'],
     },
+    readOnly: ['aiSummary', 'aiSummaryAt'],
     /* ═══ رقمُ الهوية لم يعد لازماً ═══
        ملفٌّ قديم بلا رقم، وموكّلٌ يُفتح ملفُّه قبل أن يُرسل هويته. وكان
        الاستيراد يولّد رقماً ليمرّ القيدَ — ورقمُ هويةٍ مخترَعٌ في ملفّ
@@ -95,6 +99,8 @@ export const RESOURCES = {
       /* والملاحظاتُ غيرُ الملخّص: الملخّصُ موضوعُ القضية، والملاحظةُ حاشيةٌ
          عليه — وخلطُهما يجعل تعديلَ إحداهما يمحو الأخرى. */
       notes: ['notes'],
+      aiSummary: ['ai_summary'],
+      aiSummaryAt: ['ai_summary_at', 'epoch'],
       status: ['status'],
       outcome: ['outcome'],
       basecampUrl: ['basecamp_url'],
@@ -108,6 +114,7 @@ export const RESOURCES = {
       /* الشاشات تقرأ `createdDate` و`updatedDate` لا `createdAt`. والاسمان
          مكشوفان معاً أدناه، فلا يُمسّ مكوّن منها. */
     },
+    readOnly: ['aiSummary', 'aiSummaryAt'],
     required: ['case_number', 'case_type', 'client_id'],
     defaults: { summary: '', notes: '', client_name: '', attachments: '[]' },
   },
@@ -223,6 +230,11 @@ export function toRow(resource, body) {
 
   for (const [name, field] of Object.entries(resource.fields)) {
     if (!Object.prototype.hasOwnProperty.call(body, name)) continue;
+    /* ═══ حقلٌ يُقرأ ولا يُكتب من المسار ═══
+       `aiSummary` نصٌّ يكتبه التلخيص ومعه بصمةُ مصدره. وكتابتُه من الشاشة
+       تُبقي البصمة على نصٍّ لم يعد موجوداً، فلا يُعاد التلخيصُ أبداً —
+       ويبقى الحقلُ على ما كُتب فوقه. فيُقرأ ويُعرض، ويُبدَّل من مصدره. */
+    if (resource.readOnly?.includes(name)) continue;
     const { column, type } = spec(field);
     const value = body[name];
 

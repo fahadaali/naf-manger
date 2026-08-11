@@ -43,6 +43,9 @@ export interface Client {
   clientType: 'individual' | 'company' | 'association' | 'government';
   status: 'current' | 'former';
   notes: string;
+  /** ملخّصُ قضاياه مجتمعةً — يكتبه التلخيصُ الآليّ، ويُعرض تحت الملاحظات. */
+  aiSummary?: string | null;
+  aiSummaryAt?: string | null;
   /** لحظةُ الأرشفة نصّاً ISO — وغيابُها يعني «حاضر». */
   archivedAt?: string | null;
   attachments: Attachment[];
@@ -102,6 +105,16 @@ export interface Case {
    * وكيله». و«بيانات المشروع» في بيسكامب يحملها، فتُستورد إلى عمودها هي.
    */
   notes?: string;
+  /**
+   * ملخّصٌ صاغه طرازٌ عند الاستيراد — حقلٌ مستقلٌّ عن `notes` عمداً.
+   *
+   * فالملاحظاتُ يكتبها المحامي ويأتي فيها ما في «بيانات المشروع»، ونصٌّ
+   * آليٌّ لو دخلها لاختلط بما كتبه إنسان فقُرئ بعد شهرٍ كأنه منه.
+   * ويُعرض مسمّىً «ملخّصٌ آليّ»، ويُكتب من مصدره لا من الشاشة.
+   */
+  aiSummary?: string | null;
+  /** لحظةُ كتابته نصّاً ISO. */
+  aiSummaryAt?: string | null;
   status: 'pending' | 'completed' | 'postponed' | 'in-progress';
   outcome?: 'won' | 'lost' | 'settled';
   basecampUrl?: string;
@@ -244,6 +257,8 @@ export interface BasecampStatus {
   lastSyncError?: string | null;
   projects?: { total: number; client: number; internal: number; linked: number };
   openConflicts?: number;
+  /** أمشغَّلٌ التلخيصُ الآليّ عند الاستيراد؟ */
+  aiEnabled?: boolean;
 }
 
 export interface BasecampProject {
@@ -320,6 +335,8 @@ export interface BasecampPlan {
         idType: string | null;
         phone: string | null;
         clientType: string | null;
+        /** اسمُ مسؤول التواصل إن حمله الملفّ. */
+        representative: string | null;
         /** مقصوصةٌ للعرض — والنصُّ كلُّه في الملفّ. */
         notes: string | null;
         contacts: number;
@@ -332,6 +349,8 @@ export interface BasecampPlan {
         action: 'create_case' | 'update_case' | 'none';
         caseNumber: string;
         caseType: string;
+        /** نوعٌ اقترحه الطراز لأنّ الملفّ خلا منه — يُراجَع. */
+        caseTypeSuggested: boolean;
         status: string | null;
         outcome: string | null;
         notes: string | null;
@@ -356,6 +375,20 @@ export interface BasecampSummary {
   clientsUpdated?: number;
   casesCreated?: number;
   casesUpdated?: number;
+  /**
+   * حصيلةُ التلخيص الآليّ.
+   *
+   * و`deferred` ليس عطلاً: للدورة سقفُ استدلالات، وما زاد يُلخَّص في
+   * التي تليها. ويُقال ليُعرف أنّ الباقي آتٍ لا ساقط.
+   */
+  ai?: {
+    enabled: boolean;
+    used?: number;
+    cases?: number;
+    clients?: number;
+    deferred?: number;
+    failed?: number;
+  };
 }
 
 export interface BasecampPreview {

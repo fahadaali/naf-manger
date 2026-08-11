@@ -457,6 +457,7 @@ export default function BasecampSync() {
           <PreviewPanel
             syncEnabled={status.syncEnabled === true}
             lastSyncAt={status.lastSyncAt ?? null}
+            aiEnabled={status.aiEnabled === true}
             onChanged={() => load(true)}
           />
           <ConflictsPanel onResolved={() => load(true)} />

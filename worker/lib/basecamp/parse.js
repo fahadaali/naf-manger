@@ -23,6 +23,7 @@ export const TARGETS = {
   'client.email': { label: 'البريد الإلكتروني', entity: 'client' },
   'client.clientType': { label: 'نوع العميل', entity: 'client' },
   'client.commercialRegister': { label: 'السجل التجاري', entity: 'client' },
+  'client.legalRepresentative': { label: 'مسؤول التواصل', entity: 'client' },
   'client.notes': { label: 'ملاحظات العميل', entity: 'client' },
   'case.caseNumber': { label: 'رقم القضية', entity: 'case' },
   'case.caseType': { label: 'نوع القضية', entity: 'case' },
@@ -43,6 +44,16 @@ export const DEFAULT_FIELD_MAP = {
   'اسم العميل': 'client.fullName',
   'العميل': 'client.fullName',
   'الموكل': 'client.fullName',
+  /* والمنشأةُ عميلٌ كالفرد: اسمُها في الحقل نفسه، ويفرّقهما «نوع العميل». */
+  'اسم الشركة': 'client.fullName',
+  'اسم المنشأة': 'client.fullName',
+  'اسم الجهة': 'client.fullName',
+  'مسؤول التواصل': 'client.legalRepresentative',
+  'مسؤول الاتصال': 'client.legalRepresentative',
+  'ممثل الشركة': 'client.legalRepresentative',
+  'الممثل النظامي': 'client.legalRepresentative',
+  'المفوض بالتوقيع': 'client.legalRepresentative',
+  'المفوض': 'client.legalRepresentative',
   'رقم الهوية': 'client.idNumber',
   'الهوية': 'client.idNumber',
   'رقم الإقامة': 'client.idNumber',
@@ -260,6 +271,16 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
       continue;
     }
 
+    /* ═══ مسؤولُ التواصل سطرٌ واحد فيه ثلاثة ═══
+       «مسؤول التواصل: أحمد الغامدي - 0551234567» — اسمٌ ورقمٌ وربما هوية.
+       فيُقرأ الثلاثةُ إلى العمود الذي يقبلها (`legal_representative`)،
+       ولا يُحشر السطرُ كلُّه في خانة الاسم. */
+    if (field === 'legalRepresentative') {
+      const representative = readRepresentative(line.value, relations, idTypes);
+      if (representative) client.legalRepresentative = representative;
+      continue;
+    }
+
     /* ═══ القيمةُ المعنونة تُوحَّد إن كان هدفُها رقماً ═══
        «الجوال: 050… وجوال أخيه 055…» سطرٌ واحد، وأخذُه كما هو يجعل حقلَ
        الجوّال يحمل جملةً. فيُؤخذ أوّلُ رقمٍ صالحٍ فيه، ويُترك الباقي
@@ -333,6 +354,33 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
   }
 
   return { client, case: kase, unmapped, labels: lines.map((line) => line.label), phones, identities };
+}
+
+/**
+ * «أحمد الغامدي - 0551234567» إلى `{ name, contact, idNumber }`.
+ *
+ * والرقمُ يُقصّ من الاسم بعد التقاطه: اسمٌ يحمل ذيلَ رقمٍ يُطبع في وكالةٍ
+ * أو خطابٍ كما هو. ويُردّ `null` لسطرٍ لا اسمَ فيه — «مسؤول التواصل:
+ * 0551234567» رقمٌ بلا صاحب، ويلتقطه المسحُ العام أدناه بصفته.
+ */
+function readRepresentative(value, relations, idTypes) {
+  const phone = extractPhones(value, relations)[0];
+  const identity = extractIdentities(value, idTypes)[0];
+
+  const name = String(value)
+    /* كلُّ ما يشبه رقماً يُقصّ — لا الملتقطُ وحده: الملتقطُ موحَّدُ الشكل
+       («0551234567») وفي النصّ قد يكون «+966 55 123 4567». */
+    .replace(/(?:\+|00)?\d[\d\s\-().]{5,24}\d/g, ' ')
+    .replace(/[-–—:،,(){}[\]]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!name) return null;
+  return {
+    name,
+    idNumber: identity?.number ?? '',
+    contact: phone?.number ?? '',
+  };
 }
 
 /* ما جاء من الخريطة قد يكون «+966 50 …» — فيُوحَّد ليُقارَن بما مُسح. */

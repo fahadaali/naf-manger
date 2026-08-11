@@ -14,6 +14,7 @@ import {
 } from './discover.js';
 import { DEFAULT_FIELD_MAP, TARGETS } from './parse.js';
 import { buildPlan, readFieldMap, runSync, writeFieldMap } from './sync.js';
+import { aiEnabled, setAiEnabled } from '../ai/summarize.js';
 import {
   activeConnection,
   beginAuthorization,
@@ -83,8 +84,34 @@ export async function readStatus(env, user) {
         linked: counts?.linked ?? 0,
       },
       openConflicts: open?.n ?? 0,
+      /* والتلخيصُ الآليّ: حالتُه تُقرأ مع حالة الربط لأنّ مفتاحَه في
+         شاشتها — ونداءٌ ثانٍ لعلمٍ واحد نداءٌ زائد. */
+      aiEnabled: await aiEnabled(env),
     },
   });
+}
+
+/**
+ * تشغيلُ التلخيص الآليّ وإطفاؤه.
+ *
+ * وهو مفتاحٌ للمسؤول وحده: يقرّر أنّ نصوص القضايا تُمرَّر إلى الطراز —
+ * وذلك أوسعُ ممّا يخرج اليوم إلى استبصارات التحليلات (أرقامٌ مجمَّعة
+ * وحدها). فيُقال في الشاشة، ويُقرَّر بيد.
+ */
+export async function setAiImport(request, env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail('invalid_body', 400);
+  }
+  const enabled = body?.enabled === true;
+
+  await setAiEnabled(env, enabled, user.id);
+  await logActivity(env, user, enabled ? 'شُغّل التلخيص الآليّ للاستيراد' : 'أُطفئ التلخيص الآليّ للاستيراد');
+  return Response.json({ ok: true, data: { aiEnabled: enabled } });
 }
 
 /** يبدأ التصريح — تحويلٌ إلى صفحة إذن بيسكامب. */
@@ -570,6 +597,9 @@ function shapePlan(plan) {
           idType: plan.client.values.idType ?? null,
           phone: plan.client.values.phone ?? null,
           clientType: plan.client.values.clientType ?? null,
+          /* ومسؤولُ التواصل اسمُه وحده في المعاينة: العمودُ بنيةٌ، وعرضُ
+             JSON خاماً في جدولٍ ركامٌ لا يُقرأ. */
+          representative: readRepresentativeName(plan.client.values.legalRepresentative),
           /* الملاحظاتُ تُعرض مقصوصة: المعاينةُ جدولٌ، وفقرةٌ كاملة فيه
              تدفع بقيّةَ الصفوف تحت الطيّ. والنصُّ كلُّه في الملفّ. */
           notes: shorten(plan.client.values.notes),
@@ -582,6 +612,9 @@ function shapePlan(plan) {
     case: plan.case
       ? { action: plan.case.action, caseNumber: plan.case.values.caseNumber,
           caseType: plan.case.values.caseType,
+          /* والنوعُ المقترَح آلياً يُعلَّم: يُقرأ في الشاشة ويُصحَّح قبل
+             أن يُبنى عليه ترتيبٌ أو تقرير. */
+          caseTypeSuggested: plan.caseTypeSuggested === true,
           status: plan.case.values.status ?? null,
           outcome: plan.case.values.outcome ?? null,
           notes: shorten(plan.case.values.notes),
@@ -589,6 +622,17 @@ function shapePlan(plan) {
       : null,
   };
 }
+
+/* مسؤولُ التواصل نصُّ JSON في الخطّة — اسمُه وحده يُعرض. */
+const readRepresentativeName = (value) => {
+  if (!value) return null;
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    return parsed?.name ? String(parsed.name).slice(0, 80) : null;
+  } catch {
+    return null;
+  }
+};
 
 const shorten = (text, limit = 120) => {
   const value = String(text ?? '').replace(/\s+/g, ' ').trim();

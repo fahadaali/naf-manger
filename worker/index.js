@@ -23,6 +23,7 @@ import {
   readStatus,
   rescan,
   resolveConflict,
+  setAiImport,
   setAutoSync,
   startConnect,
   sync,
@@ -239,6 +240,7 @@ export default {
         if (id === 'preview' && request.method === 'POST') return preview(env, user);
         if (id === 'sync' && request.method === 'POST') return sync(env, user, { source: 'يدوي' });
         if (id === 'auto-sync' && request.method === 'PUT') return setAutoSync(request, env, user);
+        if (id === 'ai' && request.method === 'PUT') return setAiImport(request, env, user);
         if (id === 'conflicts' && !verb && request.method === 'GET') return listConflicts(env, user);
         if (id === 'conflicts' && verb && request.method === 'POST') {
           return resolveConflict(request, env, user, verb);

@@ -368,6 +368,11 @@ export class LocalDatabase {
     return await api.put('/basecamp/auto-sync', { enabled });
   }
 
+  /* التلخيصُ الآليّ: مفتاحُه هنا لأنّ ما يُلخَّص يأتي من الاستيراد. */
+  async setBasecampAi(enabled: boolean): Promise<{ aiEnabled: boolean }> {
+    return await api.put('/basecamp/ai', { enabled });
+  }
+
   async getBasecampConflicts(): Promise<BasecampConflict[]> {
     return await api.read<BasecampConflict[]>('/basecamp/conflicts');
   }

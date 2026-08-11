@@ -7,6 +7,7 @@ import {
   Lightbulb,
   Play,
   RefreshCw,
+  Sparkles,
   Timer,
   TriangleAlert,
 } from 'lucide-react';
@@ -227,15 +228,17 @@ export function FieldMapPanel({ onSaved }: { onSaved?: () => void }) {
 export function PreviewPanel({
   syncEnabled,
   lastSyncAt,
+  aiEnabled,
   onChanged,
 }: {
   syncEnabled: boolean;
   lastSyncAt: number | null;
+  aiEnabled: boolean;
   onChanged: () => void;
 }) {
   const [preview, setPreview] = useState<BasecampPreview | null>(null);
   const [applied, setApplied] = useState<BasecampSummary | null>(null);
-  const [busy, setBusy] = useState<'preview' | 'sync' | 'auto' | null>(null);
+  const [busy, setBusy] = useState<'preview' | 'sync' | 'auto' | 'ai' | null>(null);
   const [error, setError] = useState('');
 
   const run = async (which: 'preview' | 'sync') => {
@@ -252,6 +255,19 @@ export function PreviewPanel({
       }
     } catch (runError) {
       setError((runError as Error)?.message ?? 'تعذّر التنفيذ');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const toggleAi = async (enabled: boolean) => {
+    setBusy('ai');
+    setError('');
+    try {
+      await db.setBasecampAi(enabled);
+      onChanged();
+    } catch {
+      setError('تعذّر تبديل التلخيص الآليّ');
     } finally {
       setBusy(null);
     }
@@ -322,7 +338,15 @@ export function PreviewPanel({
           <span>
             {`أُنشئ ${formatNumber(applied.clientsCreated ?? 0)} عميلاً و${formatNumber(applied.casesCreated ?? 0)} قضية، ` +
               `وحُدّثت ${formatNumber(applied.casesUpdated ?? 0)} قضيةً و${formatNumber(applied.clientsUpdated ?? 0)} عميلاً` +
-              (applied.conflicts ? `، و${formatNumber(applied.conflicts)} اختلافاً ينتظر قرارك` : '')}
+              (applied.conflicts ? `، و${formatNumber(applied.conflicts)} اختلافاً ينتظر قرارك` : '') +
+              /* والمؤجَّلُ يُقال: سقفُ الدورة بلغ، والباقي في التي تليها —
+                 لا ميزةٌ عطلت. */
+              (applied.ai?.enabled
+                ? `. ولُخِّص ${formatNumber(applied.ai.cases ?? 0)} قضيةً و${formatNumber(applied.ai.clients ?? 0)} عميلاً` +
+                  (applied.ai.deferred
+                    ? `، وأُجِّل ${formatNumber(applied.ai.deferred)} إلى الدورة التالية`
+                    : '')
+                : '')}
           </span>
         </Alert>
       )}
@@ -366,6 +390,9 @@ export function PreviewPanel({
                           {plan.client.clientType && (
                             <p className="text-xs text-muted-foreground">
                               {clientTypeLabel(plan.client.clientType)}
+                              {plan.client.representative
+                                ? ` · ${plan.client.representative}`
+                                : ''}
                             </p>
                           )}
                           {/* وما سيُكتب على عميلٍ قائم يُسمّى حقلاً حقلاً: من
@@ -392,6 +419,7 @@ export function PreviewPanel({
                           <p className="text-foreground"><bdi>{plan.case.caseNumber}</bdi></p>
                           <p className="text-xs text-muted-foreground">
                             {[
+                              plan.case.caseTypeSuggested ? `${plan.case.caseType} (مقترَح)` : null,
                               plan.case.status ? caseStatusLabel(plan.case.status) : null,
                               plan.case.outcome ? caseOutcomeLabel(plan.case.outcome) : null,
                             ]
@@ -443,6 +471,32 @@ export function PreviewPanel({
           </div>
         </>
       )}
+
+      {/* ═══ التلخيصُ الآليّ ═══
+          وهو الموضعُ الوحيد الذي يخرج فيه نصُّ قضيةٍ من القاعدة إلى طراز.
+          فيُقال هنا صراحةً ما يُمرَّر وما لا يُمرَّر — لا في README وحده. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
+        <div className="flex items-start gap-2">
+          <Sparkles className="h-5 w-5 text-muted-foreground mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-foreground">ملخّصٌ آليّ عند الاستيراد</p>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              يكتب سطراً يلخّص كلَّ قضية، وسطراً يلخّص قضايا كلِّ موكّل — في حقلٍ
+              مستقلٍّ عن الملاحظات، ويقترح نوعَ القضية من أنواعك حين يخلو منه الملفّ.
+              ويُمرَّر إلى الطراز اسمُ الموكّل ونوعُ القضية وموضوعُها وحالتُها؛ ولا
+              يُمرَّر رقمُ هوية ولا جوّالٌ ولا بريدٌ ولا أتعاب.
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={() => toggleAi(!aiEnabled)}
+          disabled={busy !== null}
+          variant={aiEnabled ? 'outline' : 'default'}
+        >
+          <Sparkles className={`h-4 w-4 ${busy === 'ai' ? 'animate-pulse' : ''}`} />
+          {aiEnabled ? 'أطفئه' : 'شغّله'}
+        </Button>
+      </div>
 
       {/* ═══ المزامنة الآلية ═══
           لا تُفتح قبل تنفيذٍ يدويٍّ ناجح: جدولةٌ تكتب في قاعدة موكّلين بلا

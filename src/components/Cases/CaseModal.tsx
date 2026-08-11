@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CircleCheck, CircleX, ExternalLink, Handshake } from 'lucide-react';
+import { CircleCheck, CircleX, ExternalLink, Handshake, Sparkles } from 'lucide-react';
 import { Attachment, Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import AttachmentList from '../Common/AttachmentList';
 import { db } from '../../data/database';
@@ -266,6 +266,23 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <div className="bg-muted rounded-lg p-4">
                 <h3 className="text-lg font-semibold text-foreground mb-3">الملاحظات</h3>
                 <p className="text-foreground whitespace-pre-wrap">{existingCase.notes}</p>
+              </div>
+            )}
+
+            {/* ═══ الملخّصُ الآليّ ═══
+                مسمّىً بذلك عمداً: نصٌّ صاغه طرازٌ، ومن يقرؤه بعد شهرٍ يجب أن
+                يعرف أنّ محامياً لم يكتبه. ولا يُحرَّر من هنا — يُعاد كتابتُه
+                من مصدره حين يتبدّل. */}
+            {existingCase.aiSummary && (
+              <div className="bg-info-soft rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" aria-hidden="true" />
+                  ملخّصٌ آليّ
+                </h3>
+                <p className="text-xs text-muted-foreground mb-2">
+                  كتبه الطراز من بيانات القضية — يُقرأ ولا يُعتمد بلا مراجعة.
+                </p>
+                <p className="text-foreground whitespace-pre-wrap">{existingCase.aiSummary}</p>
               </div>
             )}
 
