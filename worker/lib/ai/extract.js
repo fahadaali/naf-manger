@@ -168,6 +168,50 @@ export async function extractFields(env, { text, wanted, labels }) {
   return clean;
 }
 
+const CLASSIFY_SYSTEM = `أنت تفهم ألفاظَ محامٍ سعودي وتردّها إلى الرمز الذي يقابلها في منصّة إدارة القضايا.
+
+تُعطى لفظاً كتبه المحامي في حقلٍ ما، وقائمةَ الرموز المقبولة في ذلك الحقل ومعانيها.
+
+القواعد:
+- **أجب برمزٍ واحد من القائمة حرفاً بحرف، ولا شيء غيره.**
+- إن كان اللفظُ منفيّاً أو مشكوكاً فيه أو لا يقابل رمزاً بيقين، فأجب: لا-أعرف
+- لا تشرح، ولا تضع علاماتِ ترقيم، ولا تكتب أكثر من كلمة.`;
+
+/**
+ * لفظٌ لم يفهمه الجدولُ ولا الجذور — يُردّ إلى رمزٍ من قائمةٍ مغلقة.
+ *
+ * ═══ ولماذا رمزٌ لا نصّ ═══
+ *
+ * `outcome` و`status` و`client_type` أعمدةٌ تقرؤها اللوحةُ والتقارير
+ * رموزاً — «معدّل الربح» يعدّ `outcome = 'won'` وحدها. فلفظٌ حرٌّ يُكتب
+ * فيها يُعرض في بطاقة القضية ويغيب عن كل إحصاء.
+ *
+ * وأسوأُ ما يقع هنا: رمزٌ من القائمة اختير خطأً — يُقال في المعاينة
+ * «فُهمت رابحة — راجِعها» فيُرى قبل أن يُكتب. أمّا ما لم يُفهَم فلا يُكتب
+ * أصلاً.
+ */
+export async function classifyValue(env, { phrase, label, codes }) {
+  const text = String(phrase ?? '').trim();
+  const allowed = Object.keys(codes ?? {});
+  if (!text || !allowed.length) return null;
+
+  const answer = await ask(
+    env,
+    CLASSIFY_SYSTEM,
+    JSON.stringify({
+      الحقل: label,
+      اللفظ: text,
+      الرموز_المقبولة: Object.entries(codes).map(([code, meaning]) => ({ الرمز: code, المعنى: meaning })),
+    }),
+    30,
+  );
+  if (typeof answer !== 'string') return null;
+
+  /* والردُّ يُطابَق بالقائمة: كلمةٌ خارجَها — أو «لا-أعرف» — تُردّ `null`. */
+  const cleaned = answer.replace(/[`"'.،,\s]/g, '');
+  return allowed.find((code) => code.replace(/[-\s]/g, '') === cleaned.replace(/[-\s]/g, '')) ?? null;
+}
+
 /**
  * يقترح ربطاً لعناوينَ لا مقابل لها في الخريطة.
  *

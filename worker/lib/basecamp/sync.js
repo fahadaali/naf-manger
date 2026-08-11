@@ -20,8 +20,15 @@
 
 import { BasecampError } from './api.js';
 import { readProjectDocument } from './discover.js';
-import { DEFAULT_FIELD_MAP, TARGETS, coerceTarget, htmlToText, parseDocument } from './parse.js';
-import { extractFields } from '../ai/extract.js';
+import {
+  CLOSED_CODES,
+  DEFAULT_FIELD_MAP,
+  TARGETS,
+  coerceTarget,
+  htmlToText,
+  parseDocument,
+} from './parse.js';
+import { classifyValue, extractFields } from '../ai/extract.js';
 import { normalizeArabic } from './discover.js';
 import { fullerName, nameRelation } from './names.js';
 import {
@@ -316,6 +323,47 @@ async function recoverMissing(env, { parsed, text, vocab, ai }) {
   return taken;
 }
 
+/**
+ * ═══ الألفاظُ التي لم تُفهَم ═══
+ *
+ * `outcome` و`status` و`client_type` أعمدةٌ مغلقة تقرؤها اللوحةُ رموزاً:
+ * «معدّل الربح» يعدّ `outcome = 'won'` وحدها. فلفظٌ حرٌّ يُكتب فيها يظهر
+ * في بطاقة القضية ويغيب عن كل إحصاء — يكتب المحامي «ربحانة» فتُحفظ، ثم
+ * لا تُعدّ قضيةً رابحة في اللوحة ولا في تقرير المسوّق ولا يقول أحدٌ لِمَ.
+ *
+ * والجدولُ والجذورُ يكفيان أكثرَه. وما بقي يُسأل عنه الطراز — من القائمة
+ * المغلقة وحدها. وما لم يُفهَم **لا يُكتب**، ويُقال في المعاينة.
+ */
+async function resolveVocabulary(env, { parsed, plan, ai }) {
+  const resolved = [];
+
+  for (const item of parsed.unresolved ?? []) {
+    const [entity, field] = item.target.split('.');
+    const bag = entity === 'client' ? parsed.client : parsed.case;
+    /* وقد يكون مُلئ من سطرٍ آخر بلفظٍ مفهوم — فلا يُسأل عمّا عُرف. */
+    if (bag[field] !== undefined && bag[field] !== '') continue;
+
+    const meaning = TARGETS[item.target]?.label ?? item.target;
+    const codes = CLOSED_CODES[item.target];
+
+    let code = null;
+    if (ai?.enabled && codes && ai.budget.spend()) {
+      code = await classifyValue(env, { phrase: item.value, label: meaning, codes });
+      if (!code) ai.budget.failed++;
+    }
+
+    if (code) {
+      bag[field] = code;
+      resolved.push(item.target);
+      plan.warnings.push(`«${item.value}» فُهمت ${meaning}: ${codes[code]} — راجِعها`);
+    } else {
+      plan.warnings.push(`لفظٌ لم يُفهم في ${meaning}: «${item.value}» — لم يُكتب`);
+    }
+  }
+
+  return resolved;
+}
+
 /** خطّةُ مشروعٍ واحد: ماذا سيقع له ولماذا. */
 async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
   const plan = {
@@ -359,6 +407,11 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai) {
      ولا يُنادى إلا حين يدلّ الظاهرُ على أنّ شكلَ الملفّ تبدّل. */
   const text = htmlToText(document.content ?? '');
   plan.aiFields = await recoverMissing(env, { parsed, text, vocab, ai });
+
+  /* ═══ ولفظٌ لم يفهمه الجدولُ ولا الجذور ═══
+     «ربحانة» فهمها الجذر، و«الحمد لله انتهت لصالحنا» قد لا يفهمها. فتُردّ
+     إلى رمزٍ من القائمة المغلقة — أو لا تُكتب ويُقال ذلك. */
+  plan.aiFields.push(...(await resolveVocabulary(env, { parsed, plan, ai })));
 
   if (!parsed.client.fullName) {
     plan.error = 'no_client_name';

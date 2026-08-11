@@ -212,23 +212,98 @@ export function readLabelledLines(text) {
   return found;
 }
 
-/** يوحّد المفردات العربية إلى ما يقبله العمود. */
+/**
+ * ═══ الجذرُ يُغني عن استقصاء الصيغ ═══
+ *
+ * «ربحانة» و«ربحناها» و«ربحنا» — ثلاثُ صيغٍ لمعنىً واحد، ولا تنتهي:
+ * يكتب المحامي اليوم صيغةً ويكتب غداً أخرى. وجدولُ المفردات فوقُ لا يلحق
+ * بها مهما طال.
+ *
+ * فتُطلب الجذور بعد أن يعجز الجدول. وهي قليلةٌ عمداً — لا تُقبل إلا التي
+ * لا تحتمل ضدَّها: «ربح» و«خسر» و«صلح». و«لصالح» ليست منها، إذ «لصالح
+ * الخصم» ضدُّ «لصالحنا» ولفظُهما واحد.
+ */
+const ROOTS = {
+  'case.outcome': [
+    [/ربح|كسب|فوز|فزن/, 'won'],
+    [/خسر/, 'lost'],
+    [/صلح|تسوي|تصالح/, 'settled'],
+  ],
+  'case.status': [
+    /* و«غلق» لا «مغلق»: المحامي يكتب «أُغلقت» فعلاً كما يكتبها وصفاً. */
+    [/انته|منته|منجز|مكتمل|غلق|قفل/, 'completed'],
+    [/قيد|جاري|جاريه|مستمر/, 'in-progress'],
+    [/موجل|متوقف|معلق/, 'postponed'],
+    [/منظور|بانتظار/, 'pending'],
+  ],
+  'client.clientType': [
+    [/شرك|مؤسس|موسس|منشا/, 'company'],
+    [/جمعي|خيري|ربحي/, 'association'],
+    [/حكوم|وزار|امار|بلدي/, 'government'],
+    [/فرد|شخص/, 'individual'],
+  ],
+};
+
+/* والنفيُ يُبطل الجذر: «لم نربح» فيها «ربح» ومعناها ضدُّه. وما نُفي لا
+   يُخمَّن — يُردّ غيرَ مفهوم فيُسأل عنه. */
+const NEGATION = /(^|\s)(لم|لن|غير|ليس|ليست|بدون|بلا)(\s|$)/;
+
+/** أهذا هدفٌ قيمُه مغلقةٌ في المنصة؟ */
+const CLOSED = {
+  'client.clientType': ENTITIES.clientType,
+  'case.status': ENTITIES.status,
+  'case.outcome': ENTITIES.outcome,
+};
+
+/**
+ * يوحّد المفردات العربية إلى ما يقبله العمود.
+ *
+ * ═══ وما لا يُفهَم لا يُكتب ═══
+ *
+ * كان ما لا يُعرف يُترك كما هو، وعلّتُه أنّ «تكوين النظام» يقبل مفرداتٍ
+ * يضيفها المكتب. وذلك صحيحٌ في **نوع القضية** — قائمةٌ مفتوحة يكتب فيها
+ * المكتب ما شاء.
+ *
+ * وغيرُ صحيحٍ في الثلاثة أدناه: `outcome` و`status` و`client_type` قيمُها
+ * رموزٌ مغلقة تقرؤها اللوحةُ والتقارير — «معدّل الربح» يعدّ
+ * `outcome = 'won'` وحدها. فقيمةٌ حرّة تُكتب في العمود تُعرض في بطاقة
+ * القضية وتغيب عن كل إحصاء: يكتب المحامي «ربحانة» فتُحفظ، ثم لا تُعدّ
+ * قضيةً رابحة في اللوحة ولا في تقرير المسوّق ولا يقول أحدٌ لِمَ.
+ *
+ * فيُردّ `null`، ويُسأل عنه: الطرازُ يُطابقه بالرموز، وإن عجز قيل في
+ * المعاينة «نتيجةٌ لم تُفهَم» ولم يُكتب شيء.
+ */
 function translate(target, value) {
-  const table =
-    target === 'client.clientType' ? ENTITIES.clientType
-      : target === 'case.status' ? ENTITIES.status
-        : target === 'case.outcome' ? ENTITIES.outcome
-          : null;
+  const table = CLOSED[target];
   if (!table) return value;
 
   const normalized = normalizeArabic(value);
   for (const [arabic, code] of Object.entries(table)) {
     if (normalizeArabic(arabic) === normalized) return code;
   }
-  /* مفردةٌ لا تُعرف تُترك كما هي: «تكوين النظام» يقبل مفرداتٍ يضيفها
-     المكتب، وطمسُها إلى الافتراضي يُخفي ما كتبه المحامي. */
-  return value;
+
+  if (!NEGATION.test(` ${normalized} `)) {
+    for (const [pattern, code] of ROOTS[target] ?? []) {
+      if (pattern.test(normalized)) return code;
+    }
+  }
+
+  return null;
 }
+
+/**
+ * رموزُ حقلٍ مغلق ووجهُها العربي — تُعرض للطراز ليختار منها، ولا يُقبل
+ * غيرُها. وهي نسخةٌ من `src/lib/labels.ts`، والمصدرُ سجلُّ المصطلحات.
+ */
+export const CLOSED_CODES = {
+  'client.clientType': {
+    individual: 'فرد', company: 'شركة', association: 'جمعية', government: 'جهة حكومية',
+  },
+  'case.status': {
+    pending: 'منظورة', 'in-progress': 'قيد المعالجة', completed: 'مكتملة', postponed: 'مؤجلة',
+  },
+  'case.outcome': { won: 'رابحة', lost: 'خاسرة', settled: 'تسوية' },
+};
 
 /**
  * قيمةٌ خامٌ من الملفّ إلى ما يقبله الحقل.
@@ -281,7 +356,11 @@ export function coerceTarget(target, rawValue, vocab = {}) {
   /* والملاحظاتُ تُترك كما كُتبت: لا مفرداتِ توحيدٍ لها، وقصُّها تشويه. */
   if (field === 'notes') return { entity, values: { notes: value } };
 
-  return { entity, values: { [field]: translate(target, value) } };
+  const translated = translate(target, value);
+  /* وحقلٌ مغلقٌ لم يُفهَم لفظُه: لا يُكتب، ويُردّ بلفظه ليُسأل عنه. */
+  if (translated === null) return { entity, values: {}, unresolved: { target, value } };
+
+  return { entity, values: { [field]: translated } };
 }
 
 /**
@@ -306,6 +385,9 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
   const client = {};
   const kase = {};
   const unmapped = [];
+  /* ألفاظٌ في حقلٍ مغلقٍ لم تُفهَم — «ربحانة» و«خسرناه». تُردّ ليُسأل
+     عنها ولا تُكتب حرّةً في عمودٍ تقرؤه اللوحةُ رمزاً. */
+  const unresolved = [];
   /* الملاحظاتُ تُجمَع ولا تُدهس: «الملاحظات» و«ملاحظات إضافية» عنوانان
      يشيران إلى حقلٍ واحد، وآخِرُهما كان يمحو أوّلَهما. */
   const notes = { client: [], case: [] };
@@ -327,6 +409,7 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
 
     const coerced = coerceTarget(target, line.value, { contactRelations: relations, idTypes });
     if (!coerced) continue;
+    if (coerced.unresolved) unresolved.push(coerced.unresolved);
     Object.assign(coerced.entity === 'client' ? client : kase, coerced.values);
   }
 
@@ -379,7 +462,10 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
     if (matched?.type) client.idType = matched.type;
   }
 
-  return { client, case: kase, unmapped, labels: lines.map((line) => line.label), phones, identities };
+  return {
+    client, case: kase, unmapped, unresolved,
+    labels: lines.map((line) => line.label), phones, identities,
+  };
 }
 
 /**

@@ -440,5 +440,86 @@ answers = { 'عنوانٌ لم يُعطَ': 'client.phone' };
 suggestions = await suggestMapping({ AI: readerAI }, { labels: ['جوال الموكل'], targets: TARGETS });
 check('وعنوانٌ لم يُعطَ يُطرح', suggestions.length === 0, suggestions);
 
+// ═══════════════════════════════════════════════════════════
+group('ألفاظُ النتيجة والحالة كما يكتبها المحامي');
+
+/* ═══ ما يُحرَس هنا ═══
+ *
+ * `outcome` عمودٌ تقرؤه اللوحةُ رمزاً: «معدّل الربح» يعدّ `won` وحدها.
+ * وكان اللفظُ الذي لا يعرفه الجدولُ يُكتب حرّاً — فيكتب المحامي «ربحانة»
+ * فتُحفظ، ثم لا تُعدّ قضيةً رابحة في اللوحة ولا في تقرير المسوّق، ولا
+ * يقول أحدٌ لِمَ.
+ */
+const outcomeOf = (word) =>
+  parseDocument(`<div>نتيجة المشروع: ${word}</div>`, DEFAULT_FIELD_MAP).case.outcome;
+
+for (const [word, code] of [
+  ['رابحة', 'won'], ['ربح', 'won'],
+  /* والصيغُ التي لا تنتهي — يفهمها الجذرُ لا الجدول. */
+  ['ربحانة', 'won'], ['ربحناها', 'won'], ['كسبناها', 'won'], ['فزنا فيها', 'won'],
+  ['خسرناه', 'lost'], ['خسرناها', 'lost'], ['خسارة', 'lost'],
+  ['تصالحنا', 'settled'], ['انتهت بتسوية', 'settled'],
+]) {
+  check(`«${word}» → ${code}`, outcomeOf(word) === code, outcomeOf(word));
+}
+
+/* والنفيُ يُبطل الجذر: «لم نربح» فيها «ربح» ومعناها ضدُّه. */
+check('«لم نربح» لا تُقرأ ربحاً', outcomeOf('لم نربح') === undefined, outcomeOf('لم نربح'));
+check('و«غير رابحة» كذلك', outcomeOf('غير رابحة') === undefined, outcomeOf('غير رابحة'));
+
+/* ═══ وما لم يُفهَم لا يُكتب حرّاً ═══ */
+const puzzling = parseDocument('<div>نتيجة المشروع: تحت الدراسة</div>', DEFAULT_FIELD_MAP);
+check('لفظٌ لم يُفهم لا يُكتب في العمود',
+  puzzling.case.outcome === undefined, puzzling.case.outcome);
+check('بل يُردّ ليُسأل عنه',
+  puzzling.unresolved[0]?.value === 'تحت الدراسة', puzzling.unresolved);
+
+const statusOf = (word) =>
+  parseDocument(`<div>حالة المشروع: ${word}</div>`, DEFAULT_FIELD_MAP).case.status;
+check('«أُغلقت» تُقرأ اكتمالاً', statusOf('أُغلقت') === 'completed', statusOf('أُغلقت'));
+check('و«قيد المرافعة» جارية', statusOf('قيد المرافعة') === 'in-progress', statusOf('قيد المرافعة'));
+
+/* ═══ والطرازُ يُسأل عمّا بقي — من القائمة المغلقة وحدها ═══ */
+const { classifyValue } = await import('../worker/lib/ai/extract.js');
+const OUTCOME_CODES = { won: 'رابحة', lost: 'خاسرة', settled: 'تسوية' };
+
+let reply = 'won';
+const classifierAI = { async run() { return { response: reply }; } };
+
+check('يُردّ اللفظُ إلى رمزٍ من القائمة',
+  (await classifyValue({ AI: classifierAI }, { phrase: 'الحمد لله طلعت لنا', label: 'النتيجة', codes: OUTCOME_CODES })) === 'won');
+
+reply = 'ربحانة';
+check('وردٌّ خارج القائمة يُطرح',
+  (await classifyValue({ AI: classifierAI }, { phrase: 'س', label: 'النتيجة', codes: OUTCOME_CODES })) === null);
+
+reply = 'لا-أعرف';
+check('و«لا-أعرف» تُردّ فراغاً',
+  (await classifyValue({ AI: classifierAI }, { phrase: 'س', label: 'النتيجة', codes: OUTCOME_CODES })) === null);
+
+// ── وفي الاستيراد: يُفهم فيُكتب، أو يُقال ولا يُكتب ──
+({ db, env } = readerSetup());
+docContent = `<div>
+  <div>اسم العميل: خالد الغامدي</div>
+  <div>رقم المشروع: ق-2026-777</div>
+  <div>نتيجة المشروع: تحت الدراسة</div>
+</div>`;
+env.AI = { async run(model, input) {
+  return { response: input.messages[0].content.includes('تفهم ألفاظ') ? 'settled' : '{}' };
+} };
+plan = await buildPlan(env, connection);
+check('لفظٌ يفهمه الطراز يُكتب رمزاً',
+  plan.plans[0].case.values.outcome === 'settled', plan.plans[0].case.values);
+check('ويُقال في المعاينة ليُراجَع',
+  plan.plans[0].warnings.some((line) => line.includes('فُهمت')), plan.plans[0].warnings);
+
+({ db, env } = readerSetup());
+env.AI = { async run() { return { response: 'لا-أعرف' }; } };
+plan = await buildPlan(env, connection);
+check('وما عجز عنه الطرازُ لا يُكتب',
+  plan.plans[0].case.values.outcome === undefined, plan.plans[0].case.values);
+check('ويُقال إنّه لم يُكتب',
+  plan.plans[0].warnings.some((line) => line.includes('لم يُفهم')), plan.plans[0].warnings);
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);
