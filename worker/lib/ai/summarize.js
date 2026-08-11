@@ -85,10 +85,46 @@ export async function setAiEnabled(env, enabled, userId) {
     .run();
 }
 
-/** بصمةُ ما لُخِّص — بها يُعرف أنّ الملخّص لا يزال على مصدره. */
+/**
+ * ═══ البصمةُ على المعنى لا على الحروف ═══
+ *
+ * بها يُعرف أنّ الملخّص لا يزال على مصدره، فلا يُعاد الاستدلال على ما لم
+ * يتبدّل. وهي على **جوهر** النصّ لا على رسمه:
+ *
+ * محامٍ يفتح الملفّ فيصلح مسافةً، أو يضع فاصلةً، أو يشكّل حرفاً، أو يكتب
+ * «إجراءات» بعد «اجراءات» — فتتبدّل الحروفُ ولا يتبدّل المعنى. وبصمةٌ
+ * حرفيةٌ تُعيد تلخيصَ الملفّ كلِّه لأجل مسافة، كلَّ ساعة، وتُنتج النصَّ
+ * نفسَه.
+ *
+ * فتُرفع الحركاتُ والتطويل، وتُوحَّد صورُ الألف والياء والتاء المربوطة،
+ * وتُطرح علاماتُ الترقيم والمسافاتُ الزائدة. وما بقي بعد ذلك تبدُّلٌ في
+ * الكلام نفسِه — وهو وحده يستحقّ صياغةً جديدة.
+ */
+const meaningful = (text) =>
+  String(text ?? '')
+    .replace(/[ً-ْٰ]/g, '')
+    .replace(/ـ/g, '')
+    .replace(/[آأإٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[.,،؛;:!؟?"'`()[\]{}«»\-–—_*]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
 export async function fingerprint(value) {
-  const bytes = new TextEncoder().encode(typeof value === 'string' ? value : JSON.stringify(value));
-  const buffer = await crypto.subtle.digest('SHA-256', bytes);
+  /* والبنيةُ تُسطَّح بمفاتيحها مرتَّبةً: ترتيبُ الحقول في الكائن ليس من
+     المعنى في شيء، وتبدُّلُه يُنتج بصمةً أخرى لنصٍّ واحد. */
+  const source = typeof value === 'string'
+    ? meaningful(value)
+    : Object.keys(value ?? {})
+      .sort()
+      .map((key) => `${key}=${meaningful(
+        typeof value[key] === 'object' ? JSON.stringify(value[key]) : value[key],
+      )}`)
+      .join('\n');
+
+  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(source));
   return [...new Uint8Array(buffer)]
     .slice(0, 16)
     .map((byte) => byte.toString(16).padStart(2, '0'))

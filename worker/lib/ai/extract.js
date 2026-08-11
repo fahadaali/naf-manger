@@ -170,15 +170,26 @@ export async function extractFields(env, { text, wanted, labels }) {
 
 const CLASSIFY_SYSTEM = `أنت تفهم ألفاظَ محامٍ سعودي وتردّها إلى الرمز الذي يقابلها في منصّة إدارة القضايا.
 
-تُعطى لفظاً كتبه المحامي في حقلٍ ما، وقائمةَ الرموز المقبولة في ذلك الحقل ومعانيها.
+تُعطى لفظاً كتبه المحامي في حقلٍ ما، وقائمةَ الرموز المقبولة في ذلك الحقل ومعانيها، وقد تُعطى معه ما حوله من ملاحظات القضية وموضوعِها.
 
 القواعد:
 - **أجب برمزٍ واحد من القائمة حرفاً بحرف، ولا شيء غيره.**
+- **الحكمُ على اللفظ نفسِه، وما حوله يُستعان به على فهمه لا على تجاوزه.** فإن كان اللفظ «تحت الدراسة» وفي الملاحظات «صدر الحكم لصالحنا» فذلك يفسّره؛ وإن لم يكن فيها ما يفسّره فلا تستنبط من عندك.
 - إن كان اللفظُ منفيّاً أو مشكوكاً فيه أو لا يقابل رمزاً بيقين، فأجب: لا-أعرف
+- **ولا-أعرف جوابٌ صحيح.** الفراغُ الظاهر خيرٌ من رمزٍ مظنون: هذه قضايا موكّلين، ورمزٌ خاطئ يدخل الإحصاء ولا يُرى.
 - لا تشرح، ولا تضع علاماتِ ترقيم، ولا تكتب أكثر من كلمة.`;
 
 /**
  * لفظٌ لم يفهمه الجدولُ ولا الجذور — يُردّ إلى رمزٍ من قائمةٍ مغلقة.
+ *
+ * ═══ واللفظُ لا يُقرأ معزولاً ═══
+ *
+ * «تحت الدراسة» وحدَها لا تقول شيئاً عن نتيجة القضية. وفي ملاحظات الملفّ
+ * ما يفسّرها: «صدر الحكم لصالحنا وننتظر التنفيذ». فيُعطى الطرازُ ما حول
+ * اللفظ — الملاحظاتِ والموضوعَ — لا اللفظَ وحده.
+ *
+ * والسياقُ عونٌ على الفهم لا بديلٌ عن اللفظ: ما زال المحكومُ عليه ما كتبه
+ * المحامي في الحقل، والملاحظاتُ تُقرأ لتفسيره.
  *
  * ═══ ولماذا رمزٌ لا نصّ ═══
  *
@@ -190,10 +201,16 @@ const CLASSIFY_SYSTEM = `أنت تفهم ألفاظَ محامٍ سعودي وت
  * «فُهمت رابحة — راجِعها» فيُرى قبل أن يُكتب. أمّا ما لم يُفهَم فلا يُكتب
  * أصلاً.
  */
-export async function classifyValue(env, { phrase, label, codes }) {
+export async function classifyValue(env, { phrase, label, codes, context }) {
   const text = String(phrase ?? '').trim();
   const allowed = Object.keys(codes ?? {});
   if (!text || !allowed.length) return null;
+
+  const around = {};
+  for (const [key, value] of Object.entries(context ?? {})) {
+    const line = String(value ?? '').replace(/\s+/g, ' ').trim();
+    if (line) around[key] = line.slice(0, 600);
+  }
 
   const answer = await ask(
     env,
@@ -201,6 +218,7 @@ export async function classifyValue(env, { phrase, label, codes }) {
     JSON.stringify({
       الحقل: label,
       اللفظ: text,
+      ...(Object.keys(around).length ? { ما_حوله: around } : {}),
       الرموز_المقبولة: Object.entries(codes).map(([code, meaning]) => ({ الرمز: code, المعنى: meaning })),
     }),
     30,
@@ -210,6 +228,61 @@ export async function classifyValue(env, { phrase, label, codes }) {
   /* والردُّ يُطابَق بالقائمة: كلمةٌ خارجَها — أو «لا-أعرف» — تُردّ `null`. */
   const cleaned = answer.replace(/[`"'.،,\s]/g, '');
   return allowed.find((code) => code.replace(/[-\s]/g, '') === cleaned.replace(/[-\s]/g, '')) ?? null;
+}
+
+/* ═══ ومعجمٌ يتعلّم، فلا يُسأل عن لفظٍ مرّتين ═══
+ *
+ * المزامنة كلَّ ساعة، واللفظُ غيرُ المفهوم يبقى في الملفّ حتى يعدّله
+ * إنسان. فبلا ذاكرةٍ يُستدلّ على «تحت الدراسة» أربعاً وعشرين مرّةً في
+ * اليوم، وبالجواب نفسِه.
+ *
+ * فما فُهم يُحفظ في `system_settings` — معجمٌ مكشوفٌ يُقرأ ويُصحَّح، لا
+ * خبيئةٌ مخفيّة. ومفتاحُه اللفظُ موحَّداً، فتشكيلُ الكاتب لا يُنشئ مدخلاً
+ * ثانياً.
+ *
+ * **ولا يُخفي المعجمُ شيئاً**: المعاينة تقول «فُهمت رابحة — راجِعها» في
+ * كل دورة، جاء الجوابُ من الطراز أو من المعجم. فالمحفوظُ يوفّر الاستدلال
+ * ولا يوفّر المراجعة.
+ */
+const LEXICON_KEY = 'ai_lexicon';
+const MAX_LEXICON = 200;
+
+const lexiconKey = (phrase) => normalizeArabic(phrase).slice(0, 80);
+
+export async function readLexicon(env) {
+  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
+    .bind(LEXICON_KEY)
+    .first();
+  try {
+    const stored = JSON.parse(row?.value ?? '{}');
+    return stored && typeof stored === 'object' ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function rememberPhrase(env, { target, phrase, code, lexicon }) {
+  const bag = lexicon[target] ?? (lexicon[target] = {});
+  /* والسقفُ يمنع نموّاً بلا حدّ: ملفّاتٌ فيها ألفاظٌ لا تتكرّر تملأ الصفّ
+     بلا فائدة. وأقدمُ المدخلات يخرج — والحديثُ أقربُ إلى ما يُكتب اليوم. */
+  const keys = Object.keys(bag);
+  if (keys.length >= MAX_LEXICON) delete bag[keys[0]];
+  bag[lexiconKey(phrase)] = code;
+
+  await env.DB.prepare(
+    `INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  )
+    .bind(LEXICON_KEY, JSON.stringify(lexicon), Math.floor(Date.now() / 1000))
+    .run();
+}
+
+/** ما حُفظ لهذا اللفظ من قبل — أو `null`. */
+export function recallPhrase(lexicon, { target, phrase, codes }) {
+  const code = lexicon?.[target]?.[lexiconKey(phrase)];
+  /* ورمزٌ محفوظٌ لم يعد في القائمة يُطرح: القوائمُ تتبدّل، والمعجمُ لا
+     يُفلت رمزاً مهجوراً إلى عمودٍ تقرؤه اللوحة. */
+  return code && Object.keys(codes ?? {}).includes(code) ? code : null;
 }
 
 /**

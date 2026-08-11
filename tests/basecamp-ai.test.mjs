@@ -521,5 +521,84 @@ check('وما عجز عنه الطرازُ لا يُكتب',
 check('ويُقال إنّه لم يُكتب',
   plan.plans[0].warnings.some((line) => line.includes('لم يُفهم')), plan.plans[0].warnings);
 
+// ═══════════════════════════════════════════════════════════
+group('اللفظُ في سياقه، والصياغةُ على التبدّل الجوهري');
+
+/* ═══ ١) اللفظُ لا يُقرأ معزولاً ═══
+   «تحت الدراسة» وحدَها لا تقول شيئاً عن النتيجة، وفي الملاحظات ما
+   يفسّرها. فيُعطى الطرازُ ما حول اللفظ. */
+({ db, env } = readerSetup());
+let seenPayload = null;
+env.AI = {
+  async run(model, input) {
+    const system = input.messages[0].content;
+    if (system.includes('تفهم ألفاظ')) {
+      seenPayload = JSON.parse(input.messages[1].content);
+      return { response: seenPayload.ما_حوله?.الملاحظات?.includes('لصالحنا') ? 'won' : 'لا-أعرف' };
+    }
+    return { response: '{}' };
+  },
+};
+docContent = `<div>
+  <div>اسم العميل: خالد الغامدي</div>
+  <div>رقم المشروع: ق-2026-900</div>
+  <div>نتيجة المشروع: تحت الدراسة</div>
+  <div>الملاحظات: صدر الحكم لصالحنا وننتظر التنفيذ</div>
+</div>`;
+plan = await buildPlan(env, connection);
+
+check('الملاحظاتُ تُمرَّر مع اللفظ',
+  seenPayload?.ما_حوله?.الملاحظات?.includes('صدر الحكم'), seenPayload?.ما_حوله);
+check('فيُفهم اللفظُ بسياقه',
+  plan.plans[0].case.values.outcome === 'won', plan.plans[0].case.values);
+
+/* ═══ ٢) ولا يُسأل عن لفظٍ مرّتين ═══
+   المزامنة كلَّ ساعة، واللفظُ يبقى في الملفّ حتى يعدّله إنسان. */
+let asks = 0;
+env.AI = {
+  async run(model, input) {
+    if (input.messages[0].content.includes('تفهم ألفاظ')) { asks++; return { response: 'won' }; }
+    return { response: '{}' };
+  },
+};
+await buildPlan(env, connection);
+const firstAsks = asks;
+await buildPlan(env, connection);
+check('اللفظُ المحفوظ لا يُستدلّ عليه ثانية', asks === firstAsks, `asks=${asks}`);
+/* والمحفوظُ يوفّر الاستدلال ولا يوفّر المراجعة. */
+plan = await buildPlan(env, connection);
+check('ويبقى مقولاً في المعاينة',
+  plan.plans[0].warnings.some((line) => line.includes('فُهمت')), plan.plans[0].warnings);
+check('والقيمةُ تُكتب كما لو سُئل عنها',
+  plan.plans[0].case.values.outcome === 'won', plan.plans[0].case.values);
+
+/* ورمزٌ محفوظٌ خارجَ القائمة يُطرح — القوائم تتبدّل. */
+const { recallPhrase } = await import('../worker/lib/ai/extract.js');
+check('ورمزٌ مهجورٌ في المعجم لا يُفلت',
+  recallPhrase({ 'case.outcome': { 'تحت الدراسه': 'مؤجلة' } },
+    { target: 'case.outcome', phrase: 'تحت الدراسة', codes: { won: 'رابحة' } }) === null);
+check('والمحفوظُ الصالح يُقرأ موحَّداً',
+  recallPhrase({ 'case.outcome': { 'تحت الدراسه': 'won' } },
+    { target: 'case.outcome', phrase: 'تحتَ الدِّراسة', codes: { won: 'رابحة' } }) === 'won');
+
+/* ═══ ٣) والصياغةُ تُعاد على التبدّل الجوهري وحده ═══
+   محامٍ يصلح مسافةً أو يشكّل حرفاً — فتتبدّل الحروفُ ولا يتبدّل المعنى.
+   وبصمةٌ حرفيةٌ تُعيد تلخيصَ الملفّ كلِّه لأجل مسافة، كلَّ ساعة. */
+({ db, env } = setup());
+calls = { case: 0, client: 0, type: 0 };
+docContent = FULL_NAME_DOC;
+await runSync(env, connection, actor);
+const baseline = calls.case;
+
+/* تشكيلٌ ومسافاتٌ وفاصلة — لا شيء منها معنى. */
+docContent = FULL_NAME_DOC
+  .replace('مطالبةٌ بمستحقّات نهاية الخدمة', 'مطالبةٌ  بمستحقات نهايةِ الخدمة،');
+await runSync(env, connection, actor);
+check('تعديلٌ في الرسم لا يُعيد الصياغة', calls.case === baseline, `calls=${calls.case}`);
+
+docContent = FULL_NAME_DOC.replace('مطالبةٌ بمستحقّات نهاية الخدمة', 'مطالبةٌ بأجورٍ متأخّرة');
+await runSync(env, connection, actor);
+check('وتبدّلٌ في الكلام يُعيدها', calls.case === baseline + 1, `calls=${calls.case}`);
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

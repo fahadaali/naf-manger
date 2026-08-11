@@ -28,7 +28,13 @@ import {
   htmlToText,
   parseDocument,
 } from './parse.js';
-import { classifyValue, extractFields } from '../ai/extract.js';
+import {
+  classifyValue,
+  extractFields,
+  readLexicon,
+  recallPhrase,
+  rememberPhrase,
+} from '../ai/extract.js';
 import { normalizeArabic } from './discover.js';
 import { fullerName, nameRelation } from './names.js';
 import {
@@ -336,6 +342,19 @@ async function recoverMissing(env, { parsed, text, vocab, ai }) {
  */
 async function resolveVocabulary(env, { parsed, plan, ai }) {
   const resolved = [];
+  if (!(parsed.unresolved ?? []).length) return resolved;
+
+  /* ═══ واللفظُ يُقرأ في سياقه ═══
+     «تحت الدراسة» وحدَها لا تقول شيئاً عن نتيجة القضية، وفي الملاحظات ما
+     يفسّرها: «صدر الحكم لصالحنا وننتظر التنفيذ». فيُعطى الطرازُ ما حول
+     اللفظ من الملفّ نفسِه. */
+  const context = {
+    الملاحظات: parsed.case.notes ?? '',
+    موضوع_القضية: parsed.case.summary ?? '',
+    نوع_القضية: parsed.case.caseType ?? '',
+  };
+
+  const lexicon = ai?.enabled ? await readLexicon(env) : {};
 
   for (const item of parsed.unresolved ?? []) {
     const [entity, field] = item.target.split('.');
@@ -345,17 +364,26 @@ async function resolveVocabulary(env, { parsed, plan, ai }) {
 
     const meaning = TARGETS[item.target]?.label ?? item.target;
     const codes = CLOSED_CODES[item.target];
+    if (!codes) continue;
 
-    let code = null;
-    if (ai?.enabled && codes && ai.budget.spend()) {
-      code = await classifyValue(env, { phrase: item.value, label: meaning, codes });
+    /* وما فُهم مرّةً لا يُستدلّ عليه ثانيةً: اللفظُ يبقى في الملفّ حتى
+       يعدّله إنسان، والمزامنةُ كلَّ ساعة. */
+    let code = ai?.enabled ? recallPhrase(lexicon, { target: item.target, phrase: item.value, codes }) : null;
+    let asked = false;
+
+    if (!code && ai?.enabled && ai.budget.spend()) {
+      asked = true;
+      code = await classifyValue(env, { phrase: item.value, label: meaning, codes, context });
       if (!code) ai.budget.failed++;
     }
 
     if (code) {
       bag[field] = code;
       resolved.push(item.target);
+      /* ويُقال في كل دورة، جاء من الطراز أو من المعجم: المحفوظُ يوفّر
+         الاستدلال ولا يوفّر المراجعة. */
       plan.warnings.push(`«${item.value}» فُهمت ${meaning}: ${codes[code]} — راجِعها`);
+      if (asked) await rememberPhrase(env, { target: item.target, phrase: item.value, code, lexicon });
     } else {
       plan.warnings.push(`لفظٌ لم يُفهم في ${meaning}: «${item.value}» — لم يُكتب`);
     }
