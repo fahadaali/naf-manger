@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Calendar, Copy, ExternalLink, Plus, Trash2, TriangleAlert, User, Users, Video } from 'lucide-react';
 import { Client, Meeting, Prospect } from '../../types';
 import { ApiError, api } from '../../data/api';
+import { db } from '../../data/database';
 import { formatDateTime, formatNumber, isolate } from '@/registry/naf/lib/format';
 import { Alert } from '@/registry/naf/ui/alert';
 
@@ -18,10 +19,9 @@ import { Badge } from '@/registry/naf/ui/badge';
 interface ZoomMeetingModalProps {
   client?: Client | Prospect;
   onClose: () => void;
-  onMeetingCreated?: (meetingData: any) => void;
 }
 
-export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: ZoomMeetingModalProps) {
+export default function ZoomMeetingModal({ client, onClose }: ZoomMeetingModalProps) {
   const [meetingData, setMeetingData] = useState({
     title: client ? `اجتماع مع ${client.fullName}` : 'اجتماع جديد',
     date: new Date().toISOString().split('T')[0],
@@ -44,6 +44,22 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
      `alert` — والرابط هو الفائدة كلُّها، فإغلاقُه بعد لمحةٍ يُضيعه. */
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [copied, setCopied] = useState(false);
+
+  /** اجتماعاتُ هذا الصفّ التي سبقت — تُقرأ عند الفتح وتُحدَّث بعد الإنشاء. */
+  const [past, setPast] = useState<Meeting[]>([]);
+
+  const subject = client ? { type: subjectTypeOf(client), id: client.id } : undefined;
+  const subjectKey = subject ? `${subject.type}:${subject.id}` : '';
+
+  useEffect(() => {
+    if (!subject) return;
+    let alive = true;
+    db.getMeetings(subject)
+      .then((rows) => { if (alive) setPast(rows); })
+      .catch((error) => console.error('تعذّر جلب الاجتماعات:', error));
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectKey]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -135,7 +151,7 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
       });
 
       setMeeting(created);
-      onMeetingCreated?.(created);
+      setPast((rows) => [created, ...rows]);
     } catch (error) {
       const code = (error as ApiError)?.code;
       setErrors({
@@ -208,6 +224,42 @@ export default function ZoomMeetingModal({ client, onClose, onMeetingCreated }: 
         </div>
 
         <div className="p-6 space-y-6">
+          {/* ═══ ما سبق من اجتماعاتٍ لهذا الصفّ ═══
+              كانت تُنشأ وتُحفظ في `meetings` ولا تُعرض بعدها أبداً: المسارُ
+              مبنيٌّ (`GET /api/meetings`) و`db.getMeetings` مكتوبة، وصفرُ
+              نداءات إليهما. فالرابطُ يُرى مرّةً في هذه النافذة ثم يُفقد. */}
+          {past.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                اجتماعات سابقة
+              </h3>
+              <div className="rounded-lg border border-border divide-y divide-border">
+                {past.map((entry) => (
+                  <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{entry.topic}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <bdi>{formatDateTime(new Date(entry.startAt * 1000))}</bdi>
+                        {' · '}
+                        <bdi>{formatNumber(entry.duration)}</bdi> دقيقة
+                      </p>
+                    </div>
+                    <a
+                      href={entry.joinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary-strong"
+                    >
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                      رابط الدخول
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* معلومات الاجتماع الأساسية */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">

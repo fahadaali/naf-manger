@@ -175,7 +175,9 @@ export default {
         return readStats(env);
       }
       if (name === 'settings' && !id) {
-        if (request.method === 'GET') return readSettings(env);
+        /* والعضو يُمرَّر: المفردات تخرج للجميع — المنسدلات تقرؤها — وما
+           تحتها من إعدادٍ خاصّ يُقصّ لمن لا يملك `settings.read`. */
+        if (request.method === 'GET') return readSettings(env, user);
         if (request.method === 'PATCH' || request.method === 'PUT') {
           return writeSettings(request, env, user);
         }

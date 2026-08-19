@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CircleCheck, CircleX, ExternalLink, Handshake, Sparkles } from 'lucide-react';
+import { ExternalLink, Sparkles } from 'lucide-react';
 import { Attachment, Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import AttachmentList from '../Common/AttachmentList';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel } from '../../lib/labels';
+import { caseOutcomeBadge, caseStatusBadge } from '../../lib/case-badges';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
@@ -174,24 +175,6 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'completed': return 'مكتملة';
-      case 'in-progress': return 'قيد المعالجة';
-      case 'pending': return 'منظورة';
-      case 'postponed': return 'مؤجلة';
-      default: return status;
-    }
-  };
-
-  const getOutcomeLabel = (outcome?: string) => {
-    switch (outcome) {
-      case 'won': return 'رابحة';
-      case 'lost': return 'خاسرة';
-      case 'settled': return 'تسوية';
-      default: return '';
-    }
-  };
 
   // View mode
   if (!isEditing && existingCase) {
@@ -221,7 +204,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">الحالة</label>
-                  <p className="text-foreground">{getStatusLabel(existingCase.status)}</p>
+                  <p className="text-foreground">{caseStatusBadge(existingCase.status).label}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">تاريخ الإنشاء</label>
@@ -237,17 +220,11 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                     {(() => {
                       /* المقابلات مسجَّلة في naf-icons.md تحت «نتيجة القضية».
                          §٦: لا تُبلَّغ الحالة بالنصّ وحده ولا باللون وحده. */
-                      const map = {
-                        won: { variant: 'success' as const, Icon: CircleCheck },
-                        lost: { variant: 'destructive' as const, Icon: CircleX },
-                        settled: { variant: 'warning' as const, Icon: Handshake }
-                      };
-                      const { variant, Icon } =
-                        map[existingCase.outcome as keyof typeof map] ?? map.settled;
+                      const { variant, Icon, label } = caseOutcomeBadge(existingCase.outcome);
                       return (
                         <Badge variant={variant}>
                           <Icon aria-hidden="true" />
-                          {getOutcomeLabel(existingCase.outcome)}
+                          {label}
                         </Badge>
                       );
                     })()}

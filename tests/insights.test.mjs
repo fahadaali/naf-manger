@@ -28,6 +28,9 @@ const load = (file) =>
 db.exec(load('0002_platform_tables.sql'));
 db.exec(load('0004_case_attachments.sql'));
 db.exec(load('0008_ai_insights.sql'));
+/* والأرشفةُ معها: `buildDigest` تُصفّي `archived_at IS NULL` كما تفعل
+   لوحةُ التحكّم، فمخطَّطٌ ناقصُ العمود يُسقط الخلاصة كلَّها. */
+db.exec(load('0011_archive.sql'));
 
 const now = Math.floor(Date.now() / 1000);
 const ins = (sql, ...params) => db.prepare(sql).run(...params);

@@ -49,19 +49,33 @@ async function buildDigest(env) {
   const sixMonthsAgo = monthStart(5);
   const today = new Date().toISOString().slice(0, 10);
 
+  /* ═══ المؤرشفُ خارج الخلاصة ═══
+     كما هو خارج لوحة التحكّم. وصفٌّ أُخرج من شاشته بقصد لا يُبنى عليه
+     استبصار — وأثقلُ من ذلك أنّ دمجَ عميلين مكرّرين يؤرشف المدموج، فكان
+     الشخصُ نفسه يُعدّ مرّتين في الأرقام التي تصل الطراز. */
   const [clients, prospects, cases, caseTypes, marketers, followUps] = await env.DB.batch([
-    env.DB.prepare(`SELECT client_type, status, COUNT(*) n FROM clients GROUP BY client_type, status`),
-    env.DB.prepare(`SELECT prospect_status, COUNT(*) n, SUM(COALESCE(expected_value,0)) v FROM prospects GROUP BY prospect_status`),
-    env.DB.prepare(`SELECT status, outcome, COUNT(*) n FROM cases GROUP BY status, outcome`),
+    env.DB.prepare(
+      `SELECT client_type, status, COUNT(*) n FROM clients
+       WHERE archived_at IS NULL GROUP BY client_type, status`,
+    ),
+    env.DB.prepare(
+      `SELECT prospect_status, COUNT(*) n, SUM(COALESCE(expected_value,0)) v FROM prospects
+       WHERE archived_at IS NULL GROUP BY prospect_status`,
+    ),
+    env.DB.prepare(
+      `SELECT status, outcome, COUNT(*) n FROM cases
+       WHERE archived_at IS NULL GROUP BY status, outcome`,
+    ),
     env.DB.prepare(
       `SELECT case_type, COUNT(*) n,
               SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) won,
               SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) done
-       FROM cases GROUP BY case_type`,
+       FROM cases WHERE archived_at IS NULL GROUP BY case_type`,
     ),
     env.DB.prepare(`SELECT status, COUNT(*) n FROM marketers GROUP BY status`),
     env.DB.prepare(
-      `SELECT COUNT(*) n FROM prospects WHERE follow_up_date IS NOT NULL AND follow_up_date < ?`,
+      `SELECT COUNT(*) n FROM prospects
+       WHERE archived_at IS NULL AND follow_up_date IS NOT NULL AND follow_up_date < ?`,
     ).bind(today),
   ]);
 
@@ -70,15 +84,15 @@ async function buildDigest(env) {
   const [newClients, newCases, newProspects] = await env.DB.batch([
     env.DB.prepare(
       `SELECT strftime('%Y-%m', created_at, 'unixepoch') m, COUNT(*) n FROM clients
-       WHERE created_at >= ? GROUP BY m ORDER BY m`,
+       WHERE archived_at IS NULL AND created_at >= ? GROUP BY m ORDER BY m`,
     ).bind(sixMonthsAgo),
     env.DB.prepare(
       `SELECT strftime('%Y-%m', created_at, 'unixepoch') m, COUNT(*) n FROM cases
-       WHERE created_at >= ? GROUP BY m ORDER BY m`,
+       WHERE archived_at IS NULL AND created_at >= ? GROUP BY m ORDER BY m`,
     ).bind(sixMonthsAgo),
     env.DB.prepare(
       `SELECT strftime('%Y-%m', created_at, 'unixepoch') m, COUNT(*) n FROM prospects
-       WHERE created_at >= ? GROUP BY m ORDER BY m`,
+       WHERE archived_at IS NULL AND created_at >= ? GROUP BY m ORDER BY m`,
     ).bind(sixMonthsAgo),
   ]);
 

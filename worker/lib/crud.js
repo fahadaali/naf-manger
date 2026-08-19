@@ -9,6 +9,7 @@
 // ما ليس له.
 
 import { RESOURCES, orderOf, toClient, toRow } from './resources.js';
+import { logActivity } from './activity.js';
 
 const json = (body, status = 200) => Response.json(body, { status });
 const fail = (error, status) => json({ ok: false, error }, status);
@@ -235,7 +236,15 @@ export async function handleResource(request, env, user, name, id) {
     } catch {
       return fail('invalid_body', 400);
     }
-    return respond(await bulkRows(env, resource, body, user));
+    const bulk = await bulkRows(env, resource, body, user);
+    if (!bulk.error && bulk.data?.affected) {
+      await logActivity(env, user, {
+        resource: name,
+        action: String(body?.action ?? ''),
+        count: bulk.data.affected,
+      });
+    }
+    return respond(bulk);
   }
 
   if (!may(user, resource, action)) return fail('forbidden', 403);
@@ -248,7 +257,14 @@ export async function handleResource(request, env, user, name, id) {
 
   if (request.method === 'DELETE') {
     if (!id) return fail('not_found', 404);
-    return respond(await deleteRow(env, resource, id));
+    /* الصفُّ يُقرأ قبل حذفه: بعده لا اسمَ يُذكر في الأثر، ورقمُ معرّفٍ
+       وحده لا يقول لقارئ السجلّ من حُذف. */
+    const doomed = await getRow(env, resource, id);
+    const removed = await deleteRow(env, resource, id);
+    if (!removed.error) {
+      await logActivity(env, user, { resource: name, action: 'delete', row: doomed });
+    }
+    return respond(removed);
   }
 
   let body;
@@ -261,11 +277,19 @@ export async function handleResource(request, env, user, name, id) {
 
   if (request.method === 'POST') {
     if (id) return fail('not_found', 404);
-    return respond(await createRow(env, resource, body, user), 201);
+    const created = await createRow(env, resource, body, user);
+    if (!created.error) {
+      await logActivity(env, user, { resource: name, action: 'create', row: created.data });
+    }
+    return respond(created, 201);
   }
 
   if (!id) return fail('not_found', 404);
-  return respond(await updateRow(env, resource, id, body));
+  const updated = await updateRow(env, resource, id, body);
+  if (!updated.error) {
+    await logActivity(env, user, { resource: name, action: 'update', row: updated.data });
+  }
+  return respond(updated);
 }
 
 function respond(result, okStatus = 200) {

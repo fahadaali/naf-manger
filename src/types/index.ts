@@ -141,9 +141,13 @@ export interface Case {
   feeStructure?: FeeStructure;
   paymentStatus?: PaymentStatus;
   commissionStructure?: CommissionStructure;
-  commissionPayments?: CommissionPayment[];
-  totalCommissionPaid?: number;
-  remainingCommission?: number;
+
+  /* ═══ حقولٌ ثلاثةٌ حُذفت ═══
+     كانت `commissionPayments` و`totalCommissionPaid` و`remainingCommission`
+     مصرَّحةً هنا ولا يكتبها شيء — لا `RESOURCES.cases.fields` ولا الواجهة.
+     وجدولُ قضايا المسوّق كان يقرأ الاثنين الأخيرين، فيعرض **٠٫٠٠ ﷼ لكلّ
+     قضية** أبداً. والمدفوعُ اليوم يُحسب من `commission_payments` نفسها في
+     `MarketerModal`، فلا حقلَ وهميّاً يُقرأ. */
 }
 
 /**
@@ -603,7 +607,8 @@ export interface SystemSettings {
   // إعدادات عامة
   companyName?: string;
   companyDescription?: string;
-  companyLogo?: string;
+  /** مفتاحُ الشعار في الحاوية — و`null` يمحوه. وصفوفٌ قديمة قد تحمل `data:`. */
+  companyLogo?: string | null;
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
@@ -635,7 +640,10 @@ export interface ReportField {
   id: string;
   name: string;
   type: 'text' | 'number' | 'date' | 'boolean' | 'select';
-  source: 'clients' | 'prospects' | 'cases' | 'users' | 'activities';
+  /* المصادرُ الثلاثةُ المبنيّة — مرآةُ `FIELDS` في `worker/lib/reports.js`.
+     وكان النوعُ يذكر `users` و`activities` ولا وجودَ لهما هناك ولا في
+     `REPORT_FIELDS`، فالمنسدلةُ تعرضهما ولا مخرجَ منهما. */
+  source: 'clients' | 'prospects' | 'cases';
   aggregatable?: boolean;
   options?: string[]; // For select fields
 }

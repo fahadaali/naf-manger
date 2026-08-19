@@ -265,13 +265,29 @@ export default function DataExport() {
     activities: 'الأنشطة'
   };
 
-  /** الجداول إلى أوراقٍ لدفتر واحد. والترويسة من أول صفّ في كل جدول. */
+  /* ═══ الترويسة اتّحادُ مفاتيح الصفوف كلِّها لا مفاتيحُ أوّلها ═══
+   *
+   * كانت `Object.keys(rows[0])`. والصفوفُ تُبنى شرطيّاً: «الملاحظات» تُكتب
+   * إن لم تكن فارغة، و«السجل التجاري» للشركات وحدها، و«نتيجة القضية»
+   * للمكتملة، و«رابط Basecamp» لمن له رابط.
+   *
+   * فإن خلا **أوّلُ** صفٍّ من عمودٍ سقط العمودُ عن الملفّ كلِّه — ومعه
+   * بياناتُ كلِّ الصفوف التالية التي تحمله. يصيب xlsx وCSV والطباعة معاً.
+   *
+   * والترتيبُ ترتيبُ أوّل ظهور، فتبقى الأعمدة على نسقها المقصود. */
+  const headersOf = (rows: Record<string, unknown>[]): string[] => {
+    const seen = new Set<string>();
+    for (const row of rows) for (const key of Object.keys(row)) seen.add(key);
+    return [...seen];
+  };
+
+  /** الجداول إلى أوراقٍ لدفتر واحد. */
   const toSheets = (data: Record<string, Record<string, unknown>[]>): Sheet[] =>
     Object.entries(data)
       .filter(([, rows]) => rows.length > 0)
       .map(([key, rows]) => ({
         name: SHEET_TITLE[key] ?? key,
-        headers: Object.keys(rows[0]),
+        headers: headersOf(rows),
         rows
       }));
 

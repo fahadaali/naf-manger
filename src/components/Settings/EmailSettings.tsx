@@ -55,13 +55,9 @@ export default function EmailSettings() {
     setSaveMessage('');
 
     try {
-      const systemSettings = await db.getSettings();
-      const updatedSettings = {
-        ...systemSettings,
-        emailSettings: settings
-      };
-      
-      await db.updateSettings(updatedSettings);
+      /* هذا الحقل وحده لا الكائن الراجع كلَّه: إرسالُه يُثبّت المفرداتِ
+         الافتراضية في الصفّ فلا يبلغها تعديلٌ لاحق في الشيفرة. */
+      await db.updateSettings({ emailSettings: settings });
       setSaveMessage('تم الحفظ');
       
       setTimeout(() => {

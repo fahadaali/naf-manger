@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
-import { CircleCheck, CircleHelp, Gavel, ShieldCheck, Trash2, TriangleAlert, UserCog } from 'lucide-react';
+import { CircleCheck, CircleHelp, CircleSlash, Gavel, ShieldCheck, TriangleAlert, UserCheck, UserCog, UserX } from 'lucide-react';
 import { User, UserPermissions } from '../../types';
 import { db } from '../../data/database';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
+import { Select } from '@/registry/naf/ui/select';
 import { messageTone } from '../../lib/status-message';
 import { Alert } from '@/registry/naf/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 import { Card } from '@/registry/naf/ui/card';
 
+/** الأدوارُ الثلاثة — مرآةُ `BY_ROLE` في `worker/lib/roles.js`، وهو الحاكم. */
+const ROLE_OPTIONS = ['admin', 'lawyer', 'staff'];
+
 export default function UserManagement() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -107,24 +113,72 @@ export default function UserManagement() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
+  /* ═══ الدور يُغيَّر من هنا ═══
+   *
+   * الخادم يقبله — `updateMember` تكتب `role` — وREADME يقول «تُدار
+   * الترقيةُ والإيقاف من شاشة المستخدمين». ولم تكن الشاشة تعرض إلا محرّرَ
+   * الصلاحيات الدقيقة، فرفعُ عضوٍ إلى `lawyer` أو `admin` لا سبيل إليه إلا
+   * بتعديلٍ مباشر في القاعدة.
+   *
+   * وتبديلُ الدور يُبدّل الصلاحياتِ معه: `perms` تُمحى فيسري افتراضُ الدور
+   * الجديد من `worker/lib/roles.js`. ولولا ذلك لبقي عضوٌ رُقّي إلى «محامٍ»
+   * على صلاحيات «إداري» المحفوظة، فيُقرأ الدورُ شيئاً والصلاحيةُ غيرَه. */
+  const handleChangeRole = async (user: User, role: string) => {
+    if (role === user.role) return;
+    if (!window.confirm(
+      `تغيير دور «${user.name}» إلى «${getRoleLabel(role)}»؟ تعود صلاحياتُه إلى افتراض الدور الجديد.`
+    )) return;
 
-    if (window.confirm(`هل أنت متأكد من حذف المستخدم "${user.name}"؟`)) {
-      try {
-        const success = await db.deleteUser(userId);
-        if (success) {
-          await loadUsers();
-          setSaveMessage('تم حذف المستخدم');
-          setTimeout(() => setSaveMessage(''), 3000);
-        } else {
-          setSaveMessage('لا يمكن حذف هذا المستخدم');
-        }
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        setSaveMessage('حدث خطأ أثناء حذف المستخدم');
-      }
+    setIsSaving(true);
+    setSaveMessage('');
+    try {
+      await db.updateUser(user.id, { role: role as User['role'], permissions: undefined });
+      await loadUsers();
+      setSaveMessage('تم تغيير الدور');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (error) {
+      console.error('Error changing role:', error);
+      const code = (error as { code?: string })?.code;
+      setSaveMessage(
+        code === 'cannot_change_self' ? 'لا تغيّر دورك بنفسك' : 'حدث خطأ أثناء تغيير الدور'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  /* ═══ الإيقافُ إيقافٌ لا حذف ═══
+   *
+   * كان الزرُّ `Trash2` والتأكيدُ يقول «حذف» والرسالةُ «تم حذف المستخدم» —
+   * والفعلُ الواقع `isActive: false`. والصفُّ يبقى في الجدول كما هو، ولا
+   * مؤشّرَ للحالة، ولا سبيلَ لإعادة التفعيل. فيُقرأ الحذفُ واقعاً وهو لم
+   * يقع، ويُعاد الضغطُ ولا يتغيّر شيء.
+   *
+   * والحذفُ الحقيقيّ ليس مقصوداً أصلاً: صفُّ العضو يُيتّم سجلَّ الأنشطة،
+   * والإيقافُ يقوم مقامه — الوسيط يقرأ `is_active` في كل طلبٍ محميّ فيسري
+   * في الطلب التالي. فالاسمُ يُصحَّح والحالةُ تُعرض ويُفتح الطريقُ عودةً. */
+  const handleToggleActive = async (user: User) => {
+    const next = !(user.isActive ?? true);
+    const question = next
+      ? `إعادة تفعيل وصول «${user.name}»؟`
+      : `إيقاف وصول «${user.name}»؟ يسري في طلبه التالي، وبياناتُه وسجلُّه يبقيان.`;
+    if (!window.confirm(question)) return;
+
+    setIsSaving(true);
+    setSaveMessage('');
+    try {
+      await db.setUserActive(user.id, next);
+      await loadUsers();
+      setSaveMessage(next ? 'تم تفعيل الوصول' : 'تم إيقاف الوصول');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (error) {
+      console.error('Error toggling access:', error);
+      const code = (error as { code?: string })?.code;
+      setSaveMessage(
+        code === 'cannot_change_self' ? 'لا توقف وصولك بنفسك' : 'حدث خطأ أثناء تغيير الوصول'
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -164,6 +218,9 @@ export default function UserManagement() {
                 الدور
               </TableHead>
               <TableHead>
+                الوصول
+              </TableHead>
+              <TableHead>
                 آخر نشاط
               </TableHead>
               <TableHead>
@@ -175,8 +232,11 @@ export default function UserManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
+            {users.map((user) => {
+              const active = user.isActive ?? true;
+              const isSelf = user.id === currentUser?.id;
+              return (
+              <TableRow key={user.id} className={active ? undefined : 'opacity-70'}>
                 <TableCell>
                   <div>
                     <div className="text-sm font-medium text-foreground">{user.name}</div>
@@ -184,15 +244,40 @@ export default function UserManagement() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  {(() => {
-                    const { variant, Icon } = roleOf(user.role);
-                    return (
-                      <Badge variant={variant}>
-                        <Icon aria-hidden="true" />
-                        {getRoleLabel(user.role)}
-                      </Badge>
-                    );
-                  })()}
+                  {/* الدورُ يُغيَّر من هنا — وهو ما يَعِد به README. ولا
+                      يغيّر العضوُ دورَ نفسه: الخادم يردّه بـ`cannot_change_self`،
+                      وآخرُ آدمنٍ يفعلها يُغلق الشاشة على الجميع. */}
+                  {isSelf ? (
+                    (() => {
+                      const { variant, Icon } = roleOf(user.role);
+                      return (
+                        <Badge variant={variant}>
+                          <Icon aria-hidden="true" />
+                          {getRoleLabel(user.role)}
+                        </Badge>
+                      );
+                    })()
+                  ) : (
+                    <Select
+                      value={user.role}
+                      onChange={(event) => handleChangeRole(user, event.target.value)}
+                      disabled={isSaving}
+                      aria-label={`دور ${user.name}`}
+                      className="w-40"
+                    >
+                      {ROLE_OPTIONS.map((role) => (
+                        <option key={role} value={role}>{getRoleLabel(role)}</option>
+                      ))}
+                    </Select>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {/* حالةُ التفعيل تُعرض: كانت تُكتب في القاعدة ولا يراها
+                      أحد، فيُوقَف عضوٌ ولا يتغيّر في الجدول شيء. */}
+                  <Badge variant={active ? 'success' : 'default'}>
+                    {active ? <CircleCheck aria-hidden="true" /> : <CircleSlash aria-hidden="true" />}
+                    {active ? 'مفعَّل' : 'موقوف'}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   {formatLastLogin(user.lastLogin)}
@@ -205,15 +290,25 @@ export default function UserManagement() {
                     <Button onClick={() => setEditingUser(user)} className="text-primary hover:text-primary-strong" title="تعديل الصلاحيات" variant="ghost" size="icon-sm">
                       <ShieldCheck className="h-4 w-4" />
                     </Button>
-                    {user.role !== 'admin' && (
-                      <Button onClick={() => handleDeleteUser(user.id)} className="text-destructive hover:text-destructive-strong" title="حذف" variant="ghost" size="icon-sm">
-                        <Trash2 className="h-4 w-4" />
+                    {/* والإيقافُ يُرجَع: كان الزرُّ `Trash2` ويقول «حذف»
+                        والفعلُ إيقافٌ، ولا طريقَ عودةٍ منه. */}
+                    {!isSelf && (
+                      <Button
+                        onClick={() => handleToggleActive(user)}
+                        disabled={isSaving}
+                        className={active ? 'text-destructive hover:text-destructive-strong' : 'text-success hover:text-success-strong'}
+                        title={active ? 'إيقاف الوصول' : 'إعادة التفعيل'}
+                        variant="ghost"
+                        size="icon-sm"
+                      >
+                        {active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                       </Button>
                     )}
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </Card>

@@ -39,6 +39,13 @@ export const REPORT_FIELDS: Record<string, ReportField[]> = {
   ]
 };
 
+/** تسميةُ المصدر — والمصادرُ ما في `REPORT_FIELDS` لا أكثر. */
+export const SOURCE_LABEL: Record<string, string> = {
+  clients: 'العملاء',
+  prospects: 'العملاء المحتملين',
+  cases: 'القضايا'
+};
+
 const AGG_LABEL: Record<string, string> = {
   count: 'العدد',
   sum: 'المجموع',

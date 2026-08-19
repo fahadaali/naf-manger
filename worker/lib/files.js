@@ -29,7 +29,28 @@ const ATTACHMENT = {
   },
 };
 
-export const KINDS = { avatar: AVATAR, attachment: ATTACHMENT };
+/* ═══ شعارُ المكتب ═══
+ *
+ * كان يُقرأ `readAsDataURL` ويُحشر نصَّ base64 في `system_settings.value`:
+ * صفٌّ واحدٌ يحمل ميغابايتات، فوق حدّ D1 لقيمةٍ واحدة — والحفظ يسقط. وما
+ * دون الحدّ يُرسَل مع **كل** قراءة إعدادات، أي مع كل فتحةِ نموذجٍ لكل
+ * عضو، لأن المنسدلات تقرأ الكائن نفسه.
+ *
+ * فهو ملفٌّ كغيره: يُرفع إلى الحاوية ويُحفظ مفتاحُه. والحدُّ نصفُ ميغابايت
+ * — شعارٌ يُعرض في ٣٢ بكسلاً لا يحتاج أكثر. وSVG مستثنى كما في القائمتين
+ * فوقه وللسبب نفسه.
+ */
+const LOGO = {
+  prefix: 'logo',
+  maxBytes: 512 * 1024,
+  types: {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+  },
+};
+
+export const KINDS = { avatar: AVATAR, attachment: ATTACHMENT, logo: LOGO };
 
 /* ═══ لماذا لا SVG ═══
    SVG صورةٌ في نظر `image/*` ومستندٌ في نظر المتصفّح: يحمل `<script>`،
@@ -45,7 +66,7 @@ export function newKey(kind) {
 /* المفتاح يُفحص بشكله قبل أن يُقرأ: بادئةٌ معروفة ثم `UUID`. ومخازن
    الكائنات لا تعرف `..` أصلاً، لكن الشرط يمنع تخمين مفاتيح خارج ما نكتبه
    نحن، ويردّ الطلبَ قبل أن يبلغ الحاوية. */
-const KEY_SHAPE = /^(avatar|attachment)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const KEY_SHAPE = /^(avatar|attachment|logo)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export function isValidKey(key) {
   return typeof key === 'string' && KEY_SHAPE.test(key);

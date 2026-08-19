@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Archive, CalendarX, ChevronDown, CircleCheck, CircleHelp, CircleX, Clock, ExternalLink, Handshake, LoaderCircle, Plus, Search } from 'lucide-react';
+import { Archive, ChevronDown, ExternalLink, Plus, Search } from 'lucide-react';
 import { BulkAction, Case } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
@@ -10,6 +10,7 @@ import { useSelection } from '../../lib/use-selection';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel } from '../../lib/labels';
+import { caseOutcomeBadge, caseStatusBadge } from '../../lib/case-badges';
 import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
@@ -170,46 +171,11 @@ export default function CasesView() {
 
   /* LoaderCircle لما هو بيد المكتب، و Clock لانتظار موعدٍ عند
      المحكمة — الفرق مَن يملك الخطوة التالية. مسجَّل في naf-icons.md. */
-  const STATUS = {
-    completed: { variant: 'success' as const, Icon: CircleCheck },
-    'in-progress': { variant: 'primary' as const, Icon: LoaderCircle },
-    pending: { variant: 'warning' as const, Icon: Clock },
-    postponed: { variant: 'destructive' as const, Icon: CalendarX }
-  };
-
-  const statusOf = (status: string) =>
-    STATUS[status as keyof typeof STATUS] ??
-    { variant: 'default' as const, Icon: CircleHelp };
-
-  /* نتيجة القضية حالة كغيرها: أيقونة ولون ونصّ معاً كما تُلزم §٦،
-     والمقابلات مسجَّلة في naf-icons.md تحت «نتيجة القضية». */
-  const OUTCOME = {
-    won: { variant: 'success' as const, Icon: CircleCheck },
-    lost: { variant: 'destructive' as const, Icon: CircleX },
-    settled: { variant: 'warning' as const, Icon: Handshake }
-  };
-
-  const outcomeOf = (outcome: string) =>
-    OUTCOME[outcome as keyof typeof OUTCOME] ?? OUTCOME.settled;
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'completed': return 'مكتملة';
-      case 'in-progress': return 'قيد المعالجة';
-      case 'pending': return 'منظورة';
-      case 'postponed': return 'مؤجلة';
-      default: return status;
-    }
-  };
-
-  const getOutcomeLabel = (outcome?: string) => {
-    switch (outcome) {
-      case 'won': return 'رابحة';
-      case 'lost': return 'خاسرة';
-      case 'settled': return 'تسوية';
-      default: return '';
-    }
-  };
+  /* الشارةُ — أيقونةً ولوناً ونصّاً — من `lib/case-badges.ts`. وكانت
+     مكتوبةً هنا وفي `CaseModal` و`MarketerModal`، والثالثةُ تُسقط
+     «مؤجلة» فتسمّيها «منظورة». */
+  const statusOf = caseStatusBadge;
+  const outcomeOf = caseOutcomeBadge;
 
   const wonCases = completedCases.filter(c => c.outcome === 'won');
   const winRate = completedCases.length > 0 ? Math.round((wonCases.length / completedCases.length) * 100) : 0;
@@ -355,7 +321,7 @@ export default function CasesView() {
                     )}
                     <Badge variant={variant}>
                       <Icon aria-hidden="true" />
-                      {getStatusLabel(case_.status)}
+                      {statusOf(case_.status).label}
                     </Badge>
                   </div>
                 </div>
@@ -375,7 +341,7 @@ export default function CasesView() {
                       return (
                         <Badge variant={outcome.variant}>
                           <outcome.Icon aria-hidden="true" />
-                          {getOutcomeLabel(case_.outcome)}
+                          {outcomeOf(case_.outcome).label}
                         </Badge>
                       );
                     })()}
@@ -484,7 +450,7 @@ export default function CasesView() {
                       return (
                         <Badge variant={variant}>
                           <Icon aria-hidden="true" />
-                          {getStatusLabel(case_.status)}
+                          {statusOf(case_.status).label}
                         </Badge>
                       );
                     })()}
@@ -494,7 +460,7 @@ export default function CasesView() {
                         <div className="mt-1 hidden sm:block">
                           <Badge variant={variant}>
                             <Icon aria-hidden="true" />
-                            {getOutcomeLabel(case_.outcome)}
+                            {outcomeOf(case_.outcome).label}
                           </Badge>
                         </div>
                       );
@@ -628,7 +594,7 @@ export default function CasesView() {
                           return (
                             <Badge variant={variant}>
                               <Icon aria-hidden="true" />
-                              {getOutcomeLabel(case_.outcome)}
+                              {outcomeOf(case_.outcome).label}
                             </Badge>
                           );
                         })()}

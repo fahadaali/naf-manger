@@ -114,7 +114,7 @@ export default function MarketersView() {
       <div className="bg-surface-deep text-surface-deep-foreground rounded-lg p-6">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-card bg-opacity-20 rounded-full">
+            <div className="p-3 bg-card/20 rounded-full">
               <Users className="h-8 w-8" />
             </div>
             <div>

@@ -3,7 +3,7 @@ import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, TriangleAlert, X } fr
 import { CustomReport, ReportField, ReportFilter, ReportResult, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
-import { REPORT_FIELDS, columnLabel, formatCell } from '../../lib/report-fields';
+import { REPORT_FIELDS, SOURCE_LABEL, columnLabel, formatCell } from '../../lib/report-fields';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -237,15 +237,18 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                 <label className="block text-sm font-medium text-foreground mb-2">
                   مصدر البيانات *
                 </label>
+                {/* المصادرُ من `REPORT_FIELDS` لا من نصوصٍ هنا — وهي مرآةُ
+                    `FIELDS` في الخادم. وكان مكتوباً هنا خمسةٌ والمبنيُّ
+                    ثلاثة: اختيارُ «المستخدمين» أو «الأنشطة» يُفرغ قائمةَ
+                    الحقول، فيردّ الحفظُ «اختر حقلاً» أبداً وتردّ المعاينةُ
+                    `unknown_source` — طريقٌ لا مخرجَ منه إلا بالرجوع. */}
                 <Select
                   value={reportData.dataSource || ''}
                   onChange={(e) => handleDataSourceChange(e.target.value)}
                 >
-                  <option value="clients">العملاء</option>
-                  <option value="prospects">العملاء المحتملين</option>
-                  <option value="cases">القضايا</option>
-                  <option value="users">المستخدمين</option>
-                  <option value="activities">الأنشطة</option>
+                  {Object.keys(fieldDefinitions).map((source) => (
+                    <option key={source} value={source}>{SOURCE_LABEL[source] ?? source}</option>
+                  ))}
                 </Select>
               </div>
 

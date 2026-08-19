@@ -124,7 +124,7 @@ export default function ProfilePictureUpload({
 
         {/* Loading indicator */}
         {isUploading && (
-          <div className="absolute inset-0 bg-card bg-opacity-75 rounded-full flex items-center justify-center">
+          <div className="absolute inset-0 bg-card/75 rounded-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
         )}
@@ -140,7 +140,12 @@ export default function ProfilePictureUpload({
 
       {/* Action buttons */}
       <div className="flex gap-2">
+        {/* `type="button"` لازم: هذا المكوّن يُركَّب داخل `<form>` في نوافذ
+            العميل والمحتمل والمسوّق، والزرُّ بلا نوعٍ `submit` بحكم الافتراض —
+            فكان الضغط على «إضافة صورة» يفتح منتقيَ الملفّات ويحفظ النموذج
+            ويُغلق النافذة في اللحظة نفسها، فيُسجَّل صفٌّ ناقصٌ قبل اختيار الملفّ. */}
         <button
+          type="button"
           onClick={handleClick}
           disabled={isUploading}
           className="text-xs px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:bg-muted transition-colors"
@@ -150,6 +155,7 @@ export default function ProfilePictureUpload({
         
         {currentPicture && (
           <button
+            type="button"
             onClick={handleRemovePicture}
             disabled={isUploading}
             className="text-xs px-3 py-1 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 disabled:bg-muted transition-colors"

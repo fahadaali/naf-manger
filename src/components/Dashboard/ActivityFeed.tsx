@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, FileText, User, Users } from 'lucide-react';
+import { Banknote, ClipboardList, FileText, Link2, Megaphone, User, UserPlus, Users } from 'lucide-react';
 import { ActivityLog } from '../../types';
 import { db } from '../../data/database';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
+import { formatNumber, isolate } from '@/registry/naf/lib/format';
 
 export default function ActivityFeed() {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
@@ -32,56 +33,53 @@ export default function ActivityFeed() {
     }
   };
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'client_created':
-      case 'client_updated':
-      case 'client_deleted':
-        return Users;
-      case 'case_created':
-      case 'case_updated':
-      case 'case_deleted':
-        return FileText;
-      case 'user_login':
-      case 'user_created':
-        return User;
-      default:
-        return ClipboardList;
-    }
+  /* ═══ الأيقونةُ من الكيان واللونُ من الفعل ═══
+   *
+   * كان `switch` يعدّ أنواعاً بأعيانها — `client_created` و`case_updated`
+   * وأخواتِها — ولا يُكتب منها واحد، فكلُّ فرعٍ فيه ميت. والأنواعُ اليوم
+   * تُبنى في `worker/lib/activity.js` بصيغة `<كيان>_<فعل>`، فتُقرأ
+   * جزأين: يُضاف كيانٌ أو فعلٌ هناك فيجد صورتَه هنا بلا تعديل. */
+  const ENTITY_ICON: Record<string, typeof Users> = {
+    client: Users,
+    prospect: UserPlus,
+    case: FileText,
+    marketer: Megaphone,
+    commission: Banknote,
+    user: User,
+    basecamp: Link2,
   };
 
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'client_created':
-      case 'case_created':
-      case 'user_created':
-        return 'bg-success-soft text-success-strong';
-      case 'client_updated':
-      case 'case_updated':
-        return 'bg-primary-soft text-primary-strong';
-      case 'client_deleted':
-      case 'case_deleted':
-        return 'bg-destructive-soft text-destructive-strong';
-      case 'user_login':
-        return 'bg-info-soft text-info-strong';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
+  const ACTION_TONE: Record<string, string> = {
+    created: 'bg-success-soft text-success-strong',
+    updated: 'bg-primary-soft text-primary-strong',
+    deleted: 'bg-destructive-soft text-destructive-strong',
+    archived: 'bg-muted text-muted-foreground',
+    restored: 'bg-info-soft text-info-strong',
   };
 
+  /** `<كيان>_<فعل>` — وآخرُ شرطةٍ هي الفاصل، فكيانٌ باسمين لا يُمزَّق. */
+  const partsOf = (type: string) => {
+    const cut = type.lastIndexOf('_');
+    return cut > 0
+      ? { entity: type.slice(0, cut), action: type.slice(cut + 1) }
+      : { entity: type, action: '' };
+  };
+
+  const getActivityIcon = (type: string) =>
+    ENTITY_ICON[partsOf(type).entity] ?? ClipboardList;
+
+  const getActivityColor = (type: string) =>
+    ACTION_TONE[partsOf(type).action] ?? 'bg-muted text-muted-foreground';
+
+  /* الأرقامُ من `formatNumber` ومعزولةٌ بـ`isolate`: القاعدة توجب عزل كل
+     رقمٍ في نصّ عربي، و`<bdi>` لا يبلغ سلسلةً تُبنى هنا. ولحظةٌ في
+     المستقبل — ساعةُ جهازٍ متأخّرة — تُقرأ «الآن» لا «منذ ‎-٥‎ دقيقة». */
   const getTimeAgo = (timestamp: Date) => {
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 60) {
-      return `منذ ${diffInMinutes} دقيقة`;
-    } else if (diffInMinutes < 1440) {
-      const hours = Math.floor(diffInMinutes / 60);
-      return `منذ ${hours} ساعة`;
-    } else {
-      const days = Math.floor(diffInMinutes / 1440);
-      return `منذ ${days} يوم`;
-    }
+    const minutes = Math.floor((Date.now() - timestamp.getTime()) / 60000);
+    if (minutes < 1) return 'الآن';
+    if (minutes < 60) return `منذ ${isolate(formatNumber(minutes))} دقيقة`;
+    if (minutes < 1440) return `منذ ${isolate(formatNumber(Math.floor(minutes / 60)))} ساعة`;
+    return `منذ ${isolate(formatNumber(Math.floor(minutes / 1440)))} يوم`;
   };
 
   return (
@@ -123,10 +121,10 @@ export default function ActivityFeed() {
       </div>
       
       <div className="mt-4 pt-4 border-t border-border">
-        <Button  variant="link" size="sm">
-          <span onClick={loadActivities}>
+        {/* المُعالِج على الزرّ لا على `<span>` بداخله: كان الضغط خارج
+            النصّ لا يعمل، وتفعيلُه بالكيبورد لا يبلغ المُعالِج أصلاً. */}
+        <Button type="button" onClick={loadActivities} variant="link" size="sm">
           تحديث الأنشطة
-          </span>
         </Button>
       </div>
     </Card>

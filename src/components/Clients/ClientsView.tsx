@@ -165,10 +165,6 @@ export default function ClientsView() {
     setMeetingClient(null);
   };
 
-  const handleMeetingCreated = (meetingData: any) => {
-    console.log('Meeting created:', meetingData);
-    // يمكن إضافة منطق إضافي هنا مثل تحديث قاعدة البيانات
-  };
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -418,7 +414,6 @@ export default function ClientsView() {
         <ZoomMeetingModal
           client={meetingClient}
           onClose={handleCloseMeetingModal}
-          onMeetingCreated={handleMeetingCreated}
         />
       )}
     </div>

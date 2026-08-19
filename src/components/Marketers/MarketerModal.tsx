@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Archive, Banknote, ChartColumn, CircleCheck, CircleSlash, Clock, LoaderCircle, User } from 'lucide-react';
-import { Case, Marketer, MarketerStats } from '../../types';
+import { Archive, Banknote, ChartColumn, CircleCheck, CircleSlash, TriangleAlert, User } from 'lucide-react';
+import { Case, CommissionPayment, Marketer, MarketerStats } from '../../types';
 /* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
    ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
    يمرّ بـ formatDate من naf-format. */
@@ -12,12 +12,14 @@ import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { useSettingList } from '../../lib/use-settings';
 import { marketerStatusLabel, relationshipTypeLabel } from '../../lib/labels';
+import { caseStatusBadge } from '../../lib/case-badges';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
+import { Alert } from '@/registry/naf/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 
 interface MarketerModalProps {
@@ -71,9 +73,30 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
     averageCaseValue: 0
   });
   const [marketerCases, setMarketerCases] = useState<Case[]>([]);
+  const [payments, setPayments] = useState<CommissionPayment[]>([]);
 
   const marketerId = marketer?.id;
   const viewing = !isEditing && Boolean(marketerId);
+
+  /* نموذجُ تسجيل دفعة — مفتوحٌ عند الطلب لا دائماً: الجدولُ هو المقصود
+     والتسجيلُ حدثٌ نادر. */
+  const [paying, setPaying] = useState(false);
+  const [payment, setPayment] = useState({ caseId: '', amount: '', paymentDate: '', notes: '' });
+  const [paymentError, setPaymentError] = useState('');
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  const load = async (id: string) => {
+    const [marketerStats, allCases, allPayments] = await Promise.all([
+      db.getMarketerStats(id),
+      db.getCases(),
+      db.getCommissionPayments(id),
+    ]);
+    return {
+      stats: marketerStats,
+      cases: allCases.filter((c) => c.marketerId === id && !c.archivedAt),
+      payments: allPayments,
+    };
+  };
 
   useEffect(() => {
     if (!viewing || !marketerId) return;
@@ -81,26 +104,79 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
     // مقياسٌ يمنع كتابةَ نتيجةِ مسوّقٍ سابق فوق حالة اللاحق إن تبدّل قبل وصولها.
     let alive = true;
 
-    const load = async () => {
-      try {
-        const [marketerStats, allCases] = await Promise.all([
-          db.getMarketerStats(marketerId),
-          db.getCases(),
-        ]);
+    load(marketerId)
+      .then((result) => {
         if (!alive) return;
-        setStats(marketerStats);
-        setMarketerCases(allCases.filter((c) => c.marketerId === marketerId));
-      } catch (error) {
+        setStats(result.stats);
+        setMarketerCases(result.cases);
+        setPayments(result.payments);
+      })
+      .catch((error) => {
         console.error('Error loading marketer details:', error);
-        if (alive) setMarketerCases([]);
-      }
-    };
+        if (alive) {
+          setMarketerCases([]);
+          setPayments([]);
+        }
+      });
 
-    load();
     return () => {
       alive = false;
     };
   }, [viewing, marketerId]);
+
+  /* ═══ المدفوعُ لكلِّ قضية ═══
+   *
+   * كان الجدولُ يقرأ `case_.totalCommissionPaid` و`case_.remainingCommission`
+   * — حقلين مصرَّحين في النوع ولا يكتبهما شيء — فيعرض العمودان **٠٫٠٠ ﷼**
+   * لكلّ قضية أبداً. والمدفوعُ يُجمع الآن من الدفعات المسجَّلة نفسها.
+   */
+  const paidByCase = payments.reduce<Record<string, number>>((sum, entry) => {
+    sum[entry.caseId] = (sum[entry.caseId] ?? 0) + entry.amount;
+    return sum;
+  }, {});
+
+  /** العمولةُ المستحقّة على قضيةٍ بعينها — كما تُحسب في الخادم للمجموع. */
+  const earnedOn = (case_: Case): number => {
+    const commission = case_.commissionStructure;
+    if (!commission) return 0;
+    const collected = case_.paymentStatus?.collectedAmount ?? 0;
+    return commission.type === 'percentage'
+      ? (collected * (commission.value ?? 0)) / 100
+      : (commission.value ?? 0);
+  };
+
+  const recordPayment = async () => {
+    if (!marketerId) return;
+    setPaymentError('');
+
+    const amount = parseFloat(payment.amount);
+    if (!payment.caseId) return setPaymentError('اختر القضية');
+    if (!Number.isFinite(amount) || amount <= 0) return setPaymentError('أدخل مبلغاً أكبر من صفر');
+
+    setSavingPayment(true);
+    try {
+      await db.createCommissionPayment({
+        marketerId,
+        caseId: payment.caseId,
+        amount,
+        paymentDate: payment.paymentDate ? new Date(payment.paymentDate) : new Date(),
+        notes: payment.notes || undefined,
+      } as Omit<CommissionPayment, 'id'>);
+
+      const result = await load(marketerId);
+      setStats(result.stats);
+      setMarketerCases(result.cases);
+      setPayments(result.payments);
+
+      setPayment({ caseId: '', amount: '', paymentDate: '', notes: '' });
+      setPaying(false);
+    } catch (error) {
+      console.error('تعذّر تسجيل الدفعة:', error);
+      setPaymentError('تعذّر تسجيل الدفعة. أعد المحاولة');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -328,14 +404,11 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                           <TableCell className="text-foreground">{case_.clientName}</TableCell>
                           <TableCell>
                             {(() => {
-                          const s = case_.status;
-                          const map = {
-                            completed: { variant: 'success' as const, Icon: CircleCheck, label: 'مكتملة' },
-                            'in-progress': { variant: 'primary' as const, Icon: LoaderCircle, label: 'قيد المعالجة' },
-                            pending: { variant: 'warning' as const, Icon: Clock, label: 'منظورة' }
-                          };
-                          const { variant, Icon, label } =
-                            map[s as keyof typeof map] ?? map.pending;
+                          /* كانت هنا خريطةٌ ثالثة بثلاث حالاتٍ ثمّ
+                             `?? map.pending` — فالقضيةُ **المؤجَّلة** تُعرض
+                             «منظورة» بشارةٍ برتقالية. والشارةُ الآن من
+                             `lib/case-badges.ts`، موضعاً واحداً للثلاث شاشات. */
+                          const { variant, Icon, label } = caseStatusBadge(case_.status);
                           return (
                             <Badge variant={variant}>
                               <Icon aria-hidden="true" />
@@ -351,10 +424,10 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                             <Money value={case_.paymentStatus?.collectedAmount ?? 0} />
                           </TableCell>
                           <TableCell className="text-info">
-                            <Money value={case_.totalCommissionPaid ?? 0} />
+                            <Money value={paidByCase[case_.id] ?? 0} />
                           </TableCell>
                           <TableCell className="text-warning">
-                            <Money value={case_.remainingCommission ?? 0} />
+                            <Money value={earnedOn(case_) - (paidByCase[case_.id] ?? 0)} />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -363,6 +436,125 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                 </div>
               ) : (
                 <p className="text-muted-foreground text-center py-8">لم تُربَط أي قضية بهذا المسوّق بعد.</p>
+              )}
+            </div>
+
+            {/* ═══ دفعاتُ العمولة ═══
+                كان الجدولُ في القاعدة والموردُ في الـWorker ولا شاشةَ تسجّل
+                دفعةً — فبطاقتا «المدفوع» و«المتبقّي» رقمان لا يتحرّكان أبداً.
+                والتسجيلُ من هنا، والمجموعُ يُقرأ من الصفوف نفسها. */}
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Banknote className="h-5 w-5" />
+                  دفعات العمولة
+                </h3>
+                {marketerCases.length > 0 && (
+                  <Button
+                    type="button"
+                    onClick={() => { setPaying((open) => !open); setPaymentError(''); }}
+                    variant={paying ? 'ghost' : 'outline'}
+                    size="sm"
+                  >
+                    {paying ? 'إلغاء' : 'تسجيل دفعة'}
+                  </Button>
+                )}
+              </div>
+
+              {paying && (
+                <div className="bg-muted rounded-lg p-4 mb-4 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">القضية</label>
+                      <Select
+                        value={payment.caseId}
+                        onChange={(e) => setPayment((prev) => ({ ...prev, caseId: e.target.value }))}
+                      >
+                        <option value="">اختر القضية</option>
+                        {marketerCases.map((case_) => (
+                          <option key={case_.id} value={case_.id}>
+                            {case_.caseNumber} — {case_.clientName}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">المبلغ بالريال</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={payment.amount}
+                        onChange={(e) => setPayment((prev) => ({ ...prev, amount: e.target.value }))}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">تاريخ الدفع</label>
+                      <Input
+                        type="date"
+                        value={payment.paymentDate}
+                        onChange={(e) => setPayment((prev) => ({ ...prev, paymentDate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">ملاحظات</label>
+                    <Input
+                      type="text"
+                      value={payment.notes}
+                      onChange={(e) => setPayment((prev) => ({ ...prev, notes: e.target.value }))}
+                      placeholder="اختياري — رقم الحوالة مثلاً"
+                    />
+                  </div>
+
+                  {paymentError && (
+                    <Alert variant="destructive">
+                      <TriangleAlert aria-hidden="true" />
+                      <span>{paymentError}</span>
+                    </Alert>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button type="button" onClick={recordPayment} disabled={savingPayment}>
+                      {savingPayment ? 'جارٍ التسجيل' : 'تسجيل الدفعة'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {payments.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table className="rounded-lg">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>التاريخ</TableHead>
+                        <TableHead>القضية</TableHead>
+                        <TableHead>المبلغ</TableHead>
+                        <TableHead>ملاحظات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((entry) => {
+                        const related = marketerCases.find((c) => c.id === entry.caseId);
+                        return (
+                          <TableRow key={entry.id}>
+                            <TableCell><bdi>{formatDate(entry.paymentDate)}</bdi></TableCell>
+                            <TableCell className="text-primary">
+                              <bdi>{related?.caseNumber ?? '—'}</bdi>
+                            </TableCell>
+                            <TableCell className="text-info"><Money value={entry.amount} /></TableCell>
+                            <TableCell className="text-muted-foreground">{entry.notes || '—'}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  لم تُسجَّل دفعةُ عمولةٍ بعد.
+                </p>
               )}
             </div>
           </div>

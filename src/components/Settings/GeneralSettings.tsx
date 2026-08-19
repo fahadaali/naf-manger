@@ -2,16 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Building2, CircleCheck, Image, Palette, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
 import { SystemSettings } from '../../types';
+import { pictureUrl, uploadFile } from '../../data/api';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { messageTone } from '../../lib/status-message';
 import { Alert } from '@/registry/naf/ui/alert';
 
+/* الحدّان مرآةُ `LOGO` في `worker/lib/files.js` — والخادم هو الحاكم.
+   وSVG مستثنًى هناك قصداً: يحمل نصّاً يُنفَّذ حين يُفتح على أصلنا. */
+const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_BYTES = 512 * 1024;
+
+/** ما تملك هذه الشاشة تغييرَه — وهو ما تُرسله لا الكائن كلَّه. */
+type GeneralFields = Pick<SystemSettings, 'companyName' | 'companyDescription' | 'companyLogo'>;
+
 export default function GeneralSettings() {
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [settings, setSettings] = useState<GeneralFields | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -20,49 +29,60 @@ export default function GeneralSettings() {
   const loadSettings = () => {
     const loadSettingsAsync = async () => {
       try {
-        const currentSettings = await db.getSettings();
-        setSettings(currentSettings);
-        if (currentSettings.companyLogo) {
-          setLogoPreview(currentSettings.companyLogo);
-        }
+        const current = await db.getSettings();
+        setSettings({
+          companyName: current.companyName ?? '',
+          companyDescription: current.companyDescription ?? '',
+          companyLogo: current.companyLogo ?? null,
+        });
       } catch (error) {
         console.error('Error loading settings:', error);
       }
     };
-    
+
     loadSettingsAsync();
   };
 
-  const handleInputChange = (field: keyof SystemSettings, value: string) => {
+  const handleInputChange = (field: keyof GeneralFields, value: string) => {
     if (!settings) return;
     setSettings(prev => prev ? { ...prev, [field]: value } : null);
   };
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  /* ═══ الشعار يُرفع إلى الحاوية، ولا يُقرأ نصّاً ═══
+   *
+   * كان هنا `readAsDataURL`: يقرأ الملفّ سلسلةَ base64 ويحشرها في
+   * `system_settings.value` — حتى ٢٫٧ ميغابايت نصّاً لملفّ ٢ ميغابايت،
+   * فوق حدّ D1 لقيمةٍ واحدة فيسقط الحفظ. وما دون الحدّ يُنقل مع كل قراءة
+   * إعدادات، أي مع كل فتحةِ نموذجٍ لكل عضو.
+   *
+   * والآن `POST /api/files` بنوع `logo`، والمفتاحُ وحده هو ما يُحفظ —
+   * كما تفعل الصورة الشخصية بالضبط. */
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // التحقق من نوع الملف
-    if (!file.type.startsWith('image/')) {
-      setSaveMessage('يرجى اختيار ملف صورة صحيح');
+    setSaveMessage('');
+
+    if (!ACCEPTED.includes(file.type)) {
+      setSaveMessage('الصيغ المقبولة: PNG أو JPEG أو WebP');
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setSaveMessage('حجم الشعار يجب أن يكون أقل من نصف ميجابايت');
       return;
     }
 
-    // التحقق من حجم الملف (أقل من 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveMessage('حجم الصورة يجب أن يكون أقل من 2 ميجابايت');
-      return;
+    setUploading(true);
+    try {
+      const { key } = await uploadFile(file, 'logo');
+      setSettings(prev => prev ? { ...prev, companyLogo: key } : null);
+    } catch (error) {
+      console.error('تعذّر رفع الشعار:', error);
+      setSaveMessage('تعذّر رفع الشعار. أعد المحاولة');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
     }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setLogoPreview(result);
-      if (settings) {
-        setSettings(prev => prev ? { ...prev, companyLogo: result } : null);
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   /* ═══ لماذا زال منتقي الألوان من هذه الشاشة ═══
@@ -87,15 +107,17 @@ export default function GeneralSettings() {
     setSaveMessage('');
 
     try {
+      /* حقولُ هذه الشاشة وحدها لا الكائن الراجع كلَّه: إرسالُه يُثبّت
+         المفرداتِ الافتراضية في الصفّ فلا يبلغها تعديلٌ لاحق في الشيفرة. */
       await db.updateSettings(settings);
 
       setSaveMessage('تم الحفظ');
-      
+
       // إعادة تحميل الصفحة لتطبيق التغييرات على جميع المكونات
       setTimeout(() => {
         window.location.reload();
       }, 1500);
-      
+
     } catch (error) {
       console.error('Error saving settings:', error);
       setSaveMessage('حدث خطأ أثناء حفظ الإعدادات');
@@ -107,17 +129,16 @@ export default function GeneralSettings() {
     }
   };
 
+  /* والمحوُ يُرسَل `null` لا `undefined`: الثاني يُسقطه `JSON.stringify`
+     من الجسم، فلا يبلغ الخادمَ مفتاحٌ يمحوه ويبقى الشعارُ القديم بعد أن
+     فُرّغت معاينتُه — فيُقرأ الحفظُ ناجحاً ويعود الشعار مع إعادة التحميل. */
   const resetToDefaults = () => {
     if (window.confirm('هل أنت متأكد من إعادة تعيين الإعدادات إلى القيم الافتراضية؟')) {
-      const defaultSettings = {
-        ...settings!,
+      setSettings({
         companyName: 'شركة ناف',
         companyDescription: 'نظام إدارة العملاء',
-        companyLogo: undefined
-      };
-
-      setSettings(defaultSettings);
-      setLogoPreview(null);
+        companyLogo: null,
+      });
     }
   };
 
@@ -197,22 +218,23 @@ export default function GeneralSettings() {
             </label>
             <Input
               type="file"
-              accept="image/*"
+              accept={ACCEPTED.join(',')}
               onChange={handleLogoUpload}
+              disabled={uploading}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              يُفضل استخدام صور بصيغة PNG أو SVG، الحد الأقصى 2MB
+              PNG أو JPEG أو WebP (أقل من نصف ميجابايت)
             </p>
           </div>
-          
-          {logoPreview && (
-            <div className="flex-shrink-0">
+
+          {settings.companyLogo && (
+            <div className="shrink-0">
               <label className="block text-sm font-medium text-foreground mb-2">
                 معاينة الشعار
               </label>
               <div className="w-20 h-20 border border-border rounded-lg overflow-hidden bg-card flex items-center justify-center">
                 <img
-                  src={logoPreview}
+                  src={pictureUrl(settings.companyLogo)}
                   alt="شعار الشركة"
                   className="max-w-full max-h-full object-contain"
                 />

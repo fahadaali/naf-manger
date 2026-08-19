@@ -4,7 +4,7 @@ import { useChartPalette, softFill } from '../../lib/chart-tokens';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import { Client, Prospect, Case, ActivityLog } from '../../types';
-import { subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { subDays, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { db } from '../../data/database';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDateTime, formatMonth, formatNumber } from '@/registry/naf/lib/format';
@@ -45,9 +45,13 @@ export default function Analytics() {
         db.getActivities(),
       ]);
 
-      setClients(clientsData);
-      setProspects(prospectsData);
-      setCases(casesData);
+      /* ═══ المؤرشفُ خارج التحليلات ═══
+         كما هو خارج لوحة التحكّم و`‎/api/stats‎`. وصفٌّ أُخرج من شاشته بقصد
+         لا يُعدّ في تحليلٍ عنها — وأثقلُ من ذلك أنّ دمجَ عميلين مكرّرين
+         يؤرشف المدموج، فكان الشخصُ نفسه يُعدّ مرّتين في كل رسمٍ هنا. */
+      setClients(clientsData.filter((row) => !row.archivedAt));
+      setProspects(prospectsData.filter((row) => !row.archivedAt));
+      setCases(casesData.filter((row) => !row.archivedAt));
       setActivities(activitiesData);
     } catch (error) {
       console.error('Error loading analytics data:', error);
@@ -100,14 +104,22 @@ export default function Analytics() {
      تُغربل مرّتين. */
   const filteredCases = filteredData.cases;
 
+  /* ═══ الشهور تُخطى بالتقويم لا بثلاثين يوماً ═══
+   *
+   * كان الحدُّ `subDays(now, i * 30)` — والشهرُ ليس ثلاثين يوماً. فالخطوةُ
+   * تنزلق في كلّ شهرٍ من واحدٍ وثلاثين، فيتكرّر شهرٌ ويسقط آخر. في
+   * `2026-03-31` كانت تخرج: نوفمبر، ديسمبر، **ديسمبر**، يناير، **مارس**،
+   * مارس — فبراير غائبٌ كلُّه، وعدداه معدودان في غيره مرّتين.
+   *
+   * و`subMonths` تخطو شهراً تقويمياً واحداً، فالستّةُ ستّةٌ متتابعة أبداً. */
   const monthlyTrends = useMemo(() => {
     const months = [];
-    const currentDate = new Date();
-    
+    const thisMonth = startOfMonth(new Date());
+
     for (let i = 5; i >= 0; i--) {
-      const monthStart = startOfMonth(subDays(currentDate, i * 30));
+      const monthStart = subMonths(thisMonth, i);
       const monthEnd = endOfMonth(monthStart);
-      
+
       const monthClients = (clients || []).filter(client =>
         isWithinInterval(client.joinDate, { start: monthStart, end: monthEnd })
       ).length;

@@ -240,10 +240,12 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             </div>
           ) : (
             <div className="p-6">
+              {/* النوعُ كما اختاره صاحبُ التقرير. وكان يُحوَّل كلُّ ما
+                  ليس `bar` إلى `doughnut`، فثلاثةٌ من ستّة بلا أثر. */}
               {getChartData() ? (
                 <ChartCard
                   title={report.name}
-                  type={report.visualization.type === 'bar' ? 'bar' : 'doughnut'}
+                  type={report.visualization.type}
                   data={getChartData()!}
                 />
               ) : (

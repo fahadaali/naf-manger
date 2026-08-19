@@ -122,7 +122,10 @@ export interface UploadedFile {
   size: number;
 }
 
-export async function uploadFile(file: File, kind: 'avatar' | 'attachment'): Promise<UploadedFile> {
+export async function uploadFile(
+  file: File,
+  kind: 'avatar' | 'attachment' | 'logo',
+): Promise<UploadedFile> {
   const form = new FormData();
   form.set('kind', kind);
   form.set('file', file);

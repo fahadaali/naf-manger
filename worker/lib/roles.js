@@ -61,3 +61,6 @@ export function permissionsFor(role, perms) {
   if (perms && typeof perms === 'object') return perms;
   return BY_ROLE[role] ?? NONE;
 }
+
+/** الأدوارُ التي يعرفها هذا الجدول — تُسأل قبل كتابة الدور في الصفّ. */
+export const KNOWN_ROLES = new Set(Object.keys(BY_ROLE));

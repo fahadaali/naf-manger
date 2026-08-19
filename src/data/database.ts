@@ -206,9 +206,12 @@ export class LocalDatabase {
   }
 
   /* الحذف يُيتّم سجلَّ الأنشطة، والإيقاف يقوم مقامه: الوسيط يقرأ حالة
-     التفعيل في كل طلب محميّ، فيسري في الطلب التالي لا عند انتهاء الكوكي. */
-  async deleteUser(id: string): Promise<boolean> {
-    await api.patch(`/members/${encodeURIComponent(id)}`, { isActive: false });
+     التفعيل في كل طلب محميّ، فيسري في الطلب التالي لا عند انتهاء الكوكي.
+
+     وهي `setUserActive` لا `deleteUser`: الاسمُ الأول كان يَعِد بحذفٍ لا
+     يقع، فتقول الشاشةُ «تم الحذف» ويبقى الصفُّ كما هو. والإيقافُ يُرجَع. */
+  async setUserActive(id: string, isActive: boolean): Promise<boolean> {
+    await api.patch(`/members/${encodeURIComponent(id)}`, { isActive });
     return true;
   }
 
@@ -291,8 +294,14 @@ export class LocalDatabase {
     return await api.read<MarketerStats>(`/marketers/${encodeURIComponent(marketerId)}/stats`);
   }
 
-  async getCommissionPayments(): Promise<CommissionPayment[]> {
-    return (await listOr(api.list<any>('commissions'), 'العمولات')).map(asPayment);
+  /* ═══ دفعاتُ العمولة ═══
+     كانت هاتان الدالّتان بلا مستدعٍ: الجدولُ والموردُ والمسار مبنيّةٌ
+     كلُّها، ولا شاشةَ تسجّل دفعةً. فـ`totalCommissionPaid` في إحصاءات
+     المسوّق صفرٌ أبداً، و«المتبقّي» يساوي «المستحقّ» دائماً. وشاشةُ
+     المسوّق تناديهما الآن. */
+  async getCommissionPayments(marketerId?: string): Promise<CommissionPayment[]> {
+    const all = (await listOr(api.list<any>('commissions'), 'العمولات')).map(asPayment);
+    return marketerId ? all.filter((row) => row.marketerId === marketerId) : all;
   }
 
   async createCommissionPayment(

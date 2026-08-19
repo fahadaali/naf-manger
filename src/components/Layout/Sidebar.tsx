@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChartColumn, FileText, LayoutDashboard, Settings, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import { pictureUrl } from '../../data/api';
 import { ThemeToggle } from '@/registry/naf/ui/theme-toggle';
 import { NafLogo } from '@/registry/naf/brand/naf-logo';
 
@@ -65,7 +66,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
           <div className="flex items-center gap-3">
             {settings?.companyLogo ? (
               <img 
-                src={settings.companyLogo} 
+                src={pictureUrl(settings.companyLogo)} 
                 alt="شعار الشركة" 
                 className="h-6 w-6 object-contain"
               />
@@ -86,7 +87,7 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
         <div className="flex items-center gap-3 mb-8">
           {settings?.companyLogo ? (
             <img 
-              src={settings.companyLogo} 
+              src={pictureUrl(settings.companyLogo)} 
               alt="شعار الشركة" 
               className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
             />

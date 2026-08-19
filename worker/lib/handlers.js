@@ -147,6 +147,10 @@ export async function uploadFile(request, env, user) {
   const kind = String(form.get('kind') ?? 'attachment');
   if (!Object.prototype.hasOwnProperty.call(KINDS, kind)) return fail('invalid_kind', 400);
 
+  /* الشعارُ هويّةُ المكتب لا ملفَّ عضو: يرفعه من يملك تعديل الإعدادات
+     وحده. والصورةُ الشخصية والمرفقُ يملكهما كلُّ عضوٍ مفعَّل. */
+  if (kind === 'logo' && !user.permissions?.settings?.update) return fail('forbidden', 403);
+
   const file = form.get('file');
   if (!file || typeof file === 'string') return fail('invalid_body', 400);
 

@@ -2,7 +2,8 @@
 
 import { RESOURCES, toClient } from './resources.js';
 import { may } from './crud.js';
-import { permissionsFor } from './roles.js';
+import { KNOWN_ROLES, permissionsFor } from './roles.js';
+import { logActivity } from './activity.js';
 
 const json = (body, status = 200) => Response.json(body, { status });
 const fail = (error, status) => json({ ok: false, error }, status);
@@ -60,20 +61,48 @@ const DEFAULT_SETTINGS = {
   companyDescription: 'نظام إدارة العملاء',
 };
 
-export async function readSettings(env) {
+/* ═══ ما لا يخرج إلا لمن يملك قراءة الإعدادات ═══
+ *
+ * هذا المسار **لا يُحرس بتصريح**، وذلك مقصود: `useSettings()` تُغذّي كلَّ
+ * منسدلةٍ في نماذج العملاء والقضايا والمحتملين، فحجبُه عن الموظّف يُفرغ
+ * نماذجَه. لكنّ الكائن نفسه كان يحمل `emailSettings` ومعها **كلمةُ مرور
+ * SMTP** — فكانت تُنزَّل إلى متصفّح كلِّ عضو عند كل فتحةِ نموذج، ولمن
+ * `settings.read` عنده `false`.
+ *
+ * فالمفرداتُ عامّةٌ لأنها مفردات، وما عداها يُقصّ. والقصُّ هنا لا في
+ * الشاشة: من نادى المسار بيده يقرأ ما يردّه هذا السطر لا ما ترسمه شاشة.
+ */
+const PRIVILEGED_KEYS = ['emailSettings'];
+
+function publicSettings(settings) {
+  const out = { ...settings };
+  for (const key of PRIVILEGED_KEYS) delete out[key];
+  return out;
+}
+
+async function storedSettings(env) {
   const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
     .bind(SETTINGS_KEY)
     .first();
 
-  let stored = {};
   try {
-    stored = row?.value ? JSON.parse(row.value) : {};
+    return row?.value ? JSON.parse(row.value) : {};
   } catch {
     // إعدادٌ تالف يُقرأ غياباً: الشاشات تعمل بالافتراضي بدل أن تسقط.
-    stored = {};
+    return {};
   }
+}
 
-  return json({ ok: true, data: { ...DEFAULT_SETTINGS, ...stored } });
+/** تساوٍ بنيويّ للقيم البسيطة والقوائم — يكفي لما في الإعدادات. */
+function same(one, other) {
+  return JSON.stringify(one) === JSON.stringify(other);
+}
+
+export async function readSettings(env, user) {
+  const merged = { ...DEFAULT_SETTINGS, ...(await storedSettings(env)) };
+  const mayReadAll = Boolean(user?.permissions?.settings?.read);
+
+  return json({ ok: true, data: mayReadAll ? merged : publicSettings(merged) });
 }
 
 export async function writeSettings(request, env, user) {
@@ -87,18 +116,17 @@ export async function writeSettings(request, env, user) {
   }
   if (!patch || typeof patch !== 'object') return fail('invalid_body', 400);
 
-  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
-    .bind(SETTINGS_KEY)
-    .first();
-
-  let stored = {};
-  try {
-    stored = row?.value ? JSON.parse(row.value) : {};
-  } catch {
-    stored = {};
-  }
-
+  /* ═══ يُحفظ ما تغيّر وحده ═══
+     كانت الشاشات ترسل الكائن الراجع كاملاً — وهو `{…DEFAULT_SETTINGS, …stored}`
+     — فأوّلُ حفظٍ ينسخ المفرداتِ الافتراضية كلَّها إلى الصفّ، ولا يبلغ تلك
+     النسخةَ بعدها أيُّ تعديلٍ على `DEFAULT_SETTINGS` في الشيفرة. فصارت
+     الشاشاتُ ترسل حقولَها هي، ويُطرح هنا ما يساوي الافتراضَ حرفاً بحرف. */
+  const stored = await storedSettings(env);
   const merged = { ...stored, ...patch };
+
+  for (const [key, value] of Object.entries(merged)) {
+    if (key in DEFAULT_SETTINGS && same(value, DEFAULT_SETTINGS[key])) delete merged[key];
+  }
 
   await env.DB.prepare(
     `INSERT INTO system_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
@@ -152,9 +180,22 @@ export async function updateMember(request, env, user, id) {
   const sets = [];
   const values = [];
 
+  /* ودورٌ لا يعرفه `roles.js` يُردّ: قيمةٌ غريبة في العمود تُغلق الأبواب
+     كلَّها على صاحبها — `permissionsFor` تعطيها `NONE` — فتصير شاشتُه
+     فارغةً بلا سبب ظاهر، ولا سبيل لإصلاحها إلا من القاعدة. */
   if (typeof body.role === 'string' && body.role) {
+    if (!KNOWN_ROLES.has(body.role)) return fail('unknown_role', 400);
     sets.push('role = ?');
     values.push(body.role);
+
+    /* وتبديلُ الدور يمحو الصلاحياتِ الدقيقة ما لم تُرسَل معه: عضوٌ رُقّي
+       إلى «محامٍ» وله `perms` محفوظةٌ من «إداري» يبقى على صلاحيات الأدنى،
+       فيُقرأ دورُه شيئاً وتعمل صلاحيتُه شيئاً آخر. والمحوُ يُعيده إلى
+       افتراض دوره الجديد. */
+    if (!body.permissions) {
+      sets.push('perms = ?');
+      values.push(null);
+    }
   }
   if (body.permissions && typeof body.permissions === 'object') {
     sets.push('perms = ?');
@@ -232,7 +273,14 @@ export async function convertProspect(env, user, id) {
     .bind(clientId)
     .first();
 
-  return json({ ok: true, data: toClient(RESOURCES.clients, created) }, 201);
+  const client = toClient(RESOURCES.clients, created);
+
+  /* والأثرُ يُسجَّل هنا لا في الشاشة: كانت `ProspectsView` تكتبه بنفسها
+     ونسبَته إلى «النظام» لا إلى من ضغط — والفعلُ يقع على الخادم، فمن
+     يعرفه يسجّله. */
+  await logActivity(env, user, { resource: 'clients', action: 'create', row: client });
+
+  return json({ ok: true, data: client }, 201);
 }
 
 /* ═══ النموّ ═══
@@ -376,10 +424,12 @@ export async function readStats(env) {
 export async function readMarketerStats(env, user, marketerId) {
   if (!may(user, RESOURCES.marketers, 'read')) return fail('forbidden', 403);
 
+  /* والمؤرشفُ خارجَها كما هو خارج لوحة التحكّم: قضيةٌ أُخرجت من شاشتها
+     بقصد لا تُحسب في أداء المسوّق ولا في عمولته المستحقّة. */
   const [cases, paid] = await env.DB.batch([
     env.DB.prepare(
       `SELECT status, outcome, payment_status, commission_structure
-       FROM cases WHERE marketer_id = ?`,
+       FROM cases WHERE marketer_id = ? AND archived_at IS NULL`,
     ).bind(marketerId),
     env.DB.prepare(
       `SELECT COALESCE(SUM(amount), 0) total FROM commission_payments WHERE marketer_id = ?`,

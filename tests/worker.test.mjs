@@ -239,14 +239,39 @@ r = await hit('PATCH', '/api/settings', { companyName: 'مكتب ناف' });
 check('وتُكتب', r.body.ok, r.body);
 check('وتثبت', (await hit('GET', '/api/settings')).body.data.companyName === 'مكتب ناف');
 
-/* الأنشطة تكتبها الواجهة بعد كل فعل (`db.createActivity`) لا الخادمُ آلياً —
-   فيُقاس أنّ المسار يقبلها ويردّها، وهو ما تفعله اللوحة. */
+/* ═══ الأثرُ يكتبه الخادم عند كل فعل ═══
+   كانت الشاشةُ تكتبه، ولم تكن تكتبه إلا في موضعٍ واحد من كل مواضعها —
+   فلوحةُ «النشاط الأخير» تعرض أنواعاً لا يكتبها أحد. وموضعُه الآن
+   `crud.js`، فيمرّ به كلُّ إنشاءٍ وتعديلٍ وحذفٍ ودفعة. */
+r = await hit('GET', '/api/activities');
+const logged = r.body.data ?? [];
+check('الأفعالُ السابقة تركت أثرَها', r.body.ok && logged.length > 0, `${logged.length}`);
+check('وفيها إنشاءُ عميل',
+  logged.some((row) => row.type === 'client_created'),
+  logged.map((row) => row.type).join(', '));
+check('وفيها إنشاءُ قضية',
+  logged.some((row) => row.type === 'case_created'),
+  logged.map((row) => row.type).join(', '));
+check('وفيها تعديلُ عميل',
+  logged.some((row) => row.type === 'client_updated'),
+  logged.map((row) => row.type).join(', '));
+/* والوصفُ يسمّي الصفَّ لا معرّفَه: «أُضيف العميل «فلان»» لا «أُضيف c-1». */
+check('والوصفُ يسمّي الصفّ',
+  logged.some((row) => row.description.includes('«')),
+  logged.map((row) => row.description).slice(0, 3).join(' | '));
+check('والفاعلُ منسوبٌ لا «النظام»',
+  logged.every((row) => row.userId === 'u-admin'),
+  logged.map((row) => row.userId).join(', '));
+
+/* والمسارُ يقبل كتابةً مباشرة كذلك — سجلُّ الأنشطة أثرٌ لا محتوى،
+   و`permission: null` يفتحه لكل عضوٍ مفعَّل. */
+const loggedBefore = logged.length;
 r = await hit('POST', '/api/activities', {
   type: 'client_created', description: 'أُضيف عميل', userId: 'u-admin', userName: 'فهد',
 });
 check('النشاط يُكتب', r.status === 201 && r.body.ok, r.body);
 r = await hit('GET', '/api/activities');
-check('ويُقرأ', r.body.ok && r.body.data.length === 1, `${r.body.data?.length}`);
+check('ويُقرأ', r.body.ok && r.body.data.length === loggedBefore + 1, `${r.body.data?.length}`);
 
 r = await hit('GET', '/api/members');
 check('الأعضاء يُسردون', r.body.ok && r.body.data.length === 2, r.body.data);

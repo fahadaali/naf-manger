@@ -107,16 +107,10 @@ export default function ProspectsView() {
         try {
           /* التحويل فعلٌ واحد على الخادم: النسخُ ثم الحذف من المتصفّح
              يترك محتملاً نُسخ ولم يُحذف إن انقطعت الشبكة بينهما. */
+          /* والأثرُ يسجّله الخادم مع التحويل: كان يُكتب هنا منسوباً إلى
+             «النظام» لا إلى من ضغط، ويسقط صامتاً إن انقطعت الشبكة بعد
+             تحويلٍ وقع. */
           await db.convertProspectToClient(prospect.id);
-
-          await db.addActivity({
-            type: 'prospect_converted',
-            description: `تم تحويل العميل المحتمل "${prospect.fullName}" إلى عميل فعلي`,
-            userId: 'system',
-            userName: 'النظام',
-            entityId: prospect.id,
-            entityType: 'prospect',
-          } as any);
 
             loadProspects(); // إعادة تحميل القائمة
             alert(`تم تحويل "${prospect.fullName}" إلى عميل`);
@@ -147,10 +141,6 @@ export default function ProspectsView() {
     setMeetingProspect(null);
   };
 
-  const handleMeetingCreated = (meetingData: any) => {
-    console.log('Meeting created:', meetingData);
-    // يمكن إضافة منطق إضافي هنا مثل تحديث قاعدة البيانات
-  };
   /* المسجَّلة في التكوين ومعها ما وقع في الصفوف فعلاً: حالةٌ أُضيفت ولم
      تُستعمل بعد تظهر للترشيح، وحالةٌ حُذفت من التكوين وبقيت في صفوف قديمة
      لا تختفي من المرشّح فتصير صفوفُها غير قابلة للوصول. */
@@ -287,7 +277,6 @@ export default function ProspectsView() {
         <ZoomMeetingModal
           client={meetingProspect}
           onClose={handleCloseMeetingModal}
-          onMeetingCreated={handleMeetingCreated}
         />
       )}
     </div>

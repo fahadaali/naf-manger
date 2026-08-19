@@ -69,6 +69,22 @@ function tableOf(source) {
   return RESOURCES[source]?.table ?? null;
 }
 
+/* ═══ العضويةُ تُسأل بالملكية لا بـ`in` ═══
+ *
+ * `in` يقرأ سلسلةَ النماذج، فـ`'constructor'` و`'toString'` تمرّ القائمةَ
+ * البيضاء كلَّها. وكان يلزم من ذلك ثلاثةُ مخارج: حقلٌ باسم `constructor`
+ * يبني `SELECT undefined AS "constructor"`، ودالّةُ تجميعٍ باسمه تحشر نصَّ
+ * دالّة JS داخل جملة SQL، ومعاملٌ باسمه يبني شرطاً بلا علامة ربط فتختلّ
+ * المعاملات. والنتيجةُ ٥٠٠ لا حقناً — الأعمدةُ من هذا الملفّ لا من الطلب —
+ * لكنّ `createReport` كان يقبل التعريف **ويحفظه**، فيبقى التقريرُ معطوباً
+ * لكل من يفتحه بعدها.
+ *
+ * وبقيّةُ المستودع تسأل بالملكية — `resources.js` و`handlers.js` — فهذا
+ * يلحق بها.
+ */
+const owns = (table, key) =>
+  typeof key === 'string' && Object.prototype.hasOwnProperty.call(table, key);
+
 /** يقرأ تعريفَ التقرير ويردّ نسخةً منه لا تحمل إلا ما يعرفه هذا الملفّ. */
 function sanitizeDefinition(source, definition) {
   const known = FIELDS[source];
@@ -76,25 +92,24 @@ function sanitizeDefinition(source, definition) {
 
   const raw = definition ?? {};
 
-  const fields = (Array.isArray(raw.fields) ? raw.fields : []).filter((id) => id in known);
+  const fields = (Array.isArray(raw.fields) ? raw.fields : []).filter((id) => owns(known, id));
   if (!fields.length) return { error: 'no_fields' };
 
   const filters = [];
   for (const filter of Array.isArray(raw.filters) ? raw.filters : []) {
-    const field = known[filter?.fieldId];
-    if (!field) continue;
-    if (!(filter?.operator in OPERATORS)) continue;
+    if (!owns(known, filter?.fieldId)) continue;
+    if (!owns(OPERATORS, filter?.operator)) continue;
     if (filter.value === undefined || filter.value === null || filter.value === '') continue;
     filters.push({ fieldId: filter.fieldId, operator: filter.operator, value: filter.value });
   }
 
   const grouping = (Array.isArray(raw.grouping) ? raw.grouping : [])
-    .filter((entry) => entry?.fieldId in known)
+    .filter((entry) => owns(known, entry?.fieldId))
     .map((entry) => ({ fieldId: entry.fieldId, order: entry.order === 'desc' ? 'desc' : 'asc' }))
     .slice(0, 1); // تجميعٌ بحقلٍ واحد — والأكثر يحتاج شكلَ عرضٍ لم يُبنَ
 
   const aggregations = (Array.isArray(raw.aggregations) ? raw.aggregations : [])
-    .filter((entry) => entry?.fieldId in known && entry?.function in AGGREGATIONS)
+    .filter((entry) => owns(known, entry?.fieldId) && owns(AGGREGATIONS, entry?.function))
     .map((entry) => ({ fieldId: entry.fieldId, function: entry.function }));
 
   const visualization = {
@@ -124,6 +139,12 @@ function buildQuery(source, definition) {
     params.push(filter.operator === 'contains' ? `%${filter.value}%` : filter.value);
     return OPERATORS[filter.operator](column);
   });
+
+  /* ═══ المؤرشفُ خارج التقرير ═══
+     كان يُعدّ فيه: صفٌّ أُخرج من شاشته بقصد يعود في تقريرٍ عنها. وأثقلُ من
+     ذلك أنّ دمجَ عميلين مكرّرين يؤرشف المدموج — فيبقى الشخصُ نفسه محسوباً
+     مرّتين في كلّ تقرير. والشرط مكتوبٌ هنا لا مأخوذٌ من الطلب. */
+  if (RESOURCES[source]?.fields?.archivedAt) where.unshift('archived_at IS NULL');
 
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : '';
 
@@ -157,7 +178,7 @@ function buildQuery(source, definition) {
 }
 
 /** يحوّل الصفوف إلى ما تعرضه الشاشة — الأنواع كما في `resources.js`. */
-function shapeRows(source, definition, rows, grouped) {
+function shapeRows(source, rows) {
   const known = FIELDS[source];
 
   return rows.map((row) => {
@@ -224,7 +245,7 @@ function readInput(body) {
   if (!name) return { error: 'name_required' };
 
   const dataSource = body?.dataSource;
-  if (!(dataSource in FIELDS)) return { error: 'unknown_source' };
+  if (!owns(FIELDS, dataSource)) return { error: 'unknown_source' };
 
   const definition = sanitizeDefinition(dataSource, body);
   if (definition.error) return { error: definition.error };
@@ -351,7 +372,7 @@ export async function runReport(env, user, id) {
   return Response.json({
     ok: true,
     data: {
-      rows: shapeRows(report.dataSource, definition.value, results ?? [], query.grouped),
+      rows: shapeRows(report.dataSource, results ?? []),
       grouped: query.grouped,
       /* الأعمدة تُردّ مع الصفوف: العارض يرسم ترويسته منها ولا يخمّنها من
          أول صفّ — وأولُ صفٍّ قد يخلو من عمودٍ قيمتُه فارغة. */
@@ -374,7 +395,7 @@ export async function previewReport(request, env, user) {
     return fail('invalid_body', 400);
   }
 
-  if (!(body?.dataSource in FIELDS)) return fail('unknown_source', 400);
+  if (!owns(FIELDS, body?.dataSource)) return fail('unknown_source', 400);
 
   const definition = sanitizeDefinition(body.dataSource, body);
   if (definition.error) return fail(definition.error, 400);
@@ -389,7 +410,7 @@ export async function previewReport(request, env, user) {
   return Response.json({
     ok: true,
     data: {
-      rows: shapeRows(body.dataSource, definition.value, results ?? [], query.grouped),
+      rows: shapeRows(body.dataSource, results ?? []),
       grouped: query.grouped,
       columns: query.grouped
         ? [definition.value.grouping[0].fieldId, 'count',
