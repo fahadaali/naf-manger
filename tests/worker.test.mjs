@@ -431,6 +431,34 @@ check('والدور في القاعدة لم يُمسّ',
   db.prepare(`SELECT role FROM members WHERE user_id='u-staff'`).get().role === 'staff');
 
 // ═══════════════════════════════════════════════════════════
+
+/* ═══ الشعارُ ملفٌّ في الحاوية لا نصّ base64 في صفّ الإعدادات ═══
+   كان يُقرأ `readAsDataURL` ويُحشر في `system_settings.value` — فوق حدّ D1
+   لقيمةٍ واحدة، ويُرسَل مع كل قراءة إعدادات. وهو اليوم نوعُ ملفٍّ ثالث،
+   ورفعُه محروسٌ بـ`settings.update` لأنّه هويّةُ المكتب لا ملفُّ عضو. */
+setUser(ADMIN);
+const logoForm = new FormData();
+logoForm.set('kind', 'logo');
+logoForm.set('file', new File([new Uint8Array([137, 80, 78, 71])], 'logo.png', { type: 'image/png' }));
+let logoResponse = await worker.fetch(
+  new Request(`${ORIGIN}/api/files`, { method: 'POST', body: logoForm }), env, ctx);
+let logoBody = await logoResponse.json();
+check('الشعارُ يُرفع إلى الحاوية', logoResponse.status === 201 && logoBody.ok, logoBody);
+check('ومفتاحُه بالبادئة المعروفة', /^logo\/[0-9a-f-]{36}$/.test(logoBody.key ?? ''), logoBody.key);
+
+r = await hit('GET', `/api/files/${logoBody.key}`);
+check('ويُقدَّم من مساره', r.status === 200);
+
+setUser(STAFF);
+const staffForm = new FormData();
+staffForm.set('kind', 'logo');
+staffForm.set('file', new File([new Uint8Array([137, 80, 78, 71])], 'logo.png', { type: 'image/png' }));
+logoResponse = await worker.fetch(
+  new Request(`${ORIGIN}/api/files`, { method: 'POST', body: staffForm }), env, ctx);
+logoBody = await logoResponse.json();
+check('والموظّفُ لا يرفع شعاراً', logoResponse.status === 403 && logoBody.error === 'forbidden', logoBody);
+setUser(ADMIN);
+
 group('الحراسة — الموظّف');
 setUser(STAFF);
 check('يقرأ العملاء', (await hit('GET', '/api/clients')).body.ok);
