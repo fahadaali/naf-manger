@@ -12,6 +12,8 @@ import { Select } from '@/registry/naf/ui/select';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
 import AiInsights from './AiInsights';
+import { useSettingList } from '../../lib/use-settings';
+import { caseStatusLabel, clientTypeLabel } from '../../lib/labels';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
 
@@ -143,42 +145,40 @@ export default function Analytics() {
     return months;
   }, [clients, prospects, cases]);
 
+  /* ═══ الفئاتُ من «تكوين النظام» لا مكتوبةً هنا ═══
+     كانت الأربعةُ بأسمائها، و`clientTypes` و`caseStatuses` قائمتان
+     تُحرَّران — فنوعٌ خامس يُضاف لا يظهر، وأصحابُه يختفون من الرسم. وما
+     وقع في الصفوف يُضمّ إلى المكوَّن فلا تنقص الحصيلة عن مجموعها. */
+  const configuredTypes = useSettingList('clientTypes');
+  const configuredStatuses = useSettingList('caseStatuses');
+  const configuredProspectStatuses = useSettingList('prospectStatuses');
+
   const clientTypeDistribution = useMemo(() => {
-    const filteredClients = filteredData.clients;
-    const distribution = {
-      individual: filteredClients.filter(c => c.clientType === 'individual').length,
-      company: filteredClients.filter(c => c.clientType === 'company').length,
-      association: filteredClients.filter(c => c.clientType === 'association').length,
-      government: filteredClients.filter(c => c.clientType === 'government').length
-    };
-    
+    const rows = filteredData.clients;
+    const types = [...new Set([...configuredTypes, ...rows.map((c) => c.clientType)])];
+
     return {
-      labels: ['أفراد', 'شركات', 'جمعيات', 'جهات حكومية'],
+      labels: types.map(clientTypeLabel),
       datasets: [{
-        data: [distribution.individual, distribution.company, distribution.association, distribution.government],
-        backgroundColor: palette.slice(0, 4),
+        data: types.map((type) => rows.filter((c) => c.clientType === type).length),
+        backgroundColor: palette.slice(0, types.length),
         borderWidth: 0
       }]
     };
-  }, [filteredData, palette]);
+  }, [filteredData, palette, configuredTypes]);
 
   const caseStatusDistribution = useMemo(() => {
-    const distribution = {
-      pending: filteredCases.filter(c => c.status === 'pending').length,
-      'in-progress': filteredCases.filter(c => c.status === 'in-progress').length,
-      completed: filteredCases.filter(c => c.status === 'completed').length,
-      postponed: filteredCases.filter(c => c.status === 'postponed').length
-    };
-    
+    const statuses = [...new Set([...configuredStatuses, ...filteredCases.map((c) => c.status)])];
+
     return {
-      labels: ['منظورة', 'قيد المعالجة', 'مكتملة', 'مؤجلة'],
+      labels: statuses.map(caseStatusLabel),
       datasets: [{
-        data: [distribution.pending, distribution['in-progress'], distribution.completed, distribution.postponed],
-        backgroundColor: palette.slice(0, 4),
+        data: statuses.map((status) => filteredCases.filter((c) => c.status === status).length),
+        backgroundColor: palette.slice(0, statuses.length),
         borderWidth: 0
       }]
     };
-  }, [filteredCases, palette]);
+  }, [filteredCases, palette, configuredStatuses]);
 
   const prospectStatusDistribution = useMemo(() => {
     const filteredProspects = filteredData.prospects;
@@ -263,23 +263,27 @@ export default function Analytics() {
     };
   }, [filteredCases, palette]);
 
+  /* ═══ القمعُ يقرأ الحالاتِ المكوَّنة ═══
+     كان يقارن ثلاثةَ نصوصٍ حرفية — «مهتم» و«تم التواصل» و«بانتظار توقيع»
+     — و`prospectStatuses` قائمةٌ يحرّرها المسؤول. فتعديلُ صياغةِ حالةٍ
+     يُصفّر عمودَها بلا خطأٍ ولا تنبيه. */
   const conversionFunnel = useMemo(() => {
-    const totalProspects = prospects.length;
-    const interestedProspects = prospects.filter(p => p.prospectStatus === 'مهتم').length;
-    const contactedProspects = prospects.filter(p => p.prospectStatus === 'تم التواصل').length;
-    const waitingProspects = prospects.filter(p => p.prospectStatus === 'بانتظار توقيع').length;
-    const convertedClients = clients.length;
-    
+    const statuses = [...new Set([...configuredProspectStatuses, ...prospects.map((p) => p.prospectStatus)])];
+
     return {
-      labels: ['إجمالي العملاء المحتملين', 'مهتمين', 'تم التواصل', 'بانتظار توقيع', 'تم التحويل'],
+      labels: ['إجمالي العملاء المحتملين', ...statuses, 'تم التحويل'],
       datasets: [{
         label: 'عدد العملاء',
-        data: [totalProspects, interestedProspects, contactedProspects, waitingProspects, convertedClients],
+        data: [
+          prospects.length,
+          ...statuses.map((status) => prospects.filter((p) => p.prospectStatus === status).length),
+          clients.length
+        ],
         backgroundColor: palette[1],
         borderRadius: 4
       }]
     };
-  }, [prospects, clients, palette]);
+  }, [prospects, clients, palette, configuredProspectStatuses]);
 
   const kpis = useMemo(() => {
     const completedCases = filteredCases.filter(c => c.status === 'completed');

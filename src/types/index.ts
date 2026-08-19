@@ -624,10 +624,9 @@ export interface SystemSettings {
   };
 }
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+/* كانت هنا `LoginCredentials` — بريدٌ وكلمةُ مرور — ولا كلمةَ مرورٍ في
+   هذه المنصة أصلاً: الهويةُ في المركز، و`naf-auth` تحرس الجذر. سقطت مع
+   `AuthContext.login` وهي مستعمِلُها الوحيد. */
 
 export interface AuthState {
   isAuthenticated: boolean;

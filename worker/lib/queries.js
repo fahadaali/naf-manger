@@ -56,7 +56,12 @@ const DEFAULT_SETTINGS = {
   relationshipTypes: ['employee', 'freelancer', 'external_company'],
   commissionTypes: ['percentage', 'fixed_amount'],
   collectionStatuses: ['unpaid', 'partially_paid', 'fully_paid'],
-  feeTypes: ['fixed_amount', 'percentage'],
+  /* ═══ `feeTypes` كانت تحمل مفرداتٍ لا يكتبها أحد ═══
+     كانت `['fixed_amount', 'percentage']` — وهو «كيف يُحسب المبلغ» —
+     وشاشةُ القضية تكتب بنيةَ الاستحقاق: مقدَّمٌ ومؤخَّر. فالقائمةُ تُحرَّر
+     من «تكوين النظام» ولا يقرؤها أحد، وخياراتُ الشاشة مكتوبةٌ في تصييرها.
+     فصارت مفرداتِ ما يُكتب فعلاً، وصارت الشاشةُ تقرؤها. */
+  feeTypes: ['advance_only', 'deferred_only', 'advance_and_deferred'],
   companyName: 'شركة ناف',
   companyDescription: 'نظام إدارة العملاء',
 };

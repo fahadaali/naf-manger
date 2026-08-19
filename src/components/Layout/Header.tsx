@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Bell, LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import { roleLabel } from '../../lib/labels';
 
 interface HeaderProps {
   currentView: string;
@@ -38,21 +39,14 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
     loadSettings();
   }, []);
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin': return 'مسؤول النظام';
-      case 'lawyer': return 'محامٍ';
-      case 'staff': return 'إداري';
-      default: return role;
-    }
-  };
-
   return (
     <header className="bg-card shadow-sm border-b border-border">
       <div className="flex justify-between items-center px-4 sm:px-6 py-4">
         {/* Mobile menu button */}
         <button
+          type="button"
           onClick={onMenuClick}
+          aria-label="فتح القائمة"
           className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           <Menu className="h-6 w-6" />
@@ -66,10 +60,11 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
         </div>
         
         <div className="flex items-center gap-4">
-          <button className="p-2 hover:bg-muted rounded-full transition-colors hidden sm:block">
-            <Bell className="h-6 w-6 text-muted-foreground" />
-          </button>
-          
+          {/* كان هنا جرسُ إشعاراتٍ بلا `onClick` ولا اسمٍ مقروء: يُضغط فلا
+              يقع شيء. والإشعاراتُ غيرُ مبنيّةٍ أصلاً — تفضيلاتُها تُحفظ
+              ولا مُرسِل لها، وREADME يقول ذلك — فزرٌّ يَعِد بها وعدٌ كاذب.
+              ويعود حين يُبنى الإرسال. */}
+
           <div className="flex items-center gap-3">
             <ProfileAvatar 
               src={user?.profilePicture} 
@@ -78,10 +73,12 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
             />
             <div className="text-start hidden sm:block">
               <p className="text-sm font-medium text-foreground truncate max-w-32">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{getRoleLabel(user?.role || '')}</p>
+              <p className="text-xs text-muted-foreground">{roleLabel(user?.role)}</p>
             </div>
             <button
+              type="button"
               onClick={logout}
+              aria-label="تسجيل الخروج"
               className="p-1 sm:p-2 hover:bg-destructive-soft hover:text-destructive-strong rounded-full transition-colors"
               title="تسجيل الخروج"
             >

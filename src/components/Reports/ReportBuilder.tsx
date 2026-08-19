@@ -3,7 +3,7 @@ import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, TriangleAlert, X } fr
 import { CustomReport, ReportField, ReportFilter, ReportResult, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
-import { REPORT_FIELDS, SOURCE_LABEL, columnLabel, formatCell } from '../../lib/report-fields';
+import { REPORT_FIELDS, SOURCE_LABEL, VISUALIZATION_LABEL, columnLabel, formatCell } from '../../lib/report-fields';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -409,15 +409,13 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                   نوع التصور
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[
-                    { type: 'table', name: 'جدول', icon: Table2 },
-                    { type: 'bar', name: 'أعمدة', icon: ChartColumn },
-                    { type: 'line', name: 'خطي', icon: ChartColumn },
-                    { type: 'pie', name: 'دائري', icon: ChartColumn },
-                    { type: 'doughnut', name: 'حلقي', icon: ChartColumn },
-                    { type: 'area', name: 'منطقة', icon: ChartColumn }
-                  ].map((viz) => (
+                  {Object.entries(VISUALIZATION_LABEL).map(([type, name]) => ({
+                    type,
+                    name,
+                    icon: type === 'table' ? Table2 : ChartColumn
+                  })).map((viz) => (
                     <button
+                      type="button"
                       key={viz.type}
                       onClick={() => handleVisualizationChange({ type: viz.type as any })}
                       className={`p-4 border rounded-lg text-center transition-colors ${
@@ -454,7 +452,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                         <TableRow>
                           {preview.columns.map((column) => (
                             <TableHead key={column} className="text-foreground">
-                              {columnLabel(column)}
+                              {columnLabel(column, reportData.dataSource)}
                             </TableHead>
                           ))}
                         </TableRow>
@@ -493,7 +491,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                   <li>مصدر البيانات: {reportData.dataSource}</li>
                   <li>عدد الحقول: <bdi>{formatNumber(reportData.fields?.length || 0)}</bdi></li>
                   <li>عدد الفلاتر: <bdi>{formatNumber(reportData.filters?.length || 0)}</bdi></li>
-                  <li>نوع العرض: {reportData.visualization?.type}</li>
+                  <li>نوع العرض: {VISUALIZATION_LABEL[reportData.visualization?.type ?? 'table']}</li>
                 </ul>
               </div>
             </div>

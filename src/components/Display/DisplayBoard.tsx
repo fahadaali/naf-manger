@@ -6,6 +6,7 @@ import { DashboardStats } from '../../types';
 import { useChartPalette } from '../../lib/chart-tokens';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { NafLogo } from '@/registry/naf/brand/naf-logo';
+import { caseStatusLabel, clientTypeLabel } from '../../lib/labels';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -72,30 +73,26 @@ export default function DisplayBoard({ token }: { token: string }) {
     { label: 'معدّل التحويل', value: `${formatNumber(stats.conversionRate)}%`, tone: 'text-primary' }
   ];
 
+  /* والفئاتُ من الأرقام نفسها لا مكتوبةً هنا: هذه الشاشة عامّةٌ بلا جلسة،
+     فلا تقرأ «تكوين النظام» — لكنّ المفاتيح الواردة تكفي، ونوعٌ خامس
+     يُضاف يظهر فيها كما يظهر في اللوحة. */
+  const clientTypes = Object.keys(stats.clientsByType);
+  const caseStatuses = Object.keys(stats.casesByStatus);
+
   const clientTypeData = {
-    labels: ['أفراد', 'شركات', 'جمعيات', 'جهات حكومية'],
+    labels: clientTypes.map(clientTypeLabel),
     datasets: [{
-      data: [
-        stats.clientsByType.individual ?? 0,
-        stats.clientsByType.company ?? 0,
-        stats.clientsByType.association ?? 0,
-        stats.clientsByType.government ?? 0
-      ],
-      backgroundColor: palette.slice(0, 4),
+      data: clientTypes.map((type) => stats.clientsByType[type] ?? 0),
+      backgroundColor: palette.slice(0, clientTypes.length),
       borderWidth: 0
     }]
   };
 
   const caseStatusData = {
-    labels: ['منظورة', 'قيد المعالجة', 'مكتملة', 'مؤجلة'],
+    labels: caseStatuses.map(caseStatusLabel),
     datasets: [{
       label: 'عدد القضايا',
-      data: [
-        stats.casesByStatus.pending ?? 0,
-        stats.casesByStatus['in-progress'] ?? 0,
-        stats.casesByStatus.completed ?? 0,
-        stats.casesByStatus.postponed ?? 0
-      ],
+      data: caseStatuses.map((status) => stats.casesByStatus[status] ?? 0),
       backgroundColor: palette[1],
       borderRadius: 4
     }]

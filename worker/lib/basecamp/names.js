@@ -99,7 +99,9 @@ export function nameRelation(one, other) {
 }
 
 /** أهما اسمٌ واحد — تطابقاً أو اختصاراً؟ */
-export const sameParty = (one, other) => nameRelation(one, other) !== 'different';
+/* كانت هنا `sameParty(one, other)` — غلافٌ يقول «ليسا مختلفين» — بلا
+   مستدعٍ. والقرارُ يُقرأ من `nameRelation` نفسها: `same` و`prefix`
+   و`different` ثلاثةٌ يُفرَّق بينها، وطيُّها في `true/false` يُضيع الفرق. */
 
 /**
  * أيُّ الاسمين يُكتب حين يكونان لرجلٍ واحد؟ الأتمُّ.

@@ -1,9 +1,11 @@
-import { ArrowRight, CircleSlash, CircleX, Clock, FileCheck, Info, Mail, Pencil, Phone, Video } from 'lucide-react';
+import { Archive, ArrowRight, Mail, Pencil, Phone, Video } from 'lucide-react';
 import { Prospect } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import RowCheckbox from '../Common/RowCheckbox';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
+import { prospectStatusBadge } from '../../lib/status-badges';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -16,26 +18,44 @@ interface ProspectCardProps {
   onCreateMeeting?: (prospect: Prospect) => void;
   canEdit: boolean;
   canConvert: boolean;
+  /* التحديدُ اختياريّ كما في بطاقة العميل: البطاقة تُستعمل في شاشةٍ فيها
+     تحديدٌ جماعي وفي غيرها. وحين يغيب `onSelect` لا يُعرض مربّعٌ أصلاً. */
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
-export default function ProspectCard({ prospect, onViewDetails, onEdit, onConvert, onCreateMeeting, canEdit, canConvert }: ProspectCardProps) {
-  const STATUS = {
-    'مهتم': { variant: 'primary' as const, Icon: Info },
-    'تم التواصل': { variant: 'warning' as const, Icon: Clock },
-    'بانتظار توقيع': { variant: 'success' as const, Icon: FileCheck },
-    'غير مناسب': { variant: 'destructive' as const, Icon: CircleSlash },
-    'تم الرفض': { variant: 'default' as const, Icon: CircleX }
-  };
-
-  const statusOf = (status: string) =>
-    STATUS[status as keyof typeof STATUS] ?? STATUS['تم الرفض'];
+export default function ProspectCard({
+  prospect,
+  onViewDetails,
+  onEdit,
+  onConvert,
+  onCreateMeeting,
+  canEdit,
+  canConvert,
+  selected,
+  onSelect,
+}: ProspectCardProps) {
+  /* الشارةُ من `lib/status-badges.ts` — موضعٌ واحد تقرؤه البطاقةُ والنافذة.
+     وحالةٌ لا تعرفها تأخذ علامةَ استفهام لا شارةَ «تم الرفض»:
+     `prospectStatuses` قائمةٌ يحرّرها المسؤول، فحالةٌ يضيفها كانت تُعرض
+     مرفوضةً — وهي ليست كذلك. */
+  const statusOf = prospectStatusBadge;
 
   const isReadyToConvert = prospect.prospectStatus === 'بانتظار توقيع';
 
   return (
-    <Card className="p-6 hover:shadow-md transition-shadow">
+    <Card className={`p-6 hover:shadow-md transition-shadow ${
+      selected ? 'ring-2 ring-primary' : ''
+    } ${prospect.archivedAt ? 'opacity-70' : ''}`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
+          {onSelect && (
+            <RowCheckbox
+              checked={Boolean(selected)}
+              onChange={onSelect}
+              label={`تحديد ${prospect.fullName}`}
+            />
+          )}
           <ProfileAvatar 
             src={prospect.profilePicture} 
             name={prospect.fullName} 
@@ -48,7 +68,13 @@ export default function ProspectCard({ prospect, onViewDetails, onEdit, onConver
             <p className="text-sm text-muted-foreground">{clientTypeLabel(prospect.clientType)}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {prospect.archivedAt && (
+            <Badge variant="default">
+              <Archive aria-hidden="true" />
+              مؤرشف
+            </Badge>
+          )}
           {(() => {
             const { variant, Icon } = statusOf(prospect.prospectStatus);
             return (

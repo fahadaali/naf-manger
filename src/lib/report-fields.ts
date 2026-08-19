@@ -39,6 +39,16 @@ export const REPORT_FIELDS: Record<string, ReportField[]> = {
   ]
 };
 
+/** تسميةُ نوع التصوّر — الستّةُ التي يرسمها `ChartCard`. */
+export const VISUALIZATION_LABEL: Record<string, string> = {
+  table: 'جدول',
+  bar: 'أعمدة',
+  line: 'خطي',
+  pie: 'دائري',
+  doughnut: 'حلقي',
+  area: 'منطقة'
+};
+
 /** تسميةُ المصدر — والمصادرُ ما في `REPORT_FIELDS` لا أكثر. */
 export const SOURCE_LABEL: Record<string, string> = {
   clients: 'العملاء',
@@ -54,9 +64,19 @@ const AGG_LABEL: Record<string, string> = {
   max: 'الأعلى'
 };
 
-const BY_ID = new Map<string, string>();
-for (const fields of Object.values(REPORT_FIELDS)) {
-  for (const field of fields) BY_ID.set(field.id, field.name);
+/* ═══ التسميةُ بمصدرها لا بمعرّفها وحده ═══
+ *
+ * كانت خريطةً واحدة مفتاحُها `field.id` عبر المصادر الثلاثة. والمعرّفات
+ * تتكرّر بينها — `fullName` و`idNumber` و`joinDate` و`status` — فآخرُ
+ * مصدرٍ يدهس ما قبله. و`joinDate` مسمّى «تاريخ الانضمام» في العملاء
+ * و«تاريخ الإضافة» في المحتملين، فكان تقريرُ عملاءَ يعرض العمود بعنوان
+ * المحتملين.
+ *
+ * فالمفتاحُ `<مصدر>:<حقل>`، والمصدرُ يُمرَّر مع العمود.
+ */
+const BY_KEY = new Map<string, string>();
+for (const [source, fields] of Object.entries(REPORT_FIELDS)) {
+  for (const field of fields) BY_KEY.set(`${source}:${field.id}`, field.name);
 }
 
 /**
@@ -65,14 +85,17 @@ for (const fields of Object.values(REPORT_FIELDS)) {
  * وأعمدةُ التجميع تعود بصيغة `<حقل>_<دالّة>` من الخادم، فتُقرأ جزأين.
  * والمعرّفُ المجهول يُعاد كما هو: إظهارُه أصدق من إخفائه.
  */
-export function columnLabel(column: string): string {
+export function columnLabel(column: string, source?: string): string {
   if (column === 'count') return AGG_LABEL.count;
-  const direct = BY_ID.get(column);
+
+  const nameOf = (id: string) => BY_KEY.get(`${source}:${id}`);
+
+  const direct = nameOf(column);
   if (direct) return direct;
 
   const cut = column.lastIndexOf('_');
   if (cut > 0) {
-    const field = BY_ID.get(column.slice(0, cut));
+    const field = nameOf(column.slice(0, cut));
     const agg = AGG_LABEL[column.slice(cut + 1)];
     if (field && agg) return `${agg} — ${field}`;
   }

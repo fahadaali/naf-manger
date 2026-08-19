@@ -87,7 +87,7 @@ export default function Settings() {
       icon: SettingsIcon,
       color: 'purple',
       tabs: [
-        { id: 'general', label: 'الإعدادات العامة', icon: Globe, description: 'معلومات الشركة والألوان والشعار', permission: 'settings.update' },
+        { id: 'general', label: 'الإعدادات العامة', icon: Globe, description: 'اسم المكتب ووصفه وشعاره', permission: 'settings.update' },
         { id: 'system', label: 'تكوين النظام', icon: SettingsIcon, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
         { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' }
       ]

@@ -69,6 +69,11 @@ export function formatDate(value: Date | string | number): string {
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`
 }
 
+/* الهجريّ والمزدوج صيغتان مسجَّلتان في قواعد التنسيق أعلاه، ولا تناديهما
+   شاشةٌ في هذه المنصة اليوم. وتبقيان: هذا الملفّ نسخةُ السجلّ الموحَّد
+   `naf-ui` تستهلكها منصات ناف الخمس، وحذفُ صيغةٍ منه هنا انحرافٌ عن
+   السجلّ لا تنظيف. */
+
 /** هجري أم القرى: "1448/02/11 هـ" */
 export function formatHijriDate(value: Date | string | number): string {
   const parts = HIJRI_FORMAT.formatToParts(toDate(value))

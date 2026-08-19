@@ -3,7 +3,7 @@ import { ChartColumn, FileOutput, Pencil, Table2, TriangleAlert, X } from 'lucid
 import { chartPalette } from '../../lib/chart-tokens';
 import { CustomReport, ReportResult } from '../../types';
 import { db } from '../../data/database';
-import { columnLabel, formatCell } from '../../lib/report-fields';
+import { SOURCE_LABEL, VISUALIZATION_LABEL, columnLabel, formatCell } from '../../lib/report-fields';
 import { downloadText, toCsv } from '../../lib/csv';
 import { downloadXlsx } from '../../lib/xlsx';
 import { Alert } from '@/registry/naf/ui/alert';
@@ -57,10 +57,10 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
     const safeName = report.name.replace(/[\\/:*?"<>|]/g, ' ').trim() || 'تقرير';
     const labelled = rows.map((row) => {
       const out: Record<string, unknown> = {};
-      for (const column of columns) out[columnLabel(column)] = row[column] ?? '';
+      for (const column of columns) out[columnLabel(column, report.dataSource)] = row[column] ?? '';
       return out;
     });
-    const headers = columns.map(columnLabel);
+    const headers = columns.map((column) => columnLabel(column, report.dataSource));
 
     if (format === 'xlsx') {
       downloadXlsx([{ name: safeName, headers, rows: labelled }], `${safeName}.xlsx`);
@@ -82,7 +82,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
     return {
       labels: rows.map((row) => String(row[labelColumn] ?? '')),
       datasets: [{
-        label: columnLabel(valueColumn),
+        label: columnLabel(valueColumn, report.dataSource),
         data: rows.map((row) => Number(row[valueColumn] ?? 0)),
         // ستّ درجات كانت مكتوبةً بيدها، والمسجَّل خمس. اللوحة تدور على
         // الخمس بدل اختراع سادسة تقارب إحداها فتُبطل التمييز الذي وُضعت له.
@@ -177,7 +177,8 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">مصدر البيانات:</span>
-              <span className="font-medium text-foreground ms-2">{report.dataSource}</span>
+              {/* بالعربية لا بمفتاحها: كان يُعرض `clients` في شاشةٍ عربيةٍ كلُّها. */}
+              <span className="font-medium text-foreground ms-2">{SOURCE_LABEL[report.dataSource] ?? report.dataSource}</span>
             </div>
             <div>
               <span className="text-muted-foreground">عدد السجلات:</span>
@@ -191,7 +192,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
             </div>
             <div>
               <span className="text-muted-foreground">نوع العرض:</span>
-              <span className="font-medium text-foreground ms-2">{report.visualization.type}</span>
+              <span className="font-medium text-foreground ms-2">{VISUALIZATION_LABEL[report.visualization.type] ?? report.visualization.type}</span>
             </div>
           </div>
         </div>
@@ -215,7 +216,7 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
                           تخلو فيه قيمةٌ يُسقط عمودَها فتنقص الترويسة. */}
                       {columns.map((column) => (
                         <TableHead key={column} className="tracking-wider">
-                          {columnLabel(column)}
+                          {columnLabel(column, report.dataSource)}
                         </TableHead>
                       ))}
                     </TableRow>

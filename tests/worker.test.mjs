@@ -239,6 +239,24 @@ r = await hit('PATCH', '/api/settings', { companyName: 'مكتب ناف' });
 check('وتُكتب', r.body.ok, r.body);
 check('وتثبت', (await hit('GET', '/api/settings')).body.data.companyName === 'مكتب ناف');
 
+/* ═══ سرُّ البريد لا يخرج لمن لا يملك قراءة الإعدادات ═══
+   المسارُ عامٌّ بقصد — `useSettings()` تُغذّي كلَّ منسدلةٍ في النماذج —
+   لكنّه كان يحمل `emailSettings` ومعها كلمةُ مرور SMTP إلى متصفّح كلِّ
+   عضو عند كل فتحةِ نموذج، ولمن `settings.read` عنده `false`. */
+await hit('PATCH', '/api/settings', {
+  emailSettings: { host: 'smtp.example', port: 587, secure: false, user: 'a@x', password: 'سرٌّ', fromName: '', fromAddress: '' },
+});
+r = await hit('GET', '/api/settings');
+check('والآدمنُ يقرأ إعدادَ البريد', r.body.data.emailSettings?.password === 'سرٌّ', r.body.data.emailSettings);
+
+setUser(STAFF);
+r = await hit('GET', '/api/settings');
+check('والموظّفُ يقرأ المفردات', Array.isArray(r.body.data?.caseTypes) && r.body.data.caseTypes.length > 0, r.body.data);
+check('ولا يبلغه سرُّ البريد', r.body.data.emailSettings === undefined,
+  JSON.stringify(r.body.data.emailSettings));
+check('ولا يظهر السرُّ في الردّ كلِّه', !JSON.stringify(r.body).includes('سرٌّ'));
+setUser(ADMIN);
+
 /* ═══ الأثرُ يكتبه الخادم عند كل فعل ═══
    كانت الشاشةُ تكتبه، ولم تكن تكتبه إلا في موضعٍ واحد من كل مواضعها —
    فلوحةُ «النشاط الأخير» تعرض أنواعاً لا يكتبها أحد. وموضعُه الآن
@@ -517,6 +535,23 @@ r = await hit('POST', '/api/clients/bulk', { action: 'restore', ids: [batch[0]] 
 check('ويُرجَع واحدٌ منها', r.body.ok && r.body.data.affected === 1, r.body);
 listed = (await hit('GET', '/api/clients')).body.data;
 check('فيعود غيابُ اللحظة', !listed.find((row) => row.id === batch[0])?.archivedAt);
+
+/* ═══ والمؤرشفُ خارجَ ما يُقاس ═══
+   كانت `‎/api/stats‎` وحدَها تُصفّيه، فالتقاريرُ تعدّه. ودمجُ عميلين
+   مكرّرين يؤرشف المدموج — فيبقى الشخصُ نفسه محسوباً مرّتين في كلّ تقرير. */
+const archivedNow = batch.slice(1); // اثنان لا يزالان مؤرشفَين
+r = await hit('POST', '/api/reports/preview', {
+  name: 'كلُّ العملاء', dataSource: 'clients', fields: ['fullName'],
+  filters: [], grouping: [], aggregations: [], visualization: { type: 'table' },
+});
+const previewNames = (r.body?.data?.rows ?? []).map((row) => row.fullName);
+check('والتقريرُ لا يعدّ المؤرشف',
+  r.body.ok && !previewNames.includes('دفعةٌ ثانية') && !previewNames.includes('دفعةٌ ثالثة'),
+  previewNames);
+check('ويعدّ المُرجَع منه', previewNames.includes('دفعةٌ أولى'), previewNames);
+check('واثنان مؤرشفان فعلاً',
+  archivedNow.every((id) => listed.find((row) => row.id === id)?.archivedAt),
+  archivedNow);
 
 /* ═══ الصفُّ المؤرشف يبقى موصولاً ═══
    لو كانت الأرشفةُ حذفاً مؤجَّلاً لانقطعت قضيةٌ عن عميلها. وهي ليست كذلك. */

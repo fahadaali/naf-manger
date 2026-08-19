@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Archive, ExternalLink, Plus, Search } from 'lucide-react';
+import { Archive, CircleCheck, ExternalLink, Plus, Search, TriangleAlert } from 'lucide-react';
 import { BulkAction, Client } from '../../types';
 import ClientCard from './ClientCard';
 import ClientModal from './ClientModal';
@@ -19,6 +19,7 @@ import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Alert } from '@/registry/naf/ui/alert';
+import { messageTone } from '../../lib/status-message';
 import { Card } from '@/registry/naf/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 
@@ -92,8 +93,10 @@ export default function ClientsView() {
     setNotice('');
     try {
       const outcome = await db.bulkClients(action, ids);
-      const verb = action === 'delete' ? 'حُذف' : action === 'archive' ? 'أُرشف' : 'أُرجع';
-      setNotice(`${verb} ${formatNumber(outcome.affected)} من ${formatNumber(outcome.requested)}`);
+      /* والصيغةُ «تم…» لأنّ `messageTone` تقرأ بها النجاح — §٤ تنصّ على
+         «تم + المصدر»، ورسالةٌ تبدأ بـ«حُذف» تُقرأ خطأً فتُعرض حمراء. */
+      const noun = action === 'delete' ? 'حذف' : action === 'archive' ? 'أرشفة' : 'إرجاع';
+      setNotice(`تمّ ${noun} ${formatNumber(outcome.affected)} من ${formatNumber(outcome.requested)}`);
       selection.clear();
       loadClients();
     } catch (error) {
@@ -229,7 +232,18 @@ export default function ClientsView() {
         </div>
       </Card>
 
-      {notice && <Alert variant="info"><span>{notice}</span></Alert>}
+      {/* النبرةُ من `messageTone` كبقيّة الشاشات: كانت `info` دائماً،
+          فـ«تعذّر التنفيذ» يُعرض أزرق كالنجاح. */}
+      {notice && (() => {
+        const tone = messageTone(notice);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{notice}</span>
+          </Alert>
+        );
+      })()}
 
       {(hasPermission('clients', 'update') || hasPermission('clients', 'delete')) && (
         <SelectionBar
@@ -255,18 +269,17 @@ export default function ClientsView() {
             <bdi>{formatNumber(present.filter(c => c.status === 'current').length)}</bdi>
           </p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">الشركات</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">
-            <bdi>{formatNumber(present.filter(c => c.clientType === 'company').length)}</bdi>
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">الأفراد</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground">
-            <bdi>{formatNumber(present.filter(c => c.clientType === 'individual').length)}</bdi>
-          </p>
-        </Card>
+        {/* البطاقتان تتبعان «تكوين النظام»: كان النوعان مكتوبَين هنا،
+            و`clientTypes` قائمةٌ يحرّرها المسؤول — فترتيبٌ يتبدّل أو نوعٌ
+            يُعاد تسميتُه يترك بطاقةً على صفرٍ بلا سبب ظاهر. */}
+        {clientTypes.slice(0, 2).map((type) => (
+          <Card key={type} className="p-4">
+            <p className="text-xs sm:text-sm text-muted-foreground">{clientTypeLabel(type)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">
+              <bdi>{formatNumber(present.filter(c => c.clientType === type).length)}</bdi>
+            </p>
+          </Card>
+        ))}
       </div>
 
       {/* البطاقات — تُري الواحد */}

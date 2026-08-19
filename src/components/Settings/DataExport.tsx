@@ -36,7 +36,9 @@ export default function DataExport() {
     cases: true,
     users: false,
     marketers: true,
-    analytics: false,
+    /* «الإحصائيات» كانت هنا ولا يقرؤها `generateExcelData` — مربّعٌ
+       يُؤشَّر ولا يقع شيء. وما يُصدَّر جداولُ صفوفٍ، والإحصاءُ مشتقٌّ منها
+       يُقرأ في شاشة التحليلات. فسقط المربّع بدل أن يَعِد بما لا يقع. */
     activities: false
   });
   
@@ -47,8 +49,9 @@ export default function DataExport() {
     clients: {
       basicInfo: true,
       contactInfo: true,
-      notes: false,
-      attachments: false
+      /* و«المرفقات» كانت هنا ولا تُقرأ كذلك: المرفقُ ملفٌّ في الحاوية،
+         وخانةٌ في جدولٍ تحمل مفتاحَه لا تنفع من يفتح الملفّ. فسقطت. */
+      notes: false
     },
     prospects: {
       basicInfo: true,
@@ -193,7 +196,11 @@ export default function DataExport() {
     }
 
     if (selectedData.marketers) {
-      const marketers = await db.getMarketers();
+      const [marketers, casesForCount] = await Promise.all([db.getMarketers(), db.getCases()]);
+      const caseCountByMarketer = casesForCount.reduce<Record<string, number>>((sum, case_) => {
+        if (case_.marketerId) sum[case_.marketerId] = (sum[case_.marketerId] ?? 0) + 1;
+        return sum;
+      }, {});
       const marketersData = marketers.map(marketer => {
         const row: any = {};
         
@@ -211,8 +218,10 @@ export default function DataExport() {
         }
         
         if (selectedFields.marketers.performance) {
-          // يمكن إضافة إحصائيات الأداء هنا
-          row['عدد القضايا'] = 0; // سيتم حسابها لاحقاً
+          /* كان `0` مكتوباً بتعليق «سيتم حسابها لاحقاً» — والحقلُ ضمن
+             الافتراضي المفعَّل، فيخرج صفراً في كل تصدير. والعددُ يُقرأ من
+             القضايا نفسها، وهي مجلوبةٌ أصلاً. */
+          row['عدد القضايا'] = caseCountByMarketer[marketer.id] ?? 0;
         }
         
         if (selectedFields.marketers.notes && marketer.notes) {
@@ -422,7 +431,6 @@ ${tables}
                    key === 'cases' ? 'بيانات القضايا' :
                    key === 'users' ? 'بيانات المستخدمين' :
                    key === 'marketers' ? 'بيانات المسوّقين' :
-                   key === 'analytics' ? 'الإحصائيات' :
                    key === 'activities' ? 'سجل الأنشطة' : key}
                 </span>
                 <p className="text-sm text-muted-foreground">
@@ -431,7 +439,6 @@ ${tables}
                    key === 'cases' ? 'جميع القضايا المسجلة' :
                    key === 'users' ? 'جميع المستخدمين' :
                    key === 'marketers' ? 'جميع المسوّقين' :
-                   key === 'analytics' ? 'التقارير والإحصائيات' :
                    key === 'activities' ? 'سجل جميع الأنشطة في النظام' : ''}
                 </p>
               </div>
@@ -512,7 +519,7 @@ ${tables}
                       {field === 'basicInfo' ? 'المعلومات الأساسية' :
                        field === 'contactInfo' ? 'معلومات التواصل' :
                        field === 'notes' ? 'الملاحظات' :
-                       field === 'attachments' ? 'المرفقات' : field}
+                       field}
                     </span>
                   </label>
                 ))}

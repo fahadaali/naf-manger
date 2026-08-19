@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Users } from 'lucide-react';
+import { CircleCheck, Plus, Search, TriangleAlert, Users } from 'lucide-react';
 import { Marketer } from '../../types';
 import MarketerCard from './MarketerCard';
 import MarketerModal from './MarketerModal';
@@ -12,6 +12,8 @@ import { Button } from '@/registry/naf/ui/button';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Card } from '@/registry/naf/ui/card';
+import { Alert } from '@/registry/naf/ui/alert';
+import { messageTone } from '../../lib/status-message';
 
 export default function MarketersView() {
   const [marketers, setMarketers] = useState<Marketer[]>([]);
@@ -22,6 +24,7 @@ export default function MarketersView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [notice, setNotice] = useState('');
   const { hasPermission } = useAuth();
 
   // المرشّحات من «تكوين النظام».
@@ -94,11 +97,40 @@ export default function MarketersView() {
         setIsEditing(false);
       } catch (error) {
         console.error('Error saving marketer:', error);
-        alert('حدث خطأ أثناء حفظ بيانات المسوّق');
+        setNotice('تعذّر حفظ بيانات المسوّق. أعد المحاولة');
       }
     };
     
     saveMarketerAsync();
+  };
+
+  /* ═══ الحذفُ كان بلا زرّ ═══
+     `db.deleteMarketer` مكتوبةٌ والمسارُ يقبلها، ولا شيءَ في الشاشة ولا في
+     البطاقة ولا في النافذة يناديها — فمسوّقٌ أُضيف خطأً يبقى. ولا عمودَ
+     أرشفةٍ لجدولهم، فالحذفُ حذف.
+
+     وقضيةٌ تشير إليه تمنعه: القيدُ الأجنبيّ يردّ `invalid_reference`،
+     والرسالةُ تقول ذلك بدل «حدث خطأ» — والعلاجُ فكُّ الربط أو «سابق». */
+  const handleDeleteMarketer = async (marketer: Marketer) => {
+    if (!window.confirm(
+      `حذف «${marketer.fullName}» نهائياً؟ وتُحذف معه دفعاتُ عمولته المسجَّلة.`
+    )) return;
+
+    setNotice('');
+    try {
+      await db.deleteMarketer(marketer.id);
+      setNotice('تمّ الحذف');
+      loadMarketers();
+      setTimeout(() => setNotice(''), 3000);
+    } catch (error) {
+      console.error('تعذّر حذف المسوّق:', error);
+      const code = (error as { code?: string })?.code;
+      setNotice(
+        code === 'invalid_reference'
+          ? 'لا يُحذف مسوّقٌ مرتبطٌ بقضية. افصله عنها أو اجعل حالته «سابق».'
+          : 'تعذّر الحذف. أعد المحاولة'
+      );
+    }
   };
 
   const handleCloseModal = () => {
@@ -192,6 +224,17 @@ export default function MarketersView() {
         </Card>
       </div>
 
+      {notice && (() => {
+        const tone = messageTone(notice);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{notice}</span>
+          </Alert>
+        );
+      })()}
+
       {/* Marketers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredMarketers.map((marketer) => (
@@ -200,6 +243,7 @@ export default function MarketersView() {
             marketer={marketer}
             onViewDetails={handleViewDetails}
             onEdit={handleEditMarketer}
+            onDelete={hasPermission('marketers', 'delete') ? handleDeleteMarketer : undefined}
             canEdit={hasPermission('marketers', 'update')}
           />
         ))}

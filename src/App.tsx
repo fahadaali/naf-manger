@@ -14,9 +14,9 @@ import Denied from './components/Auth/Denied';
 import DisplayBoard from './components/Display/DisplayBoard';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 
-/* `LoginModal` كان هنا، ويعرض `LoginPage` فوق `LandingPage`. وقد سقط الاثنان
-   من المسار حين صار الباب مركزياً: الوسيط يحرس الجذر، فلا يبلغ هذه الحزمةَ
-   متصفّحٌ بلا جلسة أصلاً. والملفّان باقيان في المستودع كما هما. */
+/* كان هنا `LoginModal` يعرض `LoginPage` فوق `LandingPage`. وسقط الثلاثة
+   حين صار البابُ مركزياً: الوسيط يحرس الجذر، فلا يبلغ هذه الحزمةَ متصفّحٌ
+   بلا جلسة أصلاً. ولا أثرَ لها في المستودع اليوم. */
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard');

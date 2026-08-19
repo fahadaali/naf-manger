@@ -1,5 +1,5 @@
 /* ============================================================
-   شارةُ حالة القضية ونتيجتِها — أيقونةٌ ولونٌ ونصّ معاً.
+   شاراتُ الحالات — أيقونةٌ ولونٌ ونصّ معاً، §٦ تُلزم بالثلاثة.
 
    ═══ العطل الذي أوجب هذا الملفّ ═══
 
@@ -22,9 +22,12 @@ import {
   CalendarX,
   CircleCheck,
   CircleHelp,
+  CircleSlash,
   CircleX,
   Clock,
+  FileCheck,
   Handshake,
+  Info,
   LoaderCircle,
 } from 'lucide-react';
 
@@ -72,5 +75,30 @@ export function caseOutcomeBadge(outcome?: string): StatusBadge {
   return {
     ...(found ?? { variant: 'default' as const, Icon: CircleHelp }),
     label: caseOutcomeLabel(outcome),
+  };
+}
+
+/* ═══ حالةُ العميل المحتمل ═══
+ *
+ * ومفرداتُها عربيةٌ تُحرَّر من «تكوين النظام» — بخلاف حالة القضية، وهي
+ * مفاتيحُ مغلقة. فحالةٌ يضيفها المسؤول لا تجد صورةً هنا، وتأخذ علامةَ
+ * الاستفهام: كانت `ProspectCard` تُلبسها شارةَ «تم الرفض» — وهي ليست
+ * كذلك، وقولُ «لا أعرفها» أصدق من نسبتها إلى غيرها.
+ *
+ * والنصُّ هو القيمةُ نفسُها: لا خريطةَ ترجمةٍ لها لأنها عربيةٌ أصلاً.
+ */
+const PROSPECT_STATUS: Record<string, { variant: Variant; Icon: typeof Clock }> = {
+  'مهتم': { variant: 'primary', Icon: Info },
+  'تم التواصل': { variant: 'warning', Icon: Clock },
+  'بانتظار توقيع': { variant: 'success', Icon: FileCheck },
+  'غير مناسب': { variant: 'destructive', Icon: CircleSlash },
+  'تم الرفض': { variant: 'default', Icon: CircleX },
+};
+
+export function prospectStatusBadge(status?: string): StatusBadge {
+  const found = status ? PROSPECT_STATUS[status] : undefined;
+  return {
+    ...(found ?? { variant: 'default' as const, Icon: CircleHelp }),
+    label: status ?? '',
   };
 }

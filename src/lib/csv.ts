@@ -12,9 +12,20 @@
 /** علامةُ ترتيب البايتات — بدونها يقرأ Excel العربية محارفَ مبعثرة. */
 const BOM = '﻿';
 
+/* ═══ الصيغةُ لا تُنفَّذ ═══
+ *
+ * Excel يقرأ خليّةً تبدأ بـ`=` أو `+` أو `-` أو `@` صيغةً لا نصّاً، فيُنفّذ
+ * ما فيها عند الفتح. وأسماءُ الموكّلين تأتي من الاستيراد ومن بيسكامب لا من
+ * المكتب وحده — فاسمٌ يبدأ بإحداها يصير أمراً يُنفَّذ على جهاز من فتح
+ * الملفّ. والفاصلةُ العليا قبله تجعله نصّاً عند Excel وتختفي من العرض،
+ * وهي الحيلةُ المعتمدة لهذا.
+ */
+const FORMULA_LEAD = /^[=+\-@\t\r]/;
+
 /** يحمي الحقل: يُقتبس إن حمل فاصلةً أو اقتباساً أو سطراً. */
 function escapeField(value: unknown): string {
-  const text = value === null || value === undefined ? '' : String(value);
+  const raw = value === null || value === undefined ? '' : String(value);
+  const text = FORMULA_LEAD.test(raw) ? `'${raw}` : raw;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

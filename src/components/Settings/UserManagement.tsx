@@ -3,6 +3,7 @@ import { CircleCheck, CircleHelp, CircleSlash, Gavel, ShieldCheck, TriangleAlert
 import { User, UserPermissions } from '../../types';
 import { db } from '../../data/database';
 import { useAuth } from '../../contexts/AuthContext';
+import { roleLabel } from '../../lib/labels';
 import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Button } from '@/registry/naf/ui/button';
@@ -12,6 +13,27 @@ import { messageTone } from '../../lib/status-message';
 import { Alert } from '@/registry/naf/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 import { Card } from '@/registry/naf/ui/card';
+
+/* الموردُ والفعلُ بأسمائهما — مرآةُ `NONE` في `worker/lib/roles.js`. وكان
+   `marketers` ساقطاً من القائمة، فيظهر مفتاحُه الإنجليزي في شاشةٍ عربيةٍ
+   كلِّها. */
+const RESOURCE_LABEL: Record<string, string> = {
+  clients: 'العملاء',
+  prospects: 'العملاء المحتملين',
+  cases: 'القضايا',
+  marketers: 'المسوّقين',
+  analytics: 'التحليلات',
+  settings: 'الإعدادات',
+  users: 'المستخدمين'
+};
+
+const ACTION_LABEL: Record<string, string> = {
+  create: 'إنشاء',
+  read: 'قراءة',
+  update: 'تحديث',
+  delete: 'حذف',
+  convert: 'تحويل'
+};
 
 /** الأدوارُ الثلاثة — مرآةُ `BY_ROLE` في `worker/lib/roles.js`، وهو الحاكم. */
 const ROLE_OPTIONS = ['admin', 'lawyer', 'staff'];
@@ -38,15 +60,6 @@ export default function UserManagement() {
     };
     
     loadUsersAsync();
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin': return 'مسؤول النظام';
-      case 'lawyer': return 'محامٍ';
-      case 'staff': return 'إداري';
-      default: return role;
-    }
   };
 
   /* Gavel هنا صلاحيةُ محامٍ لا كيانُ قضية: الجدول عن أدوار
@@ -126,7 +139,7 @@ export default function UserManagement() {
   const handleChangeRole = async (user: User, role: string) => {
     if (role === user.role) return;
     if (!window.confirm(
-      `تغيير دور «${user.name}» إلى «${getRoleLabel(role)}»؟ تعود صلاحياتُه إلى افتراض الدور الجديد.`
+      `تغيير دور «${user.name}» إلى «${roleLabel(role)}»؟ تعود صلاحياتُه إلى افتراض الدور الجديد.`
     )) return;
 
     setIsSaving(true);
@@ -253,7 +266,7 @@ export default function UserManagement() {
                       return (
                         <Badge variant={variant}>
                           <Icon aria-hidden="true" />
-                          {getRoleLabel(user.role)}
+                          {roleLabel(user.role)}
                         </Badge>
                       );
                     })()
@@ -266,7 +279,7 @@ export default function UserManagement() {
                       className="w-40"
                     >
                       {ROLE_OPTIONS.map((role) => (
-                        <option key={role} value={role}>{getRoleLabel(role)}</option>
+                        <option key={role} value={role}>{roleLabel(role)}</option>
                       ))}
                     </Select>
                   )}
@@ -325,12 +338,7 @@ export default function UserManagement() {
               {Object.entries(editingUser.permissions).map(([resource, permissions]) => (
                 <div key={resource} className="border rounded-lg p-4">
                   <h4 className="font-medium text-foreground mb-3">
-                    {resource === 'clients' ? 'العملاء' :
-                     resource === 'prospects' ? 'العملاء المحتملين' :
-                     resource === 'cases' ? 'القضايا' :
-                     resource === 'analytics' ? 'التحليلات' :
-                     resource === 'settings' ? 'الإعدادات' :
-                     resource === 'users' ? 'المستخدمين' : resource}
+                    {RESOURCE_LABEL[resource] ?? resource}
                   </h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {Object.entries(permissions as any).map(([action, allowed]) => (
@@ -351,11 +359,7 @@ export default function UserManagement() {
                           className="rounded border-border text-primary focus-visible:ring-ring"
                         />
                         <span className="text-sm text-foreground">
-                          {action === 'create' ? 'إنشاء' :
-                           action === 'read' ? 'قراءة' :
-                           action === 'update' ? 'تحديث' :
-                           action === 'delete' ? 'حذف' :
-                           action === 'convert' ? 'تحويل' : action}
+                          {ACTION_LABEL[action] ?? action}
                         </span>
                       </label>
                     ))}

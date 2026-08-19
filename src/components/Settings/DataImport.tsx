@@ -44,6 +44,34 @@ function parseContacts(raw: string): ContactNumber[] {
     .filter((entry) => entry.number);
 }
 
+/* ═══ التاريخُ يعود كما خرج ═══
+ *
+ * «تاريخ الانضمام» و«تاريخ الإضافة» يُصدَّران ولم يكن لهما عمودُ استيراد —
+ * فملفٌّ صُدِّر ثم أُعيد استيرادُه يفقد التاريخ ويأخذ يومَ الاستيراد. وهو
+ * العمودُ نفسُه الذي يُبنى عليه «النموّ مقارنةً بالشهر الماضي» في
+ * `readStats`، فالرقمُ يُقرأ قياساً وليس منه.
+ *
+ * والصيغةُ المقبولة ما يُصدِّره `formatDate` — `2026/07/26` — ومعها
+ * `YYYY-MM-DD` لمن كتبها بيده أو صدّرها Excel. وما لا يُقرأ يُترك غياباً
+ * فيأخذ العمودُ افتراضَه، ولا يُخترع تاريخ.
+ */
+function parseDate(raw: string): Date | undefined {
+  const text = raw.trim();
+  const match = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (!match) return undefined;
+  const [, year, month, day] = match;
+  const at = new Date(Number(year), Number(month) - 1, Number(day));
+  return Number.isNaN(at.getTime()) ? undefined : at;
+}
+
+/** المبلغُ نصّاً إلى رقم — والفاصلةُ العشرية والفواصلُ الألفية تُقرآن. */
+function parseAmount(raw: string): number | undefined {
+  const text = raw.replace(/[,\s]/g, '').trim();
+  if (!text) return undefined;
+  const value = Number(text);
+  return Number.isFinite(value) ? value : undefined;
+}
+
 const CLIENT_COLUMNS: Column<Partial<Client>>[] = [
   { header: 'الاسم الكامل', required: true, sample: 'محمد عبدالله', apply: (t, v) => { t.fullName = v; } },
   /* ═══ ورقمُ الهوية لم يعد لازماً ═══
@@ -69,6 +97,11 @@ const CLIENT_COLUMNS: Column<Partial<Client>>[] = [
     apply: (t, v) => { t.status = (v || 'current') as Client['status']; }
   },
   { header: 'السجل التجاري', sample: '', apply: (t, v) => { if (v) t.commercialRegister = v; } },
+  {
+    header: 'تاريخ الانضمام',
+    sample: '2026/01/15',
+    apply: (t, v) => { const at = parseDate(v); if (at) t.joinDate = at; }
+  },
   { header: 'الملاحظات', sample: '', apply: (t, v) => { t.notes = v; } }
 ];
 
@@ -90,6 +123,21 @@ const PROSPECT_COLUMNS: Column<Partial<Prospect>>[] = [
   },
   { header: 'حالة العميل المحتمل', sample: 'مهتم', apply: (t, v) => { t.prospectStatus = v; } },
   { header: 'المصدر', sample: 'إعلان', apply: (t, v) => { if (v) t.source = v; } },
+  {
+    header: 'القيمة المتوقعة',
+    sample: '25000',
+    apply: (t, v) => { const amount = parseAmount(v); if (amount !== undefined) t.expectedValue = amount; }
+  },
+  {
+    header: 'تاريخ الإضافة',
+    sample: '2026/01/15',
+    apply: (t, v) => { const at = parseDate(v); if (at) t.joinDate = at; }
+  },
+  {
+    header: 'موعد المتابعة',
+    sample: '2026/02/01',
+    apply: (t, v) => { const at = parseDate(v); if (at) t.followUpDate = at; }
+  },
   { header: 'الملاحظات', sample: '', apply: (t, v) => { t.notes = v; } }
 ];
 

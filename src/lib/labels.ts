@@ -56,6 +56,30 @@ const COMMISSION_TYPE: Record<string, string> = {
   percentage: 'نسبة مئوية',
 }
 
+const COLLECTION_STATUS: Record<string, string> = {
+  unpaid: 'غير مدفوع',
+  partially_paid: 'مدفوع جزئياً',
+  fully_paid: 'مدفوع كاملاً',
+}
+
+/* بنيةُ الأتعاب — مقدَّمٌ ومؤخَّر. وهي غيرُ `COMMISSION_TYPE`: تلك تقول
+   «كيف يُحسب المبلغ» وهذه تقول «متى يُستحقّ». وكانت قائمةُ `feeTypes` في
+   الافتراضات تحمل الأولى بينما شاشةُ القضية تكتب الثانية — فالقائمةُ
+   تُحرَّر ولا يقرؤها أحد، وشاشةُ التكوين تترجم ثالثةً لا تطابق أيّاً منهما. */
+const FEE_TYPE: Record<string, string> = {
+  advance_only: 'مقدَّم فقط',
+  deferred_only: 'مؤخَّر فقط',
+  advance_and_deferred: 'مقدَّم ومؤخَّر',
+}
+
+/* دورُ العضو — وكانت هذه الخريطة مكتوبةً في `Header` و`UserManagement`
+   كلتيهما، وهو عين ما أُنشئ هذا الملفّ لإنهائه. */
+const ROLE: Record<string, string> = {
+  admin: 'مسؤول النظام',
+  lawyer: 'محامٍ',
+  staff: 'إداري',
+}
+
 const label = (map: Record<string, string>) => (value?: string) =>
   (value && map[value]) || value || ''
 
@@ -66,3 +90,6 @@ export const caseOutcomeLabel = label(CASE_OUTCOME)
 export const marketerStatusLabel = label(MARKETER_STATUS)
 export const clientStatusLabel = label(CLIENT_STATUS)
 export const commissionTypeLabel = label(COMMISSION_TYPE)
+export const collectionStatusLabel = label(COLLECTION_STATUS)
+export const feeTypeLabel = label(FEE_TYPE)
+export const roleLabel = label(ROLE)

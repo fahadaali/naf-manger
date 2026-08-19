@@ -81,25 +81,12 @@ export class LocalDatabase {
     return (await listOr(api.list<any>('clients'), 'العملاء')).map(asClient);
   }
 
-  async getClient(id: string): Promise<Client | undefined> {
-    try {
-      return asClient(await api.get<any>('clients', id));
-    } catch {
-      return undefined;
-    }
-  }
-
   async createClient(clientData: Omit<Client, 'id'>): Promise<Client | null> {
     return asClient(await api.create<any>('clients', clientData));
   }
 
   async updateClient(id: string, updates: Partial<Client>): Promise<Client | null> {
     return asClient(await api.update<any>('clients', id, updates));
-  }
-
-  async deleteClient(id: string): Promise<boolean> {
-    await api.remove('clients', id);
-    return true;
   }
 
   /* ═══ عملياتٌ على المحدَّد ═══
@@ -123,25 +110,12 @@ export class LocalDatabase {
     return (await listOr(api.list<any>('prospects'), 'العملاء المحتملين')).map(asProspect);
   }
 
-  async getProspect(id: string): Promise<Prospect | undefined> {
-    try {
-      return asProspect(await api.get<any>('prospects', id));
-    } catch {
-      return undefined;
-    }
-  }
-
   async createProspect(prospectData: Omit<Prospect, 'id'>): Promise<Prospect | null> {
     return asProspect(await api.create<any>('prospects', prospectData));
   }
 
   async updateProspect(id: string, updates: Partial<Prospect>): Promise<Prospect | null> {
     return asProspect(await api.update<any>('prospects', id, updates));
-  }
-
-  async deleteProspect(id: string): Promise<boolean> {
-    await api.remove('prospects', id);
-    return true;
   }
 
   /* التحويل فعلٌ واحد على الخادم لا اثنان هنا: إنشاءٌ ثم حذفٌ من المتصفّح
@@ -153,14 +127,6 @@ export class LocalDatabase {
   // ── القضايا ──
   async getCases(): Promise<Case[]> {
     return (await listOr(api.list<any>('cases'), 'القضايا')).map(asCase);
-  }
-
-  async getCase(id: string): Promise<Case | undefined> {
-    try {
-      return asCase(await api.get<any>('cases', id));
-    } catch {
-      return undefined;
-    }
   }
 
   async getCasesByClient(clientId: string): Promise<Case[]> {
@@ -175,11 +141,6 @@ export class LocalDatabase {
     return asCase(await api.update<any>('cases', id, updates));
   }
 
-  async deleteCase(id: string): Promise<boolean> {
-    await api.remove('cases', id);
-    return true;
-  }
-
   /* ═══ الأعضاء ═══
      المصادقة مركزية: لا يُنشأ عضوٌ من هنا ولا تُحذف هوية. المركز يمنح
      الوصول، وأولُ دخولٍ يُنشئ الصفّ، وهذه الشاشة ترقّي وتوقف لا أكثر. */
@@ -191,14 +152,10 @@ export class LocalDatabase {
     return (await this.getUsers()).find((user) => user.id === id);
   }
 
-  async getCurrentUser(): Promise<User | null> {
-    try {
-      const body = await api.read<{ user: any }>('/me');
-      return asUser((body as any).user ?? body);
-    } catch {
-      return null;
-    }
-  }
+  /* كانت هنا `getCurrentUser()` تنادي `api.read('/me')` — و`call()` تفكّ
+     `body.data`، و`‎/api/me‎` يردّ `{ok, center, user}` بلا غلاف. فالقيمةُ
+     `undefined` ثمّ `.user` ترمي، فتردّ `null` أبداً. ولا مستدعيَ لها:
+     العضوُ الحالي من `useAuth()` لا من هنا. */
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
     await api.patch(`/members/${encodeURIComponent(id)}`, updates);
@@ -220,15 +177,11 @@ export class LocalDatabase {
     return (await listOr(api.list<any>('activities'), 'الأنشطة')).map(asActivity);
   }
 
-  async addActivity(activity: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<ActivityLog | null> {
-    try {
-      return asActivity(await api.create<any>('activities', activity));
-    } catch (error) {
-      // أثرٌ تعذّر تسجيله لا يُسقط الفعل الذي وقع.
-      console.error('تعذّر تسجيل النشاط:', error);
-      return null;
-    }
-  }
+  /* كانت هنا `addActivity()` تكتبه من المتصفّح — ولم تكن تُنادى إلا في
+     موضعٍ واحد من كل مواضعها، فلوحةُ «النشاط الأخير» تعرض أنواعاً لا
+     يكتبها أحد. والأثرُ اليوم يكتبه `worker/lib/activity.js` من `crud.js`،
+     فيمرّ به كلُّ إنشاءٍ وتعديلٍ وحذفٍ ودفعة، ويُنسب إلى فاعله لا إلى
+     «النظام». والمسارُ يقبل الكتابةَ المباشرة إن احتاجتها شاشة. */
 
   /* ═══ الإعدادات — نداءٌ واحد لا خمسة ═══
    *
@@ -267,14 +220,6 @@ export class LocalDatabase {
   // ── المسوّقون ──
   async getMarketers(): Promise<Marketer[]> {
     return (await listOr(api.list<any>('marketers'), 'المسوّقين')).map(asMarketer);
-  }
-
-  async getMarketer(id: string): Promise<Marketer | undefined> {
-    try {
-      return asMarketer(await api.get<any>('marketers', id));
-    } catch {
-      return undefined;
-    }
   }
 
   async createMarketer(marketerData: Omit<Marketer, 'id'>): Promise<Marketer | null> {

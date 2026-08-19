@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Archive, ChevronDown, ExternalLink, Plus, Search } from 'lucide-react';
+import { Archive, ChevronDown, CircleCheck, ExternalLink, Plus, Search, TriangleAlert } from 'lucide-react';
 import { BulkAction, Case } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
@@ -10,13 +10,14 @@ import { useSelection } from '../../lib/use-selection';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel } from '../../lib/labels';
-import { caseOutcomeBadge, caseStatusBadge } from '../../lib/case-badges';
+import { caseOutcomeBadge, caseStatusBadge } from '../../lib/status-badges';
 import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Alert } from '@/registry/naf/ui/alert';
+import { messageTone } from '../../lib/status-message';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 import { Card } from '@/registry/naf/ui/card';
 
@@ -106,8 +107,10 @@ export default function CasesView() {
     setNotice('');
     try {
       const outcome = await db.bulkCases(action, ids);
-      const verb = action === 'delete' ? 'حُذفت' : action === 'archive' ? 'أُرشفت' : 'أُرجعت';
-      setNotice(`${verb} ${formatNumber(outcome.affected)} من ${formatNumber(outcome.requested)}`);
+      /* والصيغةُ «تم…» لأنّ `messageTone` تقرأ بها النجاح — §٤ تنصّ على
+         «تم + المصدر»، ورسالةٌ تبدأ بـ«حُذفت» تُقرأ خطأً فتُعرض حمراء. */
+      const noun = action === 'delete' ? 'حذف' : action === 'archive' ? 'أرشفة' : 'إرجاع';
+      setNotice(`تمّ ${noun} ${formatNumber(outcome.affected)} من ${formatNumber(outcome.requested)}`);
       selection.clear();
       loadCases();
     } catch (error) {
@@ -171,7 +174,7 @@ export default function CasesView() {
 
   /* LoaderCircle لما هو بيد المكتب، و Clock لانتظار موعدٍ عند
      المحكمة — الفرق مَن يملك الخطوة التالية. مسجَّل في naf-icons.md. */
-  /* الشارةُ — أيقونةً ولوناً ونصّاً — من `lib/case-badges.ts`. وكانت
+  /* الشارةُ — أيقونةً ولوناً ونصّاً — من `lib/status-badges.ts`. وكانت
      مكتوبةً هنا وفي `CaseModal` و`MarketerModal`، والثالثةُ تُسقط
      «مؤجلة» فتسمّيها «منظورة». */
   const statusOf = caseStatusBadge;
@@ -244,7 +247,18 @@ export default function CasesView() {
         </div>
       </Card>
 
-      {notice && <Alert variant="info"><span>{notice}</span></Alert>}
+      {/* النبرةُ من `messageTone` كبقيّة الشاشات: كانت `info` دائماً،
+          فـ«تعذّر التنفيذ» يُعرض أزرق كالنجاح. */}
+      {notice && (() => {
+        const tone = messageTone(notice);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{notice}</span>
+          </Alert>
+        );
+      })()}
 
       {(hasPermission('cases', 'update') || hasPermission('cases', 'delete')) && (
         <SelectionBar

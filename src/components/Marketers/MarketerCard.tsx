@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Archive, ChartColumn, CircleCheck, CircleSlash, Mail, Pencil, Phone } from 'lucide-react';
+import { Archive, ChartColumn, CircleCheck, CircleSlash, Mail, Pencil, Phone, Trash2 } from 'lucide-react';
 import { Marketer, MarketerStats } from '../../types';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import { db } from '../../data/database';
@@ -14,10 +14,13 @@ interface MarketerCardProps {
   marketer: Marketer;
   onViewDetails: (marketer: Marketer) => void;
   onEdit: (marketer: Marketer) => void;
+  /* الحذفُ اختياريّ: يُمرَّر لمن يملكه وحده. ولا أرشفةَ للمسوّقين —
+     لا عمودَ لها في جدولهم — فالتصحيحُ حذفٌ أو تبديلُ الحالة إلى «سابق». */
+  onDelete?: (marketer: Marketer) => void;
   canEdit: boolean;
 }
 
-export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit }: MarketerCardProps) {
+export default function MarketerCard({ marketer, onViewDetails, onEdit, onDelete, canEdit }: MarketerCardProps) {
   const [stats, setStats] = useState<MarketerStats>({
     totalCases: 0,
     completedCases: 0,
@@ -103,6 +106,17 @@ export default function MarketerCard({ marketer, onViewDetails, onEdit, canEdit 
           {canEdit && (
             <Button onClick={() => onEdit(marketer)} title="تعديل" variant="ghost" size="icon-sm">
               <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              onClick={() => onDelete(marketer)}
+              className="text-destructive hover:text-destructive-strong"
+              title="حذف"
+              variant="ghost"
+              size="icon-sm"
+            >
+              <Trash2 className="h-4 w-4" />
             </Button>
           )}
         </div>

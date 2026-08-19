@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChartColumn, FileText, LayoutDashboard, Settings, UserPlus, Users, X } from 'lucide-react';
+import { ChartColumn, FileText, LayoutDashboard, Megaphone, Settings, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import { pictureUrl } from '../../data/api';
@@ -18,7 +18,10 @@ const menuItems = [
   { id: 'clients', label: 'العملاء', icon: Users, permission: 'clients.read' },
   { id: 'prospects', label: 'العملاء المحتملين', icon: UserPlus, permission: 'prospects.read' },
   { id: 'cases', label: 'القضايا', icon: FileText, permission: 'cases.read' },
-  { id: 'marketers', label: 'المسوّقين', icon: Users, permission: null },
+  /* وتصريحُها كغيرها: كانت `null` وحدَها بين الثمانية، و`staff` لا يملك
+     `marketers.read` — فيفتحها ويردّ المسارُ ٤٠٣ و`listOr` تبتلعه، فتبقى
+     الشاشة فارغةً أبداً بلا سببٍ مقروء. */
+  { id: 'marketers', label: 'المسوّقين', icon: Megaphone, permission: 'marketers.read' },
   { id: 'analytics', label: 'التحليلات', icon: ChartColumn, permission: 'analytics.read' },
   { id: 'reports', label: 'التقارير المخصصة', icon: ChartColumn, permission: 'analytics.read' },
   { id: 'settings', label: 'الإعدادات', icon: Settings, permission: 'settings.read' },
@@ -76,7 +79,9 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
             <span className="text-lg font-bold">{settings?.companyName || 'شركة ناف'}</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="إغلاق القائمة"
             className="text-sidebar-foreground/70 hover:text-sidebar-foreground p-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
             <X className="w-6 h-6" aria-hidden="true" />

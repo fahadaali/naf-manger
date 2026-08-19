@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { CircleHelp, CircleSlash, CircleX, Clock, FileCheck, Info } from 'lucide-react';
 import { Attachment, ContactNumber, Prospect } from '../../types';
 /* date-fns هنا لقيمة <input type="date"> وحدها: الوسم يقبل yyyy-MM-dd
    ولا يقبل غيرها، وهي صيغة نقل لا صيغة عرض. كل تاريخ يقرؤه المستخدم
@@ -13,6 +12,7 @@ import ContactNumbers from '../Common/ContactNumbers';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
+import { prospectStatusBadge } from '../../lib/status-badges';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -187,18 +187,10 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 <div>
                   <label className="block text-sm font-medium text-foreground">الحالة</label>
                   {(() => {
-                    /* §٦ لا تقبل حالةً بالنصّ وحده. المقابلات مسجَّلة في
-                       naf-icons.md تحت «حالة العميل المحتمل». */
-                    const map = {
-                      'مهتم': { variant: 'primary' as const, Icon: Info },
-                      'تم التواصل': { variant: 'warning' as const, Icon: Clock },
-                      'بانتظار توقيع': { variant: 'success' as const, Icon: FileCheck },
-                      'غير مناسب': { variant: 'destructive' as const, Icon: CircleSlash },
-                      'تم الرفض': { variant: 'default' as const, Icon: CircleX }
-                    };
-                    const { variant, Icon } =
-                      map[prospect.prospectStatus as keyof typeof map] ??
-                      { variant: 'default' as const, Icon: CircleHelp };
+                    /* §٦ لا تقبل حالةً بالنصّ وحده. والخريطةُ في
+                       `lib/status-badges.ts` — موضعٌ واحد تقرؤه البطاقةُ
+                       وهذه النافذة. */
+                    const { variant, Icon } = prospectStatusBadge(prospect.prospectStatus);
                     return (
                       <Badge variant={variant}>
                         <Icon aria-hidden="true" />

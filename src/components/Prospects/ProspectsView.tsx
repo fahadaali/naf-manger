@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Prospect } from '../../types';
+import { CircleCheck, Plus, Search, TriangleAlert } from 'lucide-react';
+import { BulkAction, Prospect } from '../../types';
 import ProspectCard from './ProspectCard';
 import ProspectModal from './ProspectModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
+import SelectionBar from '../Common/SelectionBar';
+import { useSelection } from '../../lib/use-selection';
 import { useSettingList } from '../../lib/use-settings';
 import { clientTypeLabel } from '../../lib/labels';
 import { formatNumber } from '@/registry/naf/lib/format';
@@ -13,6 +15,8 @@ import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
+import { Alert } from '@/registry/naf/ui/alert';
+import { messageTone } from '../../lib/status-message';
 
 export default function ProspectsView() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -25,6 +29,14 @@ export default function ProspectsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  /* ═══ الأرشفةُ لحقت بالشاشة ═══
+     العمودُ `prospects.archived_at` قائمٌ منذ الهجرة الحادية عشرة،
+     و`db.bulkProspects` مكتوبة — ولم يكن في هذه الشاشة ما يستعملهما: لا
+     تحديدَ جماعي ولا أرشفة ولا حذف، بينما الثلاثةُ في العملاء والقضايا.
+     ومحتملٌ أُضيف خطأً لم يكن يُزال إلا بتحويله عميلاً أو من القاعدة. */
+  const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
   const { hasPermission } = useAuth();
 
   // تحميل العملاء المحتملين عند تحميل المكون
@@ -53,9 +65,40 @@ export default function ProspectsView() {
     
     const matchesType = filterType === 'all' || prospect.clientType === filterType;
     const matchesStatus = filterStatus === 'all' || prospect.prospectStatus === filterStatus;
-    
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesArchive = archiveView === 'archived'
+      ? Boolean(prospect.archivedAt)
+      : !prospect.archivedAt;
+
+    return matchesSearch && matchesType && matchesStatus && matchesArchive;
   });
+
+  /** الحاضرون — غيرُ المؤرشفين. تُبنى عليهم البطاقاتُ الأربع أعلى الشاشة. */
+  const present = prospects.filter((prospect) => !prospect.archivedAt);
+
+  const selection = useSelection(filteredProspects);
+
+  /* الحصيلةُ تُقال بعددها لا بـ«تمّ» — كما في شاشتَي العملاء والقضايا. */
+  const runBulk = async (action: BulkAction) => {
+    const ids = selection.ids;
+    if (!ids.length) return;
+
+    setBusy(true);
+    setNotice('');
+    try {
+      const outcome = await db.bulkProspects(action, ids);
+      /* والصيغةُ «تم…» لأنّ `messageTone` تقرأ بها النجاح — §٤ تنصّ على
+         «تم + المصدر»، ورسالةٌ تبدأ بـ«حُذف» تُقرأ خطأً فتُعرض حمراء. */
+      const noun = action === 'delete' ? 'حذف' : action === 'archive' ? 'أرشفة' : 'إرجاع';
+      setNotice(`تمّ ${noun} ${formatNumber(outcome.affected)} من ${formatNumber(outcome.requested)}`);
+      selection.clear();
+      loadProspects();
+    } catch (error) {
+      console.error('تعذّر تنفيذ الفعل الجماعي:', error);
+      setNotice('تعذّر التنفيذ. حدّث الصفحة وأعد المحاولة.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleCreateProspect = () => {
     setEditingProspect(null);
@@ -162,8 +205,8 @@ export default function ProspectsView() {
     loadTotalClients();
   }, []);
   
-  const conversionRate = prospects.length + totalClients > 0 ? 
-    Math.round((totalClients / (prospects.length + totalClients)) * 100) : 0;
+  const conversionRate = present.length + totalClients > 0 ?
+    Math.round((totalClients / (present.length + totalClients)) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -212,28 +255,59 @@ export default function ProspectsView() {
                 <option key={status} value={status}>{status}</option>
               ))}
             </Select>
+            <Select
+              value={archiveView}
+              onChange={(e) => {
+                setArchiveView(e.target.value as 'active' | 'archived');
+                selection.clear();
+              }}
+            >
+              <option value="active">الحاضرون</option>
+              <option value="archived">المؤرشفون</option>
+            </Select>
           </div>
         </div>
       </Card>
+
+      {notice && (() => {
+        const tone = messageTone(notice);
+        const Icon = tone === 'success' ? CircleCheck : TriangleAlert;
+        return (
+          <Alert variant={tone}>
+            <Icon aria-hidden="true" />
+            <span>{notice}</span>
+          </Alert>
+        );
+      })()}
+
+      <SelectionBar
+        count={selection.count}
+        onClear={selection.clear}
+        onAction={runBulk}
+        busy={busy}
+        showRestore={archiveView === 'archived'}
+        noun="محتملاً"
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي العملاء المحتملين</p>
-          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(prospects.length)}</bdi></p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(present.length)}</bdi></p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">المهتمّين</p>
-          <p className="text-xl sm:text-2xl font-bold text-primary">
-            <bdi>{formatNumber(prospects.filter(p => p.prospectStatus === 'مهتم').length)}</bdi>
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">بانتظار توقيع</p>
-          <p className="text-xl sm:text-2xl font-bold text-warning">
-            <bdi>{formatNumber(prospects.filter(p => p.prospectStatus === 'بانتظار توقيع').length)}</bdi>
-          </p>
-        </Card>
+        {/* ═══ البطاقتان تتبعان «تكوين النظام» ═══
+            كانتا تقارنان نصّين حرفيّين — «مهتم» و«بانتظار توقيع» —
+            و`prospectStatuses` قائمةٌ يحرّرها المسؤول. فتعديلُ صياغةِ حالةٍ
+            كان يُصفّر البطاقة بلا خطأٍ ولا تنبيه. والمعروضُ أوّلُ حالتين
+            مكوَّنتين، فتتبعان ما ضُبط. */}
+        {configured.slice(0, 2).map((status, index) => (
+          <Card key={status} className="p-4">
+            <p className="text-xs sm:text-sm text-muted-foreground">{status}</p>
+            <p className={`text-xl sm:text-2xl font-bold ${index === 0 ? 'text-primary' : 'text-warning'}`}>
+              <bdi>{formatNumber(present.filter(p => p.prospectStatus === status).length)}</bdi>
+            </p>
+          </Card>
+        ))}
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">معدل التحويل</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(conversionRate)}%</bdi></p>
@@ -252,13 +326,19 @@ export default function ProspectsView() {
             onCreateMeeting={handleCreateMeeting}
             canEdit={hasPermission('prospects', 'update')}
             canConvert={hasPermission('prospects', 'convert')}
+            selected={selection.has(prospect.id)}
+            onSelect={() => selection.toggle(prospect.id)}
           />
         ))}
       </div>
 
       {filteredProspects.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.</p>
+          <p className="text-muted-foreground">
+            {archiveView === 'archived'
+              ? 'لا محتملَ مؤرشفاً.'
+              : 'لا نتائج مطابقة لبحثك. جرّب كلمات أخرى.'}
+          </p>
         </div>
       )}
 

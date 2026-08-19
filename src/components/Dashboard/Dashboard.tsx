@@ -7,6 +7,8 @@ import { db } from '../../data/database';
 import { DashboardStats } from '../../types';
 import { useChartPalette } from '../../lib/chart-tokens';
 import { formatNumber } from '@/registry/naf/lib/format';
+import { useSettingList } from '../../lib/use-settings';
+import { caseStatusLabel, clientTypeLabel } from '../../lib/labels';
 
 /* الحالةُ الفارغة تُكتب مرّةً وتُقرأ في الابتداء وفي الخطأ معاً: كانت
    مكرّرةً في موضعين، فيُزاد حقلٌ في أحدهما ويُنسى في الآخر. */
@@ -51,33 +53,39 @@ export default function Dashboard() {
     }
   };
 
+  /* ═══ الرسمُ يتبع «تكوين النظام» ═══
+   *
+   * كانت الأربعةُ مكتوبةً هنا بأسمائها — `individual` و`company` وأختاهما،
+   * و`pending` و`completed` وأختاهما — و`clientTypes` و`caseStatuses`
+   * قائمتان يحرّرهما مسؤولُ المنصة. فنوعُ عميلٍ خامس يُضاف ويُحفظ ويظهر
+   * في النماذج، **ولا يظهر في رسمٍ واحد**، وأصحابُه يختفون من «توزيع
+   * العملاء» بلا أن يُقال.
+   *
+   * والقيمُ المسجَّلة في الصفوف تُضمّ إلى المكوَّنة: نوعٌ حُذف من التكوين
+   * وبقيت له صفوفٌ لا يسقط من الرسم فتنقص الحصيلة عن مجموعها. */
+  const configuredTypes = useSettingList('clientTypes');
+  const configuredStatuses = useSettingList('caseStatuses');
+
+  const clientTypes = [...new Set([...configuredTypes, ...Object.keys(stats.clientsByType)])];
+  const caseStatuses = [...new Set([...configuredStatuses, ...Object.keys(stats.casesByStatus)])];
+
   const clientTypeData = {
-    labels: ['أفراد', 'شركات', 'جمعيات', 'جهات حكومية'],
+    labels: clientTypes.map(clientTypeLabel),
     datasets: [
       {
-        data: [
-          stats.clientsByType.individual,
-          stats.clientsByType.company,
-          stats.clientsByType.association,
-          stats.clientsByType.government
-        ],
-        backgroundColor: palette.slice(0, 4),
+        data: clientTypes.map((type) => stats.clientsByType[type] ?? 0),
+        backgroundColor: palette.slice(0, clientTypes.length),
         borderWidth: 0
       }
     ]
   };
 
   const caseStatusData = {
-    labels: ['منظورة', 'مكتملة', 'مؤجلة', 'قيد المعالجة'],
+    labels: caseStatuses.map(caseStatusLabel),
     datasets: [
       {
         label: 'عدد القضايا',
-        data: [
-          stats.casesByStatus.pending,
-          stats.casesByStatus.completed,
-          stats.casesByStatus.postponed,
-          stats.casesByStatus['in-progress']
-        ],
+        data: caseStatuses.map((status) => stats.casesByStatus[status] ?? 0),
         backgroundColor: palette[1],
         borderRadius: 4
       }

@@ -12,7 +12,7 @@ import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { useSettingList } from '../../lib/use-settings';
 import { marketerStatusLabel, relationshipTypeLabel } from '../../lib/labels';
-import { caseStatusBadge } from '../../lib/case-badges';
+import { caseStatusBadge } from '../../lib/status-badges';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
 import { Textarea } from '@/registry/naf/ui/textarea';
 import { Select } from '@/registry/naf/ui/select';
@@ -407,7 +407,7 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
                           /* كانت هنا خريطةٌ ثالثة بثلاث حالاتٍ ثمّ
                              `?? map.pending` — فالقضيةُ **المؤجَّلة** تُعرض
                              «منظورة» بشارةٍ برتقالية. والشارةُ الآن من
-                             `lib/case-badges.ts`، موضعاً واحداً للثلاث شاشات. */
+                             `lib/status-badges.ts`، موضعاً واحداً للثلاث شاشات. */
                           const { variant, Icon, label } = caseStatusBadge(case_.status);
                           return (
                             <Badge variant={variant}>

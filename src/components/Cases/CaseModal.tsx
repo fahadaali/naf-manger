@@ -4,8 +4,8 @@ import { Attachment, Case, Client, Marketer, FeeStructure, PaymentStatus, Commis
 import AttachmentList from '../Common/AttachmentList';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
-import { caseStatusLabel } from '../../lib/labels';
-import { caseOutcomeBadge, caseStatusBadge } from '../../lib/case-badges';
+import { caseStatusLabel, collectionStatusLabel, feeTypeLabel } from '../../lib/labels';
+import { caseOutcomeBadge, caseStatusBadge } from '../../lib/status-badges';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
@@ -64,6 +64,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
      تُمرَّر فتبقى ظاهرةً حتى لو حُذفت من التكوين بعد حفظها. */
   const caseTypes = useSettingList('caseTypes', formData.caseType);
   const caseStatuses = useSettingList('caseStatuses', formData.status);
+  const feeTypes = useSettingList('feeTypes', formData.feeType);
+  const collectionStatuses = useSettingList('collectionStatuses', formData.collectionStatus);
 
   useEffect(() => {
     // تحميل قائمة العملاء
@@ -417,13 +419,15 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <label className="block text-sm font-medium text-foreground mb-2">
                 نوع الأتعاب
               </label>
+              {/* من «تكوين النظام» كبقية المنسدلات — وكانت الثلاثةُ مكتوبةً
+                  هنا بينما القائمةُ المكوَّنة تحمل مفرداتٍ أخرى لا يقرؤها أحد. */}
               <Select
                 value={formData.feeType}
                 onChange={(e) => handleInputChange('feeType', e.target.value)}
               >
-                <option value="advance_only">مقدم فقط</option>
-                <option value="deferred_only">مؤخر فقط</option>
-                <option value="advance_and_deferred">مقدم ومؤخر</option>
+                {feeTypes.map((type) => (
+                  <option key={type} value={type}>{feeTypeLabel(type)}</option>
+                ))}
               </Select>
             </div>
 
@@ -547,9 +551,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   value={formData.collectionStatus}
                   onChange={(e) => handleInputChange('collectionStatus', e.target.value)}
                 >
-                  <option value="unpaid">غير مدفوع</option>
-                  <option value="partially_paid">مدفوع جزئياً</option>
-                  <option value="fully_paid">مدفوع بالكامل</option>
+                  {collectionStatuses.map((status) => (
+                    <option key={status} value={status}>{collectionStatusLabel(status)}</option>
+                  ))}
                 </Select>
               </div>
             </div>

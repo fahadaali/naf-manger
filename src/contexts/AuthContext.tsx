@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthState, LoginCredentials, NotificationPrefs } from '../types';
+import { User, AuthState, NotificationPrefs } from '../types';
 import { ApiError, fileUrl, goToLogin } from '../data/api';
 
 /* ═══ الدخول صار مركزياً ═══
@@ -16,7 +16,6 @@ import { ApiError, fileUrl, goToLogin } from '../data/api';
  */
 
 interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
   hasPermission: (resource: string, action: string) => boolean;
   /** يحفظ في `‎/api/me‎` ثم يُحدِّث الحالة بما ردّه الخادم. يرمي إن سقط. */
@@ -118,13 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  /* الباب هو المركز، والوسيط يقود إليه. وهذه الدالة باقيةٌ في السطح لأن
-     شاشة الدخول القديمة لا تزال تستدعيها — فتقودها إلى الباب نفسه بدل أن
-     تفشل صامتة. وكلمةُ المرور لا تُقرأ هنا ولا تُرسل إلى أي مكان. */
-  const login = async (_credentials: LoginCredentials): Promise<boolean> => {
-    window.location.href = '/';
-    return false;
-  };
+  /* كانت هنا `login(credentials)` تُبقى «لأن شاشة الدخول القديمة لا تزال
+     تستدعيها» — ولا شاشةَ دخولٍ في المستودع ولا مستدعيَ لها. والبابُ
+     المركز، والوسيط يحرس الجذر فلا تبلغ هذه الحزمةَ جلسةٌ مغلقة. */
 
   const logout = async () => {
     try {
@@ -181,7 +176,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       ...authState,
-      login,
       logout,
       hasPermission,
       updateUser,

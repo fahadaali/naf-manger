@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { CircleCheck, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import { db } from '../../data/database';
+import {
+  caseStatusLabel,
+  clientStatusLabel,
+  clientTypeLabel,
+  collectionStatusLabel,
+  commissionTypeLabel,
+  feeTypeLabel,
+  marketerStatusLabel,
+  relationshipTypeLabel
+} from '../../lib/labels';
 import { SystemSettings } from '../../types';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
@@ -74,81 +84,23 @@ export default function SystemConfiguration() {
     }
   };
 
-  const getItemLabel = (category: string, item: string) => {
-    if (category === 'clientTypes') {
-      switch (item) {
-        case 'individual': return 'فرد';
-        case 'company': return 'شركة';
-        case 'association': return 'جمعية';
-        case 'government': return 'جهة حكومية';
-        default: return item;
-      }
-    }
-    
-    if (category === 'clientStatuses') {
-      switch (item) {
-        case 'current': return 'حالي';
-        case 'former': return 'سابق';
-        default: return item;
-      }
-    }
-    
-    if (category === 'caseStatuses') {
-      switch (item) {
-        case 'pending': return 'منظورة';
-        case 'in-progress': return 'قيد المعالجة';
-        case 'completed': return 'مكتملة';
-        case 'postponed': return 'مؤجلة';
-        default: return item;
-      }
-    }
-    
-    if (category === 'marketerStatuses') {
-      switch (item) {
-        case 'active': return 'نشط';
-        case 'suspended': return 'معطّل';
-        case 'former': return 'سابق';
-        default: return item;
-      }
-    }
-    
-    if (category === 'relationshipTypes') {
-      switch (item) {
-        case 'employee': return 'موظف';
-        case 'freelancer': return 'مستقل';
-        case 'external_company': return 'شركة خارجية';
-        default: return item;
-      }
-    }
-    
-    if (category === 'commissionTypes') {
-      switch (item) {
-        case 'fixed_amount': return 'مبلغ ثابت';
-        case 'percentage': return 'نسبة مئوية';
-        default: return item;
-      }
-    }
-    
-    if (category === 'collectionStatuses') {
-      switch (item) {
-        case 'fully_paid': return 'مدفوع كاملاً';
-        case 'partially_paid': return 'مدفوع جزئياً';
-        case 'unpaid': return 'غير مدفوع';
-        default: return item;
-      }
-    }
-    
-    if (category === 'feeTypes') {
-      switch (item) {
-        case 'advance_only': return 'مقدم فقط';
-        case 'deferred_only': return 'مؤخر فقط';
-        case 'advance_and_deferred': return 'مقدم ومؤخر';
-        default: return item;
-      }
-    }
-    
-    return item;
+  /* ═══ التسميةُ من `lib/labels.ts` ═══
+     كانت هنا سابعُ نسخةٍ من الخرائط — سبعُ كتلِ `switch` تترجم ما ترجمه
+     `labels.ts` أصلاً، وإحداها (`feeTypes`) تترجم مفرداتٍ لا تطابق القائمةَ
+     التي تحتها. والسجلُّ `naf-terms.md` مصدرٌ واحد، ومرآتُه ملفٌّ واحد. */
+  const ITEM_LABEL: Partial<Record<ListCategory, (value?: string) => string>> = {
+    clientTypes: clientTypeLabel,
+    clientStatuses: clientStatusLabel,
+    caseStatuses: caseStatusLabel,
+    marketerStatuses: marketerStatusLabel,
+    relationshipTypes: relationshipTypeLabel,
+    commissionTypes: commissionTypeLabel,
+    collectionStatuses: collectionStatusLabel,
+    feeTypes: feeTypeLabel
   };
+
+  const getItemLabel = (category: string, item: string) =>
+    ITEM_LABEL[category as ListCategory]?.(item) ?? item;
 
   const addItem = (category: ListCategory) => {
     if (!newItem.trim()) return;
