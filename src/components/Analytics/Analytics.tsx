@@ -13,6 +13,7 @@ import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
 import AiInsights from './AiInsights';
 import { useSettingList } from '../../lib/use-settings';
+import { saveText } from '../../lib/download';
 import { caseStatusLabel, clientTypeLabel } from '../../lib/labels';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
@@ -326,14 +327,13 @@ export default function Analytics() {
       }
     };
     
-    const dataStr = JSON.stringify(analyticsData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `NAF_Law_Analytics_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    /* الحفظ من `download.ts` لا هنا: كانت هذه نسخةً ثالثة من الأسطر
+       نفسها، وفيها الخطأان اللذان يُسقطان التنزيل على آيفون. */
+    saveText(
+      JSON.stringify(analyticsData, null, 2),
+      `NAF_Law_Analytics_${new Date().toISOString().split('T')[0]}.json`,
+      'application/json'
+    );
   };
 
   if (loading) {

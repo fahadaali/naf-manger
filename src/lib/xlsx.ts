@@ -14,6 +14,8 @@
    والعربية تمرّ سليمةً: النصّ UTF-8 داخل XML، ولا شأن للاتجاه بالتخزين.
    ============================================================ */
 
+import { saveBlob } from './download';
+
 /* ═══ CRC-32 ═══
    الجدول يُبنى مرّةً عند أول نداء: بناؤه في كل ملفّ يكرّر ٢٥٦ دورة بلا سبب. */
 let CRC_TABLE: Uint32Array | null = null;
@@ -259,12 +261,7 @@ ${named
   ]);
 }
 
-/** يبني الدفتر وينزّله. */
+/** يبني الدفتر وينزّله — والحفظ نفسه في `download.ts`. */
 export function downloadXlsx(sheets: Sheet[], filename: string): void {
-  const url = URL.createObjectURL(buildXlsx(sheets));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  saveBlob(buildXlsx(sheets), filename);
 }

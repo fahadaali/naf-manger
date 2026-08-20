@@ -9,6 +9,8 @@
    و«Excel» في نصوص الشاشات يعني هذا: الملفّ CSV، ويفتحه Excel جدولاً.
    ============================================================ */
 
+import { saveText } from './download';
+
 /** علامةُ ترتيب البايتات — بدونها يقرأ Excel العربية محارفَ مبعثرة. */
 const BOM = '﻿';
 
@@ -105,12 +107,7 @@ export function parseCsv(text: string): Record<string, string>[] {
   });
 }
 
-/** ينزّل نصّاً ملفّاً. والعنوان يُحرَّر بعد النقر وإلّا بقي في الذاكرة. */
+/** ينزّل نصّاً ملفّاً — والحفظ نفسه في `download.ts`، والعلّة مشروحة هناك. */
 export function downloadText(content: string, filename: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  saveText(content, filename, type);
 }
