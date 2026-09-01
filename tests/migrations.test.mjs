@@ -128,3 +128,74 @@ test('ورقمُ الهوية المولَّد يُمحى ولا يبقى هوي
 
   db.close();
 });
+
+/* ═══ والاسمُ الجاري يبلغ ما حُفظ من قبل ═══
+ *
+ * افتراضُ الشيفرة (`DEFAULT_DOC_TITLES`) يكفي مكتباً لم يضبط عناوينَه بيده.
+ * ولا يكفي من ضبطها: `readDocTitles` تردّ المحفوظَ كما هو ولا تنظر إلى
+ * الافتراض. فمكتبٌ حفظ «ملخص القضية» قبل إعادة التسمية يبقى يبحث عن اسمٍ
+ * لم يعد موجوداً — وذلك ما تُصلحه الهجرة الخامسة عشرة.
+ */
+const TITLES = '0015_project_data_title.sql';
+const titlesOf = (db) =>
+  JSON.parse(
+    db.prepare(`SELECT value FROM system_settings WHERE key = 'basecamp_doc_titles'`).get().value,
+  );
+
+const setting = (db, key, value) =>
+  db.prepare(`INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, 1)`)
+    .run(key, value);
+
+const applyTitles = (db) => db.exec(fs.readFileSync(path.join(DIR, TITLES), 'utf8'));
+
+test('«بيانات المشروع» يُدخَل أوّلَ العناوين المحفوظة، والقديمُ يبقى', () => {
+  const db = upTo(TITLES);
+  setting(db, 'basecamp_doc_titles', JSON.stringify(['ملخص القضية', 'ملف الموكل']));
+
+  applyTitles(db);
+
+  /* الأوّلُ هو الجاري — والشاشة تقرؤها بهذا الترتيب وتقول ذلك. */
+  assert.deepEqual(titlesOf(db), ['بيانات المشروع', 'ملخص القضية', 'ملف الموكل']);
+  db.close();
+});
+
+test('وما ضُبط بيدٍ لا يُدهس، والتشغيلُ مرّتين تشغيلٌ واحد', () => {
+  const db = upTo(TITLES);
+  setting(db, 'basecamp_doc_titles', JSON.stringify(['بيانات المشروع', 'ملف الموكل']));
+  /* وإعدادٌ آخر في الجدول نفسِه لا تمسّه الهجرة. */
+  setting(db, 'platform', '{"idTypes":["هوية وطنية"]}');
+
+  applyTitles(db);
+  assert.deepEqual(titlesOf(db), ['بيانات المشروع', 'ملف الموكل']);
+
+  applyTitles(db);
+  assert.deepEqual(titlesOf(db), ['بيانات المشروع', 'ملف الموكل']);
+
+  assert.equal(
+    db.prepare(`SELECT value FROM system_settings WHERE key = 'platform'`).get().value,
+    '{"idTypes":["هوية وطنية"]}',
+  );
+  db.close();
+});
+
+test('ولا صفَّ يُنشأ لمن لم يضبط شيئاً، ولا يُمسّ تالفٌ', () => {
+  const db = upTo(TITLES);
+  applyTitles(db);
+
+  /* غيابُ الصفّ هو ما يجعل `readDocTitles` تقرأ الافتراض — وهو الجاري.
+     فاختراعُ صفٍّ هنا يُثبّت قائمةً كان يكفي أن تُقرأ من الشيفرة. */
+  assert.equal(
+    db.prepare(`SELECT COUNT(*) n FROM system_settings WHERE key = 'basecamp_doc_titles'`).get().n,
+    0,
+  );
+
+  /* وقيمةٌ ليست مصفوفةَ JSON صحيحة تُترك كما هي: `readDocTitles` تردّها
+     إلى الافتراض أصلاً، ومحاولةُ إصلاحها هنا تكتب فوق ما لا يُفهم. */
+  setting(db, 'basecamp_doc_titles', 'ليس JSON');
+  applyTitles(db);
+  assert.equal(
+    db.prepare(`SELECT value FROM system_settings WHERE key = 'basecamp_doc_titles'`).get().value,
+    'ليس JSON',
+  );
+  db.close();
+});

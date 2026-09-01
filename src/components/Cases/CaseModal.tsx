@@ -99,7 +99,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     }
 
     if (!formData.summary.trim()) {
-      newErrors.summary = 'ملخص القضية مطلوب';
+      newErrors.summary = 'موضوع المشروع مطلوب';
     }
 
     setErrors(newErrors);
@@ -235,9 +235,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               </div>
             </div>
 
-            {/* Case Summary */}
+            {/* موضوع المشروع */}
             <div className="bg-primary-soft rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-foreground mb-3">ملخص القضية</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">موضوع المشروع</h3>
               <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
             </div>
 
@@ -615,13 +615,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              ملخص القضية *
+              موضوع المشروع *
             </label>
             <Textarea
               value={formData.summary}
               onChange={(e) => handleInputChange('summary', e.target.value)}
               rows={4}
-              placeholder="وصف مختصر للقضية..."
+              placeholder="وصف مختصر لموضوع المشروع..."
              aria-invalid={!!errors.summary} />
             {errors.summary && (
               <p className="text-destructive text-sm mt-1">{errors.summary}</p>
@@ -636,7 +636,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
               rows={3}
-              placeholder="حاشيةٌ على القضية — غيرُ الملخّص..."
+              placeholder="حاشيةٌ على القضية — غيرُ الموضوع..."
             />
           </div>
 

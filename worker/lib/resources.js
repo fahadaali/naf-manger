@@ -96,7 +96,7 @@ export const RESOURCES = {
       clientId: ['client_id'],
       clientName: ['client_name'],
       summary: ['summary'],
-      /* والملاحظاتُ غيرُ الملخّص: الملخّصُ موضوعُ القضية، والملاحظةُ حاشيةٌ
+      /* والملاحظاتُ غيرُ الموضوع: `summary` موضوعُ المشروع، والملاحظةُ حاشيةٌ
          عليه — وخلطُهما يجعل تعديلَ إحداهما يمحو الأخرى. */
       notes: ['notes'],
       aiSummary: ['ai_summary'],

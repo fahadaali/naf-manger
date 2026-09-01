@@ -175,7 +175,7 @@ export default function DataExport() {
         }
         
         if (selectedFields.cases.details) {
-          row['ملخص القضية'] = case_.summary;
+          row['موضوع المشروع'] = case_.summary;
           /* والملاحظاتُ معه: تُستورد من «بيانات المشروع» وتُكتب في الشاشة،
              وعمودٌ يدخل ولا يخرج يجعل الملفَّ المصدَّر ناقصاً بلا سبب. */
           row['الملاحظات'] = case_.notes ?? '';

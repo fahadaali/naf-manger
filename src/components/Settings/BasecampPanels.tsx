@@ -46,7 +46,7 @@ const FIELD_LABEL: Record<string, string> = {
 };
 
 const PLAN_ERROR: Record<string, string> = {
-  no_document: 'لا ملفّ بيانات في المشروع',
+  no_document: 'لا ملفّ «بيانات المشروع» في هذا المشروع',
   no_client_name: 'الملفّ بلا اسم عميل',
   duplicate_case_number: 'رقم القضية مكرّر بين مشروعين',
   read_failed: 'تعذّرت قراءة الملفّ',
