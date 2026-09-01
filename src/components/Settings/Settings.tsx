@@ -510,7 +510,10 @@ export default function Settings() {
                           onClick={() => handleTabClick(tab.id)}
                           aria-current={current ? 'page' : undefined}
                           title={tab.description}
-                          className={`w-full flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-start text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          /* `min-h-11` أي ٤٤ بكسل — أدنى ما يُلمس بإصبع.
+                             وبالحشو وحدَه كان الصفُّ ٤١، وفرقُ ثلاثة بكسلات
+                             يُخطئه الإبهام على شاشةٍ تهتزّ في يد. */
+                          className={`w-full min-h-11 flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-start text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                             current
                               ? `${getColorClasses(category.color, 'soft')} ${getColorClasses(
                                   category.color,

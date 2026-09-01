@@ -53,7 +53,15 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
   };
 
   return (
-    <div className={`bg-sidebar text-sidebar-foreground w-64 min-h-screen fixed inset-y-0 start-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+    /* ═══ الدُّرجُ يُمرَّر، وإلا لم يُبلَغ أسفلُه ═══
+       `fixed inset-y-0` يجعل ارتفاعَه ارتفاعَ الشاشة، و`min-h-screen` كان
+       يدفعه إلى ما بعدها ثم `overflow: visible` يمنع تمريره. فمحتواه ٦٧٣
+       بكسلاً في شاشةٍ ارتفاعُها ٣٤٣ حين يُدار الجوّال — و«الإعدادات»
+       و«التقارير» ومُبدِّلُ المظهر تحت الطيّ **لا تُبلَغ بحال**.
+
+       فالقيدُ للحاسب وحدَه حيث الشريطُ `relative` ينمو بمحتواه، وللجوّال
+       تمريرٌ داخل الدُّرج. */
+    <div className={`bg-sidebar text-sidebar-foreground w-64 lg:min-h-screen max-lg:overflow-y-auto fixed inset-y-0 start-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
       /* الإزاحة للدُّرج على الجوّال وحده — ‎max-lg:‎ إلزاميّ لا تجميل:
          بدونه يتغلّب متغيّرا ‎rtl:‎ و‎ltr:‎ على ‎lg:translate-x-0‎ في ترتيب
          الإخراج، فيُزاح الشريط خارج الشاشة على الحاسوب أيضاً.
