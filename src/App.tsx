@@ -109,7 +109,15 @@ function AppContent() {
         onClose={closeSidebar}
       />
       
-      <div className="flex-1 flex flex-col">
+      {/* ═══ `min-w-0` ولولاها لانزاحت المنصة كلُّها ═══
+          عمودُ المحتوى عنصرٌ مرن، و`min-width` المرنِ `auto` — أي أضيقُ ما
+          يقبله محتواه. فجدولٌ عريض (المستخدمون، القضايا، العملاء) يدفع
+          العمودَ إلى ٥٢٥ بكسل على شاشةٍ عرضُها ٣٩٠، فتُمرَّر الصفحةُ كلُّها
+          أفقياً — الترويسةُ والشريطُ معها — بدل أن يُمرَّر الجدولُ وحده.
+
+          و`Table` في السجلّ يلفّ نفسَه بـ`overflow-x-auto` أصلاً، وهذا
+          القيدُ ما يجعل ذلك اللفَّ يعمل: عمودٌ يقبل الانكماش. */}
+      <div className="flex-1 min-w-0 flex flex-col">
         <Header 
           currentView={currentView} 
           onMenuClick={() => setSidebarOpen(true)}
