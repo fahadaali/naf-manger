@@ -129,42 +129,24 @@ export default function Settings() {
 
   const visibleCategories = getVisibleCategories();
 
-  /* لكل رمز مقدّمتُه المسجَّلة، ولذلك أُضيف variant الرابع `fg`: الأبيض
-     الحرفيّ الذي كان مكتوباً هنا لا ينقلب في الوضع الداكن، ورموز
-     ‎--*-foreground‎ تنقلب مع خلفياتها بتعريف واحد. */
-  const getColorClasses = (
-    color: string,
-    variant: 'bg' | 'fg' | 'text' | 'border' | 'hover'
-  ) => {
+  /* ═══ اللونُ علامةٌ لا طلاء ═══
+   *
+   * كان لكل فئةٍ لونُها مصمتاً يملأ شريطَها بعرض الشاشة، ولخيارها المختار
+   * مثلُه. فصارت الشاشةُ أربعةَ ألواحٍ صارخة، ولم يبقَ بين «الفئة»
+   * و«الخيار» فرقٌ في الوزن يُقرأ منه أيُّهما يحوي الآخر.
+   *
+   * فاللونُ الآن في موضعين اثنين: مربّعُ الأيقونة، والخيارُ المختار —
+   * تخفيفاً (`soft`) لا مصمتاً، مع حدٍّ ولفظٍ بلونه. والباقي محايد.
+   *
+   * ورموزُ ‎--*-soft‎ مخلوطةٌ بالبطاقة في `naf-theme.css`، فتنقلب مع
+   * الوضع الداكن بتعريفٍ واحد ولا تُكتب هنا قيمةٌ حرفية.
+   */
+  const getColorClasses = (color: string, variant: 'soft' | 'text' | 'border') => {
     const colors = {
-      blue: {
-        bg: 'bg-primary',
-        fg: 'text-primary-foreground',
-        text: 'text-primary',
-        border: 'border-primary/30',
-        hover: 'hover:bg-primary-soft'
-      },
-      purple: {
-        bg: 'bg-info',
-        fg: 'text-info-foreground',
-        text: 'text-info',
-        border: 'border-info/30',
-        hover: 'hover:bg-info-soft'
-      },
-      green: {
-        bg: 'bg-success',
-        fg: 'text-success-foreground',
-        text: 'text-success',
-        border: 'border-success/30',
-        hover: 'hover:bg-success-soft'
-      },
-      amber: {
-        bg: 'bg-warning',
-        fg: 'text-warning-foreground',
-        text: 'text-warning',
-        border: 'border-warning/30',
-        hover: 'hover:bg-warning-soft'
-      }
+      blue: { soft: 'bg-primary-soft', text: 'text-primary', border: 'border-primary/30' },
+      purple: { soft: 'bg-info-soft', text: 'text-info', border: 'border-info/30' },
+      green: { soft: 'bg-success-soft', text: 'text-success', border: 'border-success/30' },
+      amber: { soft: 'bg-warning-soft', text: 'text-warning', border: 'border-warning/30' }
     };
     return colors[color as keyof typeof colors]?.[variant] || colors.blue[variant];
   };
@@ -499,81 +481,98 @@ export default function Settings() {
         <div className="space-y-6">
           {/* Categories with Inline Content */}
           <div className="space-y-4">
-            {visibleCategories.map((category) => (
+            {visibleCategories.map((category) => {
+              const open = expandedCategory === category.id;
+              return (
               <div key={category.id} className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
-                {/* Category Header */}
+                {/* عنوانُ الفئة — سطرٌ محايد، ولونُ الفئة في مربّع أيقونته وحده. */}
                 <button
                   onClick={() => handleCategoryToggle(category.id)}
-                  className={`w-full p-6 ${getColorClasses(category.color, 'bg')} ${getColorClasses(
-                    category.color,
-                    'fg'
-                  )} flex items-center justify-between hover:opacity-90 transition-opacity`}
+                  aria-expanded={open}
+                  className="w-full px-4 sm:px-5 py-4 flex items-center gap-4 text-start hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                 >
-                  <div className="flex items-center gap-3">
-                    <category.icon className="h-6 w-6" />
-                    <h3 className="font-bold text-lg">{category.name}</h3>
-                  </div>
-                  <ChevronDown 
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      expandedCategory === category.id ? 'rotate-180' : ''
-                    }`} 
+                  <span
+                    className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${getColorClasses(
+                      category.color,
+                      'soft'
+                    )} ${getColorClasses(category.color, 'text')}`}
+                  >
+                    <category.icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <h3 className="flex-1 min-w-0 font-semibold text-base sm:text-lg text-foreground">
+                    {category.name}
+                  </h3>
+                  <ChevronDown
+                    className={`h-5 w-5 flex-none text-muted-foreground transition-transform duration-300 ${
+                      open ? 'rotate-180' : ''
+                    }`}
+                    aria-hidden="true"
                   />
                 </button>
-                
-                {/* Category Tabs */}
-                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                  expandedCategory === category.id ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                }`}>
-                  <div className="p-4 space-y-2 border-b border-border">
-                    {category.tabs.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleTabClick(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-start transition-all duration-200 ${
-                          activeTab === tab.id
-                            ? `${getColorClasses(category.color, 'bg')} ${getColorClasses(
-                                category.color,
-                                'fg'
-                              )} shadow-lg`
-                            : `text-foreground ${getColorClasses(category.color, 'hover')}`
-                        }`}
-                      >
-                        <tab.icon className={`h-5 w-5 ${
-                          activeTab === tab.id
-                            ? getColorClasses(category.color, 'fg')
-                            : getColorClasses(category.color, 'text')
-                        }`} />
-                        <div className="flex-1 text-start">
-                          <div className={`font-medium ${
-                              activeTab === tab.id
-                                ? getColorClasses(category.color, 'fg')
-                                : 'text-foreground'
-                            }`}>
-                            {tab.label}
-                          </div>
-                          <div className={`text-xs ${
-                            activeTab === tab.id
-                              ? `${getColorClasses(category.color, 'fg')}/80`
-                              : 'text-muted-foreground'
-                          }`}>
-                            {tab.description}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+
+                {/* ═══ خياراتُ الفئة ═══
+                    كان الطيُّ بـ`max-h-96` — رقمٌ مكتوب: فئةٌ خياراتُها أكثر أو
+                    شرحٌ يلتفّ على شاشةٍ ضيّقة يُقصّ آخرُها صامتاً تحت
+                    `overflow-hidden`. و`grid-rows` تقيس المحتوى نفسَه، فلا رقم.
+
+                    وهي شبكةٌ لا عمودٌ واحد: خيارٌ بعرض ١٢٨٠ بكسل نصُّه في حافةٍ
+                    وباقيه فراغ. */}
+                <div
+                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                    open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="grid gap-2 p-3 sm:p-4 sm:grid-cols-2 xl:grid-cols-3 border-b border-border">
+                      {category.tabs.map((tab) => {
+                        const current = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => handleTabClick(tab.id)}
+                            aria-current={current ? 'page' : undefined}
+                            tabIndex={open ? undefined : -1}
+                            className={`flex items-start gap-3 rounded-xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                              current
+                                ? `${getColorClasses(category.color, 'soft')} ${getColorClasses(
+                                    category.color,
+                                    'border'
+                                  )}`
+                                : 'border-border hover:bg-muted hover:border-muted-foreground/30'
+                            }`}
+                          >
+                            <tab.icon
+                              className={`h-5 w-5 mt-0.5 flex-none ${
+                                current ? getColorClasses(category.color, 'text') : 'text-muted-foreground'
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0">
+                              <span
+                                className={`block text-sm font-semibold ${
+                                  current ? getColorClasses(category.color, 'text') : 'text-foreground'
+                                }`}
+                              >
+                                {tab.label}
+                              </span>
+                              <span className="block text-xs text-muted-foreground">{tab.description}</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                {/* Content Area - Shows directly under the expanded category */}
-                {expandedCategory === category.id && activeTab && category.tabs.some(tab => tab.id === activeTab) && (
-                  <div className="transition-all duration-300 ease-in-out">
-                    <div className="p-8 bg-muted">
-                      {renderTabContent()}
-                    </div>
+                {/* محتوى الخيار المختار — تحت فئته مباشرةً. */}
+                {open && activeTab && category.tabs.some(tab => tab.id === activeTab) && (
+                  <div className="p-4 sm:p-6 lg:p-8 bg-muted">
+                    {renderTabContent()}
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
