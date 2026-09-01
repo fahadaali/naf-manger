@@ -480,21 +480,25 @@ export default function Settings() {
               نفسِه لا سطرٌ هنا. */}
           <nav
             aria-label="أقسام الإعدادات"
-            className="w-full lg:w-72 lg:flex-none bg-card rounded-2xl border border-border shadow-sm p-3 space-y-4"
+            className="w-full lg:w-72 lg:flex-none bg-card rounded-2xl border border-border shadow-sm p-3 space-y-5"
           >
             {visibleCategories.map((category) => (
-              <div key={category.id} className="space-y-1.5">
-                {/* عنوانُ القسم — لافتةٌ تُقرأ لا زرٌّ يُضغط. */}
-                <div className="flex items-center gap-2.5 px-1">
-                  <span
-                    className={`flex h-7 w-7 flex-none items-center justify-center rounded-lg ${getColorClasses(
-                      category.color,
-                      'soft'
-                    )} ${getColorClasses(category.color, 'text')}`}
-                  >
-                    <category.icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <h2 className="min-w-0 text-xs font-semibold tracking-wide text-muted-foreground">
+              <div key={category.id} className="space-y-2">
+                {/* ═══ عنوانُ القسم لافتةٌ تُقرأ لا خيارٌ يُضغط ═══
+                    كان يشبه صفَّ خيارٍ مختاراً: أيقونةٌ في مربّعٍ ملوَّن ثمّ
+                    لفظ، في العمود نفسِه وبالمحاذاة نفسِها. فيُقرأ «الإعدادات
+                    الشخصية» خياراً حادي عشر لا عنواناً لثلاثة تحته.
+
+                    فثلاثةُ فروقٍ تجتمع عليه، لا واحد: الحجمُ (١٢ بكسلاً دون
+                    الأربعةَ عشرَ للخيار)، والخطُّ تحته يفصله عمّا يليه،
+                    والأيقونةُ بلا مربّعٍ يملؤه لونٌ — فلا يبقى فيه ما يشبه
+                    الاختيار. */}
+                <div className="flex items-center gap-2 px-1 pb-1.5 border-b border-border">
+                  <category.icon
+                    className={`h-3.5 w-3.5 flex-none ${getColorClasses(category.color, 'text')}`}
+                    aria-hidden="true"
+                  />
+                  <h2 className="min-w-0 text-xs font-bold tracking-wider text-muted-foreground">
                     {category.name}
                   </h2>
                 </div>
