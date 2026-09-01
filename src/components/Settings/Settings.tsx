@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
    الملفّ نداءً للشاشة لا رسماً لأيقونة — تستدعي نفسَها بلا قرار توقّف،
    فتنمو شجرةُ التصيير حتى يعلق المتصفّح والجهاز معه.
    فالأيقونة تُستعار باسمٍ صريح، ويبقى الاسم الأصلي للشاشة وحدها. */
-import { Bell, Check, ChevronDown, CircleCheck, ExternalLink, FileOutput, Globe, Import, Info, Link2, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
+import { Bell, Check, CircleCheck, ExternalLink, FileOutput, Globe, Import, Info, Link2, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
@@ -48,7 +48,6 @@ const SYSTEM_NOTICES: { key: keyof NotificationPrefs; label: string; desc: strin
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
-  const [expandedCategory, setExpandedCategory] = useState<string | null>('personal');
   const { user, hasPermission, updateUser, center } = useAuth();
 
   /* الصورة وحدها حالةٌ محلّية هنا: الاسم والبريد والمسمّى تُقرأ من المركز
@@ -149,20 +148,6 @@ export default function Settings() {
       amber: { soft: 'bg-warning-soft', text: 'text-warning', border: 'border-warning/30' }
     };
     return colors[color as keyof typeof colors]?.[variant] || colors.blue[variant];
-  };
-
-  const handleCategoryToggle = (categoryId: string) => {
-    if (expandedCategory === categoryId) {
-      setExpandedCategory(null);
-      setActiveTab('');
-    } else {
-      setExpandedCategory(categoryId);
-      // Set the first tab of the category as active
-      const category = visibleCategories.find(cat => cat.id === categoryId);
-      if (category && category.tabs.length > 0) {
-        setActiveTab(category.tabs[0].id);
-      }
-    }
   };
 
   const handleTabClick = (tabId: string) => {
@@ -478,101 +463,81 @@ export default function Settings() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* Categories with Inline Content */}
-          <div className="space-y-4">
-            {visibleCategories.map((category) => {
-              const open = expandedCategory === category.id;
-              return (
-              <div key={category.id} className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
-                {/* عنوانُ الفئة — سطرٌ محايد، ولونُ الفئة في مربّع أيقونته وحده. */}
-                <button
-                  onClick={() => handleCategoryToggle(category.id)}
-                  aria-expanded={open}
-                  className="w-full px-4 sm:px-5 py-4 flex items-center gap-4 text-start hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                >
+        {/* ═══ عمودُ تنقّلٍ ولوحةُ محتوى ═══
+            كانت الأقسامُ الأربعةُ قوائمَ تُطوى وتُنشَر: قسمٌ واحدٌ مفتوحٌ في
+            الوقت الواحد، وخياراتُ الثلاثة الباقية مخبوءةٌ خلف ضغطة. فمن أراد
+            «تصدير البيانات» وهو في «الملف الشخصي» طوى قسماً ونشر آخر ثم اختار
+            — ثلاثُ ضغطاتٍ لِما يكفيه واحدة.
+
+            والأحدَ عشرَ خياراً كلُّها معروضةٌ الآن في عمودٍ واحدٍ لا يُطوى،
+            والمحتوى إلى جانبه يأخذ باقي العرض. وعلى الشاشة الضيّقة يتكدّس:
+            العمودُ فوق شبكةً، والمحتوى تحته. */}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          {/* ولا `sticky` هنا: `main` في `App.tsx` عليه `overflow-auto`، فهو
+              حاويةُ التمرير التي يلتصق العنصرُ داخلها — وهو لا يمرّر شيئاً
+              (الغلافُ `min-h-screen` فينمو بمحتواه، والتمريرُ للصفحة). فيبقى
+              الالتصاقُ صنفاً مكتوباً لا أثر له، وإحياؤه يلزمه تبديلُ الغلاف
+              نفسِه لا سطرٌ هنا. */}
+          <nav
+            aria-label="أقسام الإعدادات"
+            className="w-full lg:w-72 lg:flex-none bg-card rounded-2xl border border-border shadow-sm p-3 space-y-4"
+          >
+            {visibleCategories.map((category) => (
+              <div key={category.id} className="space-y-1.5">
+                {/* عنوانُ القسم — لافتةٌ تُقرأ لا زرٌّ يُضغط. */}
+                <div className="flex items-center gap-2.5 px-1">
                   <span
-                    className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${getColorClasses(
+                    className={`flex h-7 w-7 flex-none items-center justify-center rounded-lg ${getColorClasses(
                       category.color,
                       'soft'
                     )} ${getColorClasses(category.color, 'text')}`}
                   >
-                    <category.icon className="h-5 w-5" aria-hidden="true" />
+                    <category.icon className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <h3 className="flex-1 min-w-0 font-semibold text-base sm:text-lg text-foreground">
+                  <h2 className="min-w-0 text-xs font-semibold tracking-wide text-muted-foreground">
                     {category.name}
-                  </h3>
-                  <ChevronDown
-                    className={`h-5 w-5 flex-none text-muted-foreground transition-transform duration-300 ${
-                      open ? 'rotate-180' : ''
-                    }`}
-                    aria-hidden="true"
-                  />
-                </button>
-
-                {/* ═══ خياراتُ الفئة ═══
-                    كان الطيُّ بـ`max-h-96` — رقمٌ مكتوب: فئةٌ خياراتُها أكثر أو
-                    شرحٌ يلتفّ على شاشةٍ ضيّقة يُقصّ آخرُها صامتاً تحت
-                    `overflow-hidden`. و`grid-rows` تقيس المحتوى نفسَه، فلا رقم.
-
-                    وهي شبكةٌ لا عمودٌ واحد: خيارٌ بعرض ١٢٨٠ بكسل نصُّه في حافةٍ
-                    وباقيه فراغ. */}
-                <div
-                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-                    open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <div className="grid gap-2 p-3 sm:p-4 sm:grid-cols-2 xl:grid-cols-3 border-b border-border">
-                      {category.tabs.map((tab) => {
-                        const current = activeTab === tab.id;
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => handleTabClick(tab.id)}
-                            aria-current={current ? 'page' : undefined}
-                            tabIndex={open ? undefined : -1}
-                            className={`flex items-start gap-3 rounded-xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                              current
-                                ? `${getColorClasses(category.color, 'soft')} ${getColorClasses(
-                                    category.color,
-                                    'border'
-                                  )}`
-                                : 'border-border hover:bg-muted hover:border-muted-foreground/30'
-                            }`}
-                          >
-                            <tab.icon
-                              className={`h-5 w-5 mt-0.5 flex-none ${
-                                current ? getColorClasses(category.color, 'text') : 'text-muted-foreground'
-                              }`}
-                              aria-hidden="true"
-                            />
-                            <span className="min-w-0">
-                              <span
-                                className={`block text-sm font-semibold ${
-                                  current ? getColorClasses(category.color, 'text') : 'text-foreground'
-                                }`}
-                              >
-                                {tab.label}
-                              </span>
-                              <span className="block text-xs text-muted-foreground">{tab.description}</span>
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  </h2>
                 </div>
 
-                {/* محتوى الخيار المختار — تحت فئته مباشرةً. */}
-                {open && activeTab && category.tabs.some(tab => tab.id === activeTab) && (
-                  <div className="p-4 sm:p-6 lg:p-8 bg-muted">
-                    {renderTabContent()}
-                  </div>
-                )}
+                {/* عمودٌ على الشاشة الواسعة، وشبكةٌ على الضيّقة — فلا يطول
+                    العمودُ على الجوّال حتى يُدفَع المحتوى خارج الشاشة. */}
+                <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-1">
+                  {category.tabs.map((tab) => {
+                    const current = activeTab === tab.id;
+                    return (
+                      <li key={tab.id}>
+                        <button
+                          onClick={() => handleTabClick(tab.id)}
+                          aria-current={current ? 'page' : undefined}
+                          title={tab.description}
+                          className={`w-full flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-start text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                            current
+                              ? `${getColorClasses(category.color, 'soft')} ${getColorClasses(
+                                  category.color,
+                                  'border'
+                                )} font-semibold ${getColorClasses(category.color, 'text')}`
+                              : 'border-transparent text-foreground hover:bg-muted'
+                          }`}
+                        >
+                          <tab.icon
+                            className={`h-4 w-4 flex-none ${
+                              current ? getColorClasses(category.color, 'text') : 'text-muted-foreground'
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span className="min-w-0 leading-snug">{tab.label}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-              );
-            })}
+            ))}
+          </nav>
+
+          {/* `min-w-0` كما في `App.tsx`: لوحةٌ فيها جدولٌ عريض لا تدفع العمود. */}
+          <div className="flex-1 min-w-0 bg-card rounded-2xl border border-border shadow-sm p-4 sm:p-6 lg:p-8">
+            {renderTabContent()}
           </div>
         </div>
       </div>
