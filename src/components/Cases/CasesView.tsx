@@ -296,7 +296,7 @@ export default function CasesView() {
       </div>
 
       {/* ═══ بطاقات ═══
-          القضيةُ الواحدة تُقرأ كاملةً هنا: رقمُها ونوعُها وعميلُها وملخّصُها
+          القضيةُ الواحدة تُقرأ كاملةً هنا: رقمُها ونوعُها وعميلُها وموضوعُها
           في موضعٍ واحد بلا تمريرٍ أفقيّ — وهو ما يلزم على شاشةٍ ضيّقة. */}
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -415,7 +415,7 @@ export default function CasesView() {
                   العميل
                 </TableHead>
                 <TableHead className="sm:px-6 tracking-wider hidden md:table-cell">
-                  الملخص
+                  الموضوع
                 </TableHead>
                 <TableHead className="sm:px-6 tracking-wider">
                   الحالة
@@ -559,7 +559,7 @@ export default function CasesView() {
                       العميل
                     </TableHead>
                     <TableHead className="tracking-wider">
-                      الملخص
+                      الموضوع
                     </TableHead>
                     <TableHead className="tracking-wider">
                       النتيجة

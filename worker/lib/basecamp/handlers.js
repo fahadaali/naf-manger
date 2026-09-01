@@ -448,7 +448,7 @@ export async function readSample(env, user, url) {
     });
   } catch (readError) {
     const code = readError instanceof BasecampError ? readError.code : 'read_failed';
-    console.error('Basecamp: تعذّرت قراءة الملخّص —', code);
+    console.error('Basecamp: تعذّرت قراءة «بيانات المشروع» —', code);
     return fail(code, 502);
   }
 }
