@@ -78,7 +78,7 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
                 aria-label وtitle. */}
             {center && (
               <a
-                href={`${center}/`}
+                href={`${center.replace(/\/+$/, "")}/`}
                 aria-label={ALL_PLATFORMS}
                 title={ALL_PLATFORMS}
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto sm:px-3"
