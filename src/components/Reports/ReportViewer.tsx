@@ -106,21 +106,21 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
   return (
     <div className="min-h-screen bg-muted">
       {/* Header */}
-      <div className="bg-card border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-4">
             <Button onClick={onClose} className="rounded-full" variant="ghost" size="icon-md">
               <X className="h-6 w-6" />
             </Button>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">{report.name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-foreground break-words">{report.name}</h1>
               {report.description && (
                 <p className="text-sm text-muted-foreground">{report.description}</p>
               )}
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center bg-muted rounded-lg p-1">
               <button
                 onClick={() => setViewMode('table')}
@@ -144,12 +144,15 @@ export default function ReportViewer({ report, onClose, onEdit }: ReportViewerPr
               </button>
             </div>
             
+            {/* يُفتح بالتركيز أيضاً لا بالمرور وحده: لا مرور على شاشة اللمس،
+                والضغطُ على الزرّ يركّزه فتنسدل القائمة، وتبقى ما دام التركيز
+                فيها. */}
             <div className="relative group">
               <Button  variant="outline">
                 <FileOutput className="h-4 w-4" />
                 تصدير
               </Button>
-              <div className="absolute end-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <div className="absolute end-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all z-10">
                 <Button onClick={() => exportReport('xlsx')} className="w-full justify-start first:rounded-t-lg" variant="ghost">
                   تصدير Excel (.xlsx)
                 </Button>

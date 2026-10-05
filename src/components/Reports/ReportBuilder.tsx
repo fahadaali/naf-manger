@@ -158,9 +158,9 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
   return (
     <div className="min-h-screen bg-muted">
       {/* Header */}
-      <div className="bg-card border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="bg-card border-b border-border px-4 sm:px-6 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-4">
             <Button onClick={onClose} className="rounded-full" variant="ghost" size="icon-md">
               <X className="h-6 w-6" />
             </Button>
@@ -182,9 +182,11 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
         </div>
       </div>
 
-      <div className="flex">
+      {/* تحت `md` يعلو عمودُ الخطوات المحتوى بدل أن يجاوره: بعرضٍ ثابت
+          بجواره لا يبقى للمحتوى على 375 إلا نحو مئة بكسل. */}
+      <div className="flex flex-col md:flex-row">
         {/* Steps Sidebar */}
-        <div className="w-64 bg-card border-e border-border p-6">
+        <div className="w-full md:w-64 shrink-0 bg-card border-b md:border-b-0 md:border-e border-border p-4 md:p-6">
           <nav className="space-y-2">
             {steps.map((step) => (
               <button
@@ -204,7 +206,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 min-w-0 p-4 md:p-6">
           {currentStep === 1 && (
             <div className="max-w-2xl space-y-6">
               <h2 className="text-lg font-semibold text-foreground">المعلومات الأساسية</h2>
