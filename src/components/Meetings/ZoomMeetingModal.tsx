@@ -463,6 +463,10 @@ export default function ZoomMeetingModal({ client, onClose }: ZoomMeetingModalPr
         {meeting && (
           <div className="mx-6 mb-2 bg-success-soft border border-success/30 rounded-lg p-4 space-y-3">
             <p className="font-semibold text-success-strong">أُنشئ الاجتماع</p>
+            {/* والدعوةُ أُرسلت بالبريد إن رُبط — والنسخُ باقٍ لمن يرسلها بنفسه. */}
+            {meeting.invitationSent && (
+              <p className="text-sm text-success-strong">أُرسلت الدعوة إلى المدعوّين بالبريد.</p>
+            )}
             <div className="text-sm space-y-1">
               <p>رقم الاجتماع: <bdi>{meeting.providerId}</bdi></p>
               {meeting.passcode && <p>كلمة المرور: <bdi>{meeting.passcode}</bdi></p>}

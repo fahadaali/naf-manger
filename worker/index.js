@@ -35,6 +35,9 @@ import {
 } from './lib/basecamp/handlers.js';
 import { scheduledSync } from './lib/basecamp/cron.js';
 import { scheduledWafeqSync } from './lib/wafeq/sync.js';
+import { readConflicts } from './lib/conflicts.js';
+import { readMailStatus, sendTestMail } from './lib/mail.js';
+import { scheduledNotifications } from './lib/notify.js';
 import {
   decideWafeqPayment,
   listWafeqPayments,
@@ -78,7 +81,12 @@ export default {
      رآها صاحبُ المكتب — والفحصُ في `cron.js` لا هنا. */
   async scheduled(event, env, ctx) {
     /* ووافق معها — مستقلّتان: سقوطُ إحداهما لا يُسقط الأخرى. */
-    ctx.waitUntil(Promise.allSettled([scheduledSync(env), scheduledWafeqSync(env)]));
+    ctx.waitUntil(Promise.allSettled([
+      scheduledSync(env),
+      scheduledWafeqSync(env),
+      /* والبريدُ اليوميّ والأسبوعيّ — في ساعته وحدها، والفحصُ في `notify.js`. */
+      scheduledNotifications(env),
+    ]));
   },
 
   async fetch(request, env) {
@@ -234,6 +242,13 @@ export default {
          والفحصُ في `basecamp/handlers.js` لا هنا. و`callback` تحويلُ متصفّح
          لا نداءُ `fetch` — لكنه بعد الحارس كغيره، لأنّ من يعود من صفحة
          الإذن يحمل جلسته. */
+      /* البريد — عبر Resend. الحالةُ والتجربةُ للمسؤول وحده. */
+      if (name === 'mail' && id === 'status' && request.method === 'GET') return readMailStatus(env, user);
+      if (name === 'mail' && id === 'test' && request.method === 'POST') return sendTestMail(request, env, user);
+      /* تعارضُ المصالح — تنبيهٌ لا منع، والتفصيل في `lib/conflicts.js`. */
+      if (name === 'conflicts' && !id && request.method === 'GET') {
+        return readConflicts(env, user, url);
+      }
       /* ═══ وافق ═══
          قراءةٌ لا كتابة، كبيسكامب. والتصاريحُ في `wafeq/handlers.js`. */
       if (name === 'wafeq') {

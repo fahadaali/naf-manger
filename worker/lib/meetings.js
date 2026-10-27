@@ -12,6 +12,8 @@
 // الحزمة، فقرأه كلُّ زائرٍ وأنشأ اجتماعاتٍ باسم المكتب. فالنداء هنا،
 // والسرُّ `wrangler secret` لا `VITE_*`.
 
+import { sendMail } from './mail.js';
+
 const fail = (error, status) => Response.json({ ok: false, error }, { status });
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
@@ -180,6 +182,29 @@ export async function createMeeting(request, env, user) {
     )
     .run();
 
+  /* ═══ الدعوةُ تُرسل ولا تُنسخ ═══
+     كانت تُنسخ وتُرسل باليد لأنّ البريد غير مربوط. فإن رُبط أُرسلت إلى
+     المدعوّين هنا، وإلا بقي زرُّ النسخ في الشاشة كما كان. ولا يُسقط سقوطُها
+     اجتماعاً أُنشئ. */
+  const when = new Intl.DateTimeFormat('ar-SA-u-nu-latn', {
+    dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Riyadh',
+  }).format(new Date(input.startAt * 1000));
+  const passcode = meeting.password ?? input.passcode;
+  const invitation = await sendMail(env, {
+    to: input.invitees,
+    subject: `دعوة اجتماع — ${input.topic}`,
+    title: input.topic,
+    lines: [
+      `التاريخ والوقت: ${when}`,
+      `المدة: ${input.duration} دقيقة`,
+      `رقم الاجتماع: ${String(meeting.id)}`,
+      passcode ? `كلمة المرور: ${passcode}` : '',
+      `رابط الدخول: ${meeting.join_url ?? ''}`,
+      input.agenda ? `جدول الأعمال:\n${input.agenda}` : '',
+      'مع تحيات فريق ناف',
+    ].filter(Boolean),
+  });
+
   return Response.json(
     {
       ok: true,
@@ -197,6 +222,7 @@ export async function createMeeting(request, env, user) {
         subjectId: input.subjectId,
         invitees: input.invitees,
         createdAt,
+        invitationSent: invitation.ok,
       },
     },
     { status: 201 },

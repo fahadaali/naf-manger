@@ -35,6 +35,7 @@ const FIELD_LABEL: Record<string, string> = {
   status: 'حالة المشروع',
   outcome: 'نتيجة المشروع',
   notes: 'ملاحظات المشروع',
+  opposingParties: 'الطرف الخصم',
   'client.fullName': 'اسم العميل',
   'client.idNumber': 'رقم الهوية',
   'client.idType': 'نوع الهوية',

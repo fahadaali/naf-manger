@@ -11,7 +11,7 @@ import DataExport from './DataExport';
 import DataImport from './DataImport';
 import BasecampSync from './BasecampSync';
 import WafeqSync from './WafeqSync';
-import EmailSettings from './EmailSettings';
+import MailSettings from './MailSettings';
 import { useAuth } from '../../contexts/AuthContext';
 import GeneralSettings from './GeneralSettings';
 import DashboardDisplay from './DashboardDisplay';
@@ -89,7 +89,7 @@ export default function Settings() {
       tabs: [
         { id: 'general', label: 'الإعدادات العامة', icon: Globe, description: 'اسم المكتب ووصفه وشعاره', permission: 'settings.update' },
         { id: 'system', label: 'تكوين النظام', icon: SettingsIcon, description: 'إدارة أنواع العملاء والقضايا والحالات', permission: 'settings.update' },
-        { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'إعدادات خادم SMTP وإرسال الرسائل', permission: 'settings.update' }
+        { id: 'email', label: 'البريد الإلكتروني', icon: Mail, description: 'حالة ربط البريد (Resend) ورسالة تجريبية', permission: 'admin.only' }
       ]
     },
     {
@@ -312,7 +312,7 @@ export default function Settings() {
         return <DashboardDisplay />;
       
       case 'email':
-        return <EmailSettings />;
+        return <MailSettings />;
       
       case 'export':
         return <DataExport />;

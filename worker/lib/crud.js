@@ -11,6 +11,7 @@
 import { RESOURCES, orderOf, toClient, toRow } from './resources.js';
 import { logActivity } from './activity.js';
 import { preparePayment, recomputeCollected } from './payments.js';
+import { notifyEvent } from './notify.js';
 
 const json = (body, status = 200) => Response.json(body, { status });
 const fail = (error, status) => json({ ok: false, error }, status);
@@ -294,6 +295,8 @@ export async function handleResource(request, env, user, name, id) {
     if (!created.error) {
       await afterWrite(env, name, resource, created);
       await logActivity(env, user, { resource: name, action: 'create', row: created.data });
+      /* والإشعارُ بعد الأثر: بريدٌ تعذّر لا يُسقط ما حُفظ، ولا يرمي. */
+      await notifyEvent(env, user, { resource: name, action: 'create', row: created.data });
     }
     return respond(created, 201);
   }
