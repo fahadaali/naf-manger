@@ -380,7 +380,7 @@ const WINDOW = {
 export async function readStats(env, { publicBoard = false } = {}) {
   const [
     clients, prospects, cases, newClients, newProspects, newCases, proBono, closed, outstanding, byLawyer, collected,
-    ongoing,
+    ongoing, undecided,
   ] = await env.DB.batch([
     env.DB.prepare(
       `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
@@ -429,9 +429,10 @@ export async function readStats(env, { publicBoard = false } = {}) {
         WHERE archived_at IS NULL AND ${FEE_TYPE} = 'pro_bono'`,
     ),
 
-    /* ═══ ما أُغلق في كلّ نافذة، وما رُبح منه ═══
+    /* ═══ ما حُسم في كلّ نافذة، وما كُسب منه ═══
        بـ`closed_at` — لحظةُ صيرورتها مكتملة (`migrations/0017`) — لا
-       بـ`updated_at` الذي يتحرّك مع أيّ تعديل. */
+       بـ`updated_at` الذي يتحرّك مع أيّ تعديل. والمحسومةُ وحدها — ما له
+       نتيجة — كنسبة الكسب نفسِها. */
     env.DB.prepare(
       `SELECT SUM(CASE WHEN closed_at >= strftime('%s', ${WINDOW.recentDate}) THEN 1 ELSE 0 END) recent,
               SUM(CASE WHEN closed_at >= strftime('%s', ${WINDOW.recentDate}) AND outcome = 'won'
@@ -441,7 +442,8 @@ export async function readStats(env, { publicBoard = false } = {}) {
               SUM(CASE WHEN closed_at >= strftime('%s', ${WINDOW.priorDate})
                         AND closed_at <  strftime('%s', ${WINDOW.recentDate}) AND outcome = 'won'
                        THEN 1 ELSE 0 END) prior_won
-         FROM cases WHERE archived_at IS NULL AND status = 'completed' AND closed_at IS NOT NULL`,
+         FROM cases WHERE archived_at IS NULL AND status = 'completed' AND closed_at IS NOT NULL
+          AND outcome IN ('won', 'lost', 'settled')`,
     ),
 
     /* ما لم يُحصَّل: الإجماليُّ ناقصَ المحصَّل لكل قضيةٍ حاضرة، ولا يُحسب
@@ -483,6 +485,14 @@ export async function readStats(env, { publicBoard = false } = {}) {
         WHERE archived_at IS NULL AND status IN ('in-progress', 'pending')
         GROUP BY kind`,
     ),
+
+    /* قضايا منظورة انتهت ولم تُسجَّل نتيجتُها — تُقال لتُسجَّل، فنسبةُ الكسب
+       لا تراها. والعملُ القانونيّ خارجها: لا كسبَ فيه ولا خسارة. */
+    env.DB.prepare(
+      `SELECT COUNT(*) n FROM cases
+        WHERE archived_at IS NULL AND status = 'completed'
+          AND (outcome IS NULL OR outcome = '') AND ${WORK_KIND_SQL} = 'litigation'`,
+    ),
   ]);
 
   const clientsByType = {};
@@ -502,13 +512,18 @@ export async function readStats(env, { publicBoard = false } = {}) {
   const casesByStatus = {};
   let totalCases = 0;
   let completedCases = 0;
-  let wonCases = 0;
+  /* ═══ نسبةُ كسب القضايا ═══
+     الرابحةُ من المحسومة — ما له نتيجة: رابحة أو خاسرة أو تسوية. وكانت
+     «الرابحة من كلّ المكتملة»، فيُنقصها كلُّ عقدٍ واستشارةٍ اكتمل، وكلُّ قضيةٍ
+     انتهت ولم تُسجَّل نتيجتُها. */
+  const outcomes = { won: 0, lost: 0, settled: 0 };
   for (const row of cases.results ?? []) {
     casesByStatus[row.status] = (casesByStatus[row.status] ?? 0) + row.n;
     totalCases += row.n;
     if (row.status === 'completed') completedCases += row.n;
-    if (row.outcome === 'won') wonCases += row.n;
+    if (row.outcome in outcomes) outcomes[row.outcome] += row.n;
   }
+  const decided = outcomes.won + outcomes.lost + outcomes.settled;
 
   return json({
     ok: true,
@@ -522,7 +537,8 @@ export async function readStats(env, { publicBoard = false } = {}) {
         (ongoing.results ?? []).map((row) => [row.kind === 'litigation' ? 'litigation' : 'legalWork', Number(row.n ?? 0)]),
       ),
       completedCases,
-      winRate: completedCases > 0 ? Math.round((wonCases / completedCases) * 100) : 0,
+      winRate: decided > 0 ? Math.round((outcomes.won / decided) * 100) : 0,
+      outcomes: { ...outcomes, decided, undecided: Number(undecided.results?.[0]?.n ?? 0) },
       clientsByType,
       prospectsByStatus,
       casesByStatus,

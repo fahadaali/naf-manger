@@ -157,9 +157,27 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
           color="bg-chart-2"
           onClick={go('cases', { status: 'in-progress', workKind: 'legal_work' })}
         />
+        {/* نسبةُ كسب القضايا: الرابحةُ من المحسومة — ما له نتيجة. وتحتها
+            مكوّناتُها، وما انتهى بلا نتيجةٍ مسجّلة ليُسجَّل. */}
         <StatsCard
-          title="معدل الربح"
-          value={`${formatNumber(stats.winRate)}%`}
+          title="نسبة كسب القضايا"
+          value={<>
+            {`${formatNumber(stats.winRate)}%`}
+            {stats.outcomes && (
+              <span className="block text-xs font-normal text-muted-foreground">
+                {stats.outcomes.decided > 0
+                  ? `${formatNumber(stats.outcomes.won)} رابحة من ${formatNumber(stats.outcomes.decided)} محسومة`
+                    + (stats.outcomes.settled ? ` · ${formatNumber(stats.outcomes.settled)} تسوية` : '')
+                    + (stats.outcomes.lost ? ` · ${formatNumber(stats.outcomes.lost)} خاسرة` : '')
+                  : 'لا قضايا محسومة بعد'}
+                {stats.outcomes.undecided > 0 && (
+                  <span className="block text-warning-strong">
+                    {`${formatNumber(stats.outcomes.undecided)} منتهية بلا نتيجة — سجّلها`}
+                  </span>
+                )}
+              </span>
+            )}
+          </>}
           icon={Award}
           color="bg-chart-5"
           trend={stats.growth?.winRate ?? undefined}

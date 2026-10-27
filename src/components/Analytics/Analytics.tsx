@@ -288,8 +288,10 @@ export default function Analytics() {
 
   const kpis = useMemo(() => {
     const completedCases = filteredCases.filter(c => c.status === 'completed');
-    const wonCases = completedCases.filter(c => c.outcome === 'won');
-    const winRate = completedCases.length > 0 ? Math.round((wonCases.length / completedCases.length) * 100) : 0;
+    /* الرابحةُ من المحسومة — ما له نتيجة — كما في لوحة التحكم. */
+    const decidedCases = filteredCases.filter(c => c.outcome === 'won' || c.outcome === 'lost' || c.outcome === 'settled');
+    const wonCases = decidedCases.filter(c => c.outcome === 'won');
+    const winRate = decidedCases.length > 0 ? Math.round((wonCases.length / decidedCases.length) * 100) : 0;
     
     const totalProspects = prospects.length;
     const totalClients = clients.length;
@@ -421,7 +423,7 @@ export default function Analytics() {
               <ChartColumn className="h-6 w-6 text-warning-strong" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">معدل الربح</p>
+              <p className="text-sm text-muted-foreground">نسبة كسب القضايا</p>
               <p className="text-2xl font-bold text-foreground"><bdi>{formatNumber(kpis.winRate)}%</bdi></p>
             </div>
           </div>
@@ -595,7 +597,7 @@ export default function Analytics() {
                   <span className="font-medium text-primary"><bdi>{formatNumber(kpis.activeCases)}</bdi></span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">معدل النجاح</span>
+                  <span className="text-muted-foreground">نسبة كسب القضايا</span>
                   <span className="font-medium text-warning"><bdi>{formatNumber(kpis.winRate)}%</bdi></span>
                 </div>
               </div>

@@ -90,6 +90,30 @@ const stats = (await bodyOf(await readStats(env))).data;
 check('اللوحةُ تعدّ الجاريَ بنوعه — و«منظورة» القديمة منه',
   stats.ongoingByKind.litigation === 1 && stats.ongoingByKind.legalWork === 2 && stats.pendingCases === 3, stats.ongoingByKind);
 
+// ═══════════════════════════════════════════════════════════
+group('نسبةُ كسب القضايا');
+
+{
+  const db2 = freshDatabase();
+  const env2 = makeEnv(db2);
+  db2.prepare(`INSERT INTO clients (id, full_name, created_at, updated_at) VALUES ('c', 'س', ?, ?)`).run(now, now);
+  const add = db2.prepare(
+    `INSERT INTO cases (id, case_number, case_type, client_id, client_name, status, outcome, created_at, updated_at)
+     VALUES (?, ?, ?, 'c', 'س', 'completed', ?, ?, ?)`,
+  );
+  add.run('w1', 'w1', 'قضية تجارية', 'won', now, now);
+  add.run('w2', 'w2', 'قضية عمالية', 'won', now, now);
+  add.run('l1', 'l1', 'قضية مدنية', 'lost', now, now);
+  add.run('s1', 's1', 'قضية تجارية', 'settled', now, now);
+  add.run('u1', 'u1', 'قضية تجارية', null, now, now);
+  add.run('j1', 'j1', 'صياغة عقود', null, now, now);
+  const decided = (await bodyOf(await readStats(env2))).data;
+  check('الرابحةُ من المحسومة لا من كلّ المكتملة', decided.winRate === 50, decided.winRate);
+  check('ومكوّناتُها، وما انتهى بلا نتيجة — بلا العمل القانوني',
+    decided.outcomes.won === 2 && decided.outcomes.lost === 1 && decided.outcomes.settled === 1 &&
+      decided.outcomes.decided === 4 && decided.outcomes.undecided === 1, decided.outcomes);
+}
+
 const { parseDocument, DEFAULT_FIELD_MAP } = await import('../worker/lib/basecamp/parse.js');
 check('و«منظورة» في الملفّ تُقرأ «جارية»',
   parseDocument('<div>حالة القضية: منظورة</div>', DEFAULT_FIELD_MAP).case.status === 'in-progress');

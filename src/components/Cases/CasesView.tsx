@@ -224,8 +224,11 @@ export default function CasesView({ initialFilter }: { initialFilter?: ViewFilte
   const statusOf = caseStatusBadge;
   const outcomeOf = caseOutcomeBadge;
 
-  const wonCases = completedCases.filter(c => c.outcome === 'won');
-  const winRate = completedCases.length > 0 ? Math.round((wonCases.length / completedCases.length) * 100) : 0;
+  /* نسبةُ كسب القضايا: الرابحةُ من المحسومة — ما له نتيجة — لا من كلّ
+     المكتملة: العقدُ المكتمل ليس قضيةً خاسرة. */
+  const decidedCases = visibleCases.filter((c) => c.outcome === 'won' || c.outcome === 'lost' || c.outcome === 'settled');
+  const wonCases = decidedCases.filter((c) => c.outcome === 'won');
+  const winRate = decidedCases.length > 0 ? Math.round((wonCases.length / decidedCases.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -362,8 +365,11 @@ export default function CasesView({ initialFilter }: { initialFilter?: ViewFilte
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">معدل الربح</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">نسبة كسب القضايا</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(winRate)}%</bdi></p>
+          <p className="text-xs text-muted-foreground">
+            <bdi>{formatNumber(wonCases.length)}</bdi> من <bdi>{formatNumber(decidedCases.length)}</bdi> محسومة
+          </p>
         </Card>
       </div>
 
