@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Building2, CircleCheck, ExternalLink, ListChecks, Merge, Sparkles } from 'lucide-react';
 
 import { db } from '../../data/database';
-import { BasecampReview } from '../../types';
+import { BasecampReview, MemberEntry } from '../../types';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
 import { Badge } from '@/registry/naf/ui/badge';
@@ -26,6 +26,7 @@ const KIND_BADGE: Record<string, 'primary' | 'success' | 'outline'> = {
   unresolved_value: 'outline',
   similar_client: 'primary',
   generated_number: 'outline',
+  unmatched_lawyer: 'outline',
 };
 
 export default function BasecampReviews({ onChanged }: { onChanged: () => void }) {
@@ -33,6 +34,8 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
   const [busy, setBusy] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
+  /* الأعضاءُ لسؤال «محامٍ لم يُعرف» — يُختار منهم من كتب الملفُّ اسمَه. */
+  const [members, setMembers] = useState<MemberEntry[]>([]);
 
   const load = async () => {
     setReviews(await db.getBasecampReviews().catch(() => []));
@@ -40,6 +43,7 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
 
   useEffect(() => {
     load();
+    db.getDirectory().then(setMembers);
   }, []);
 
   const settle = async (review: BasecampReview, resolution: string, value?: string) => {
@@ -229,6 +233,38 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
                     size="sm"
                   >
                     اترك المولَّد
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* ═══ محامٍ لم يُعرف ═══
+                الملفُّ يسمّيه، ولا عضوَ بالاسم نفسِه — أو أكثرُ من عضو. */}
+            {review.kind === 'unmatched_lawyer' && (
+              <>
+                <p className="text-sm text-foreground">
+                  {`الملفُّ يقول المحامي المسؤول «${review.subject}» — ولم يُعرف بين الأعضاء. اختر العضو.`}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={drafts[review.id] ?? ''}
+                    onChange={(event) => setDrafts({ ...drafts, [review.id]: event.target.value })}
+                    className="max-w-56"
+                  >
+                    <option value="">اختر العضو</option>
+                    {members.map((member) => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </Select>
+                  <Button
+                    onClick={() => settle(review, 'set', drafts[review.id])}
+                    disabled={busy === review.id || !drafts[review.id]}
+                    size="sm"
+                  >
+                    اكتبه
+                  </Button>
+                  <Button onClick={() => settle(review, 'ignore')} disabled={busy === review.id} variant="outline" size="sm">
+                    اتركه
                   </Button>
                 </div>
               </>

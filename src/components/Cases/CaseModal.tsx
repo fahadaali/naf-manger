@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, HandHeart, Sparkles } from 'lucide-react';
-import { Attachment, Case, Client, Marketer, FeeStructure, OpposingParty, PaymentStatus, CommissionStructure } from '../../types';
+import { Attachment, Case, Client, Marketer, FeeStructure, MemberEntry, OpposingParty, PaymentStatus, CommissionStructure } from '../../types';
 import AttachmentList from '../Common/AttachmentList';
 import CasePayments from './CasePayments';
 import OpposingParties from './OpposingParties';
@@ -34,6 +34,8 @@ interface CaseModalProps {
 export default function CaseModal({ case: existingCase, onClose, onSave, isEditing = false }: CaseModalProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [marketers, setMarketers] = useState<Marketer[]>([]);
+  /* الأعضاء المفعَّلون — للمحامي المسؤول وفريقه. */
+  const [members, setMembers] = useState<MemberEntry[]>([]);
   const [formData, setFormData] = useState({
     caseNumber: existingCase?.caseNumber || '',
     caseType: existingCase?.caseType || 'قضية تجارية',
@@ -47,6 +49,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     outcome: existingCase?.outcome || '',
     // Marketer fields
     marketerId: existingCase?.marketerId || '',
+    lawyerId: existingCase?.lawyerId || '',
+    proBonoValue: existingCase?.proBonoValue?.toString() || '',
+    proBonoHours: existingCase?.proBonoHours?.toString() || '',
     // Fee structure fields
     feeType: existingCase?.feeStructure?.type || 'advance_only',
     advanceFeeType: existingCase?.feeStructure?.advance?.feeType || 'fixed_amount',
@@ -70,6 +75,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   const [attachments, setAttachments] = useState<Attachment[]>(existingCase?.attachments ?? []);
   /* قائمةٌ لا نصّ، فخارج `formData` كالمرفقات. */
   const [opposingParties, setOpposingParties] = useState<OpposingParty[]>(existingCase?.opposingParties ?? []);
+  const [team, setTeam] = useState<string[]>(existingCase?.team ?? []);
 
   /* المنسدلات من «تكوين النظام» لا من نصوصٍ في التصيير. والقيمةُ المحفوظة
      تُمرَّر فتبقى ظاهرةً حتى لو حُذفت من التكوين بعد حفظها. */
@@ -87,6 +93,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
         // تحميل قائمة المسوّقين النشطين
         const allMarketers = await db.getMarketers();
         setMarketers(allMarketers.filter(m => m.status === 'active'));
+        setMembers(await db.getDirectory());
       } catch (error) {
         console.error('Error loading data:', error);
         setClients([]);
@@ -182,6 +189,12 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
       paymentStatus,
       commissionStructure,
       attachments,
+      lawyerId: formData.lawyerId || null,
+      /* والمسؤولُ ليس من فريقه — هو فوقه. */
+      team: team.filter((id) => id && id !== formData.lawyerId),
+      /* قيمةُ التطوّعي وساعاتُه للتطوّعية وحدها؛ وغيرُها يُفرَّغ فلا يُجمع. */
+      proBonoValue: proBono && formData.proBonoValue ? parseFloat(formData.proBonoValue) : null,
+      proBonoHours: proBono && formData.proBonoHours ? parseFloat(formData.proBonoHours) : null,
       /* طرفٌ بلا اسمٍ يُطرح: سطرٌ أُضيف ولم يُملأ ليس خصماً. */
       opposingParties: opposingParties
         .map((party) => ({ name: party.name.trim(), ...(party.idNumber?.trim() ? { idNumber: party.idNumber.trim() } : {}) }))
@@ -261,6 +274,30 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <h3 className="text-lg font-semibold text-foreground mb-3">موضوع المشروع</h3>
               <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
             </div>
+
+            {(existingCase.lawyerId || (existingCase.team ?? []).length > 0) && (
+              <div className="bg-muted rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-3">المحامي المسؤول</h3>
+                <p className="text-foreground">
+                  {members.find((member) => member.id === existingCase.lawyerId)?.name ?? (existingCase.lawyerId ? '—' : 'بلا محامٍ')}
+                </p>
+                {(existingCase.team ?? []).length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    الفريق: {(existingCase.team ?? []).map((id) => members.find((member) => member.id === id)?.name ?? '—').join('، ')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {existingCase.feeStructure?.type === 'pro_bono' && (existingCase.proBonoValue || existingCase.proBonoHours) && (
+              <div className="bg-muted rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-3">قيمة العمل التطوّعي</h3>
+                <p className="text-foreground">
+                  {existingCase.proBonoValue ? <Money value={existingCase.proBonoValue} /> : '—'}
+                  {existingCase.proBonoHours ? <span className="text-muted-foreground"> · <bdi>{existingCase.proBonoHours}</bdi> ساعة</span> : null}
+                </p>
+              </div>
+            )}
 
             {(existingCase.opposingParties ?? []).length > 0 && (
               <div className="bg-muted rounded-lg p-4">
@@ -428,6 +465,41 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             )}
           </div>
 
+          {/* ═══ المحامي المسؤول وفريقُه ═══
+              واحدٌ مسؤول، ومن يعاونه إن وُجد. والرؤيةُ لا تتبدّل به —
+              الكلُّ يرى الكلّ، وللمحامي تصفيةُ «قضاياي». */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">المحامي المسؤول</label>
+              <Select value={formData.lawyerId} onChange={(e) => handleInputChange('lawyerId', e.target.value)}>
+                <option value="">بلا محامٍ</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>{member.name || member.id}</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <p className="block text-sm font-medium text-foreground mb-2">الفريق (اختياري)</p>
+              <div className="flex flex-wrap gap-2">
+                {members.filter((member) => member.id !== formData.lawyerId).map((member) => {
+                  const on = team.includes(member.id);
+                  return (
+                    <Button
+                      key={member.id}
+                      type="button"
+                      size="sm"
+                      variant={on ? 'default' : 'outline'}
+                      aria-pressed={on}
+                      onClick={() => setTeam((current) => on ? current.filter((id) => id !== member.id) : [...current, member.id])}
+                    >
+                      {member.name || member.id}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* Marketer Selection */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
@@ -473,6 +545,35 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   قضيةٌ يقدّمها المكتب مجاناً تطوّعاً — بلا أتعابٍ ولا تحصيلٍ ولا عمولة،
                   ولا تدخل الإيرادات.
                 </p>
+              </div>
+            )}
+
+            {/* ═══ قيمةُ العمل التطوّعي ═══
+                ما كان المكتب سيتقاضاه — تقديراً — وساعاتُه إن عُدّت. وبهما يُبنى
+                تقريرُ المسؤولية الاجتماعية. */}
+            {formData.feeType === 'pro_bono' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">القيمة التقديرية بالريال</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.proBonoValue}
+                    onChange={(e) => handleInputChange('proBonoValue', e.target.value)}
+                    placeholder="15000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">الساعات (اختياري)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={formData.proBonoHours}
+                    onChange={(e) => handleInputChange('proBonoHours', e.target.value)}
+                    placeholder="20"
+                  />
+                </div>
               </div>
             )}
 

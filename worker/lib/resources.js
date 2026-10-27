@@ -13,6 +13,7 @@ import { toLatinDigits } from './digits.js';
  * `date`   — تاريخٌ مجرّد نصّاً `YYYY-MM-DD`. لا لحظة، فلا منطقة زمنية.
  * `epoch`  — لحظةٌ بالثواني.
  * `json`   — بنيةٌ تُسلسل. والتالف يُقرأ غياباً ولا يُسقط الطلب.
+ * `number` — عددٌ لا مبلغ: الساعات. وما لا يُقرأ عدداً غياب، لا نصٌّ في عمودٍ عدديّ.
  * وما عداها نصّ.
  */
 
@@ -111,6 +112,12 @@ export const RESOURCES = {
       commissionStructure: ['commission_structure', 'json'],
       /* الأطرافُ الخصم — `[{ name, idNumber? }]` — وبها يُفحص تعارضُ المصالح. */
       opposingParties: ['opposing_parties', 'json'],
+      /* المحامي المسؤول وفريقُه — أعضاءٌ بمعرّفاتهم. */
+      lawyerId: ['lawyer_id'],
+      team: ['team', 'json'],
+      /* قيمةُ التطوّعي التقديرية وساعاتُه — `migrations/0021`. */
+      proBonoValue: ['pro_bono_value', 'money'],
+      proBonoHours: ['pro_bono_hours', 'number'],
       attachments: ['attachments', 'json'],
       archivedAt: ['archived_at', 'epoch'],
       /* الشاشات تقرأ `createdDate` و`updatedDate` لا `createdAt`. والاسمان
@@ -118,7 +125,7 @@ export const RESOURCES = {
     },
     readOnly: ['aiSummary', 'aiSummaryAt'],
     required: ['case_number', 'case_type', 'client_id'],
-    defaults: { summary: '', notes: '', client_name: '', attachments: '[]', opposing_parties: '[]' },
+    defaults: { summary: '', notes: '', client_name: '', attachments: '[]', opposing_parties: '[]', team: '[]' },
   },
 
   marketers: {
@@ -232,6 +239,7 @@ export function toClient(resource, row) {
     }
 
     if (type === 'money') out[name] = Number(value) / 100;
+    else if (type === 'number') out[name] = Number(value);
     else if (type === 'json') out[name] = parseJson(value);
     else if (type === 'date') out[name] = value;
     else if (type === 'epoch') out[name] = toIso(value);
@@ -294,7 +302,10 @@ export function toRow(resource, body) {
     }
 
     if (type === 'money') row[column] = Math.round(Number(value) * 100);
-    else if (type === 'json') row[column] = JSON.stringify(value);
+    else if (type === 'number') {
+      const number = Number(toLatinDigits(String(value)));
+      row[column] = Number.isFinite(number) ? number : null;
+    } else if (type === 'json') row[column] = JSON.stringify(value);
     else if (type === 'date') row[column] = toDateOnly(value);
     else if (type === 'epoch') row[column] = toEpoch(value);
     else row[column] = String(value);

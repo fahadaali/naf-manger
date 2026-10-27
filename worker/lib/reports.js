@@ -57,6 +57,10 @@ const FIELDS = {
       column: "(CASE WHEN json_valid(fee_structure) THEN json_extract(fee_structure, '$.type') END)",
       type: 'text',
     },
+    /* اسمُ المحامي المسؤول من دليل الأعضاء — تعبيرٌ ثابتٌ من هذا الملفّ. */
+    lawyerName: { column: '(SELECT display_name FROM members WHERE user_id = cases.lawyer_id)', type: 'text' },
+    proBonoValue: { column: 'pro_bono_value', type: 'money' },
+    proBonoHours: { column: 'pro_bono_hours', type: 'text' },
     createdDate: { column: 'created_at', type: 'epoch' },
     updatedDate: { column: 'updated_at', type: 'epoch' },
   },

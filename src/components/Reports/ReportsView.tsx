@@ -9,6 +9,7 @@ import { formatDate } from '@/registry/naf/lib/format';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
+import ProBonoReport from './ProBonoReport';
 import { Card } from '@/registry/naf/ui/card';
 
 export default function ReportsView() {
@@ -137,6 +138,9 @@ export default function ReportsView() {
           )}
         </div>
       </div>
+
+      {/* القضايا التطوّعية: عددُها وساعاتُها وقيمتُها في السنة — ويُصدَّر. */}
+      <ProBonoReport />
 
       {/* Search and Filters */}
       <Card className="p-4">

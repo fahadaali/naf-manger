@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Archive, ChevronDown, CircleCheck, ExternalLink, HandHeart, Plus, Search, TriangleAlert } from 'lucide-react';
-import { BulkAction, Case } from '../../types';
+import { BulkAction, Case, MemberEntry } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import RowCheckbox from '../Common/RowCheckbox';
@@ -40,7 +40,18 @@ export default function CasesView() {
   const [editingCase, setEditingCase] = useState<Case | null>(null);
   const [viewingCase, setViewingCase] = useState<Case | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  /* «قضاياي» و«بلا محامٍ» — والأسماءُ من دليل الأعضاء لا من القضية. */
+  const [filterLawyer, setFilterLawyer] = useState<'all' | 'mine' | 'none'>('all');
+  const [members, setMembers] = useState<MemberEntry[]>([]);
+  useEffect(() => {
+    db.getDirectory().then(setMembers);
+  }, []);
+  const lawyerName = (id?: string | null) => (id ? members.find((member) => member.id === id)?.name ?? '' : '');
+  const matchesLawyer = (case_: Case) =>
+    filterLawyer === 'all'
+      || (filterLawyer === 'none' && !case_.lawyerId)
+      || (filterLawyer === 'mine' && Boolean(user?.id) && (case_.lawyerId === user?.id || (case_.team ?? []).includes(user?.id ?? '')));
   const [showCompletedCases, setShowCompletedCases] = useState(false);
   const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
   /* القضايا تُقرأ جدولاً في الغالب — ففيها رقمٌ وعميلٌ وحالةٌ وتاريخ،
@@ -90,7 +101,7 @@ export default function CasesView() {
     const matchesStatus = filterStatus === 'all' || case_.status === filterStatus;
     const matchesType = filterType === 'all' || case_.caseType === filterType;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesLawyer(case_);
   });
 
   const filteredCompletedCases = completedCases.filter(case_ => {
@@ -101,7 +112,7 @@ export default function CasesView() {
     const matchesStatus = filterStatus === 'all' || filterStatus === 'completed';
     const matchesType = filterType === 'all' || case_.caseType === filterType;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesLawyer(case_);
   });
 
   /* التحديدُ يشمل النشطةَ والمكتملةَ المعروضتين معاً: من فتح الجدولين
@@ -244,6 +255,15 @@ export default function CasesView() {
               ))}
             </Select>
             <Select
+              value={filterLawyer}
+              onChange={(e) => setFilterLawyer(e.target.value as 'all' | 'mine' | 'none')}
+              aria-label="تصفية بالمحامي"
+            >
+              <option value="all">كل المحامين</option>
+              <option value="mine">قضاياي</option>
+              <option value="none">بلا محامٍ</option>
+            </Select>
+            <Select
               value={archiveView}
               onChange={(e) => {
                 setArchiveView(e.target.value as 'active' | 'archived');
@@ -352,6 +372,9 @@ export default function CasesView() {
                 </div>
 
                 <p className="text-sm text-foreground">{case_.clientName}</p>
+                {case_.lawyerId && (
+                  <p className="text-xs text-muted-foreground">المحامي: {lawyerName(case_.lawyerId) || '—'}</p>
+                )}
                 {case_.summary && (
                   <p className="text-sm text-muted-foreground line-clamp-3">{case_.summary}</p>
                 )}
@@ -465,6 +488,9 @@ export default function CasesView() {
                   </TableCell>
                   <TableCell className="sm:px-6">
                     <div className="text-xs sm:text-sm text-foreground truncate max-w-32">{case_.clientName}</div>
+                    {case_.lawyerId && (
+                      <div className="text-xs text-muted-foreground truncate max-w-32">{lawyerName(case_.lawyerId)}</div>
+                    )}
                   </TableCell>
                   <TableCell className="sm:px-6 hidden md:table-cell">
                     <div className="text-xs sm:text-sm text-foreground line-clamp-2">{case_.summary}</div>

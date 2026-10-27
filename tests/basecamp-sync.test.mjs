@@ -90,7 +90,7 @@ const DOC = `<div>
   <div>نوع القضية: قضية تجارية</div>
   <div>حالة القضية: قيد المعالجة</div>
   <div>موضوع القضية: نزاعٌ على عقد توريد</div>
-  <div>المحامي المسؤول: سارة المطيري</div>
+  <div>تاريخ الجلسة: ١٤٤٨/٠٣/١٢</div>
 </div>`;
 
 const parsed = parseDocument(DOC, DEFAULT_FIELD_MAP);
@@ -102,7 +102,7 @@ check('رقم القضية ونوعها', parsed.case.caseNumber === 'ق-2026-01
 check('«قيد المعالجة» تُترجَم in-progress', parsed.case.status === 'in-progress', parsed.case);
 check('«موضوع القضية» يُربط بالملخّص', parsed.case.summary === 'نزاعٌ على عقد توريد', parsed.case);
 check('وحقلٌ لا مقابل له يُعرض لا يُبتلع',
-  parsed.unmapped.some((u) => u.label === 'المحامي المسؤول'), parsed.unmapped);
+  parsed.unmapped.some((u) => u.label === 'تاريخ الجلسة'), parsed.unmapped);
 
 const shaddad = parseDocument(
   '<div>اسمُ العميلِ: أحمد</div><div>رقمُ الهويّة: 1012345678</div>', DEFAULT_FIELD_MAP);
