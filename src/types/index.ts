@@ -808,7 +808,9 @@ export interface DashboardStats {
    * نتائجُ القضايا — ونسبةُ الكسب `winRate` = الرابحة ÷ المحسومة (ما له نتيجة).
    * و`undecided` قضايا منظورة انتهت ولم تُسجَّل نتيجتُها.
    */
-  outcomes?: { won: number; lost: number; settled: number; decided: number; undecided: number };
+  outcomes?: { won: number; lost: number; settled: number; wins?: number; decided: number; undecided: number };
+  /** الفترةُ المحسوبة — و`null` للكلّ. */
+  range?: { from: string; to: string; prevFrom: string; prevTo: string } | null;
   /** الجاري بنوعه: قضايا منظورة، وأعمالٌ قانونية مستمرّة. */
   ongoingByKind?: { litigation?: number; legalWork?: number };
   /** المحصَّل هذا العام: دفعاتُ القضايا، والإيرادُ العامّ بلا قضية — ريالات. */

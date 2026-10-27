@@ -202,7 +202,8 @@ export default {
       const [, name, id, verb] = segments;
 
       if (name === 'stats' && !id && request.method === 'GET') {
-        return readStats(env);
+        /* فترةُ اللوحة اختيارية — `from` و`to` تاريخان شاملان. */
+        return readStats(env, { from: url.searchParams.get('from'), to: url.searchParams.get('to') });
       }
       if (name === 'settings' && !id) {
         /* والعضو يُمرَّر: المفردات تخرج للجميع — المنسدلات تقرؤها — وما

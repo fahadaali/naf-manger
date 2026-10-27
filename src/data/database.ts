@@ -252,8 +252,10 @@ export class LocalDatabase {
   }
 
   // ── إحصاءات ──
-  async getStats() {
-    return await api.read<any>('/stats');
+  /* والفترةُ اختيارية: تاريخان شاملان، تُقارَن بالسابقة المساوية لها. */
+  async getStats(range?: { from: string; to: string } | null) {
+    const query = range ? `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}` : '';
+    return await api.read<any>(`/stats${query}`);
   }
 
   // ── المسوّقون ──

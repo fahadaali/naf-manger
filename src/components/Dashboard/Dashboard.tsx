@@ -7,6 +7,10 @@ import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
 import { db } from '../../data/database';
 import { DashboardStats, ViewFilter } from '../../types';
+import PeriodFilter from './PeriodFilter';
+import { Period, periodRange } from '../../lib/periods';
+
+const PERIOD_KEY = 'dashboard-period';
 import { useChartPalette } from '../../lib/chart-tokens';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { useSettingList } from '../../lib/use-settings';
@@ -38,22 +42,38 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
   const palette = useChartPalette();
 
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
+  /* الفترةُ تُذكر لكلّ متصفّح — تفضيلٌ لا بيانات، فـ`localStorage` يكفي. */
+  const [period, setPeriod] = useState<Period>(() => {
+    try {
+      const saved = localStorage.getItem(PERIOD_KEY);
+      return saved ? JSON.parse(saved) as Period : { kind: 'all' };
+    } catch {
+      return { kind: 'all' };
+    }
+  });
+  const range = periodRange(period);
+  const ranged = Boolean(range);
+  const choosePeriod = (next: Period) => {
+    setPeriod(next);
+    try { localStorage.setItem(PERIOD_KEY, JSON.stringify(next)); } catch { /* بلا تخزينٍ يعمل كما هو */ }
+  };
 
   useEffect(() => {
-    // تحديث الإحصائيات عند تحميل الصفحة
+    // تحديث الإحصائيات عند تحميل الصفحة وعند تبديل الفترة
     loadStats();
     
     // تحديث الإحصائيات كل 30 ثانية
     const interval = setInterval(loadStats, 30000);
     
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range?.from, range?.to]);
   
   const loadStats = async () => {
     try {
       // الإحصاءات تُحسب في القاعدة لا هنا: جلبُ الجداول كاملةً إلى المتصفّح
       // ليُعدّ صفوفُها كان ينقل آلاف الصفوف في كل فتحةِ لوحة.
-      setStats(await db.getStats());
+      setStats(await db.getStats(range));
     } catch (error) {
       console.error('Error loading stats:', error);
       // في حالة الخطأ، استخدم قيم افتراضية
@@ -113,45 +133,50 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
 
   return (
     <div className="space-y-6">
+      <PeriodFilter value={period} onChange={choosePeriod} />
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* والمؤشّرات تأتي من `‎/api/stats‎` محسوبةً — كانت أرقاماً مكتوبةً
             هنا لا تُقرأ من شيء ولا تتغيّر: «‎+١٢٪‎» و«‎+٨٪‎» و«‎+٥٪‎» في كل
             فتحةٍ منذ أوّل يوم. */}
         <StatsCard
-          title="إجمالي العملاء"
+          title={ranged ? 'عملاء جدد في الفترة' : 'إجمالي العملاء'}
           value={stats.totalClients}
           icon={Users}
           color="bg-chart-1"
           trend={stats.growth?.clients}
+          against={ranged ? 'period' : 'month'}
           onClick={go('clients')}
         />
         <StatsCard
-          title="العملاء المحتملين"
+          title={ranged ? 'محتملون جدد في الفترة' : 'العملاء المحتملين'}
           value={stats.totalProspects}
           icon={UserPlus}
           color="bg-chart-2"
           trend={stats.growth?.prospects}
+          against={ranged ? 'period' : 'month'}
           onClick={go('prospects')}
         />
         <StatsCard
-          title="إجمالي القضايا"
+          title={ranged ? 'قضايا فُتحت في الفترة' : 'إجمالي القضايا'}
           value={stats.totalCases}
           icon={FileText}
           color="bg-chart-3"
           trend={stats.growth?.cases}
+          against={ranged ? 'period' : 'month'}
           onClick={go('cases')}
         />
         {/* «جارية» بنوعها — قضايا منظورة أمام جهة، وأعمالٌ قانونية مستمرّة. */}
         <StatsCard
-          title="قضايا منظورة"
+          title={ranged ? 'قضايا منظورة (الآن)' : 'قضايا منظورة'}
           value={stats.ongoingByKind?.litigation ?? 0}
           icon={Gavel}
           color="bg-chart-4"
           onClick={go('cases', { status: 'in-progress', workKind: 'litigation' })}
         />
         <StatsCard
-          title="أعمال قانونية مستمرة"
+          title={ranged ? 'أعمال قانونية مستمرة (الآن)' : 'أعمال قانونية مستمرة'}
           value={stats.ongoingByKind?.legalWork ?? 0}
           icon={TrendingUp}
           color="bg-chart-2"
@@ -165,11 +190,12 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
             {`${formatNumber(stats.winRate)}%`}
             {stats.outcomes && (
               <span className="block text-xs font-normal text-muted-foreground">
+                {/* والتسويةُ والصلحُ كسبٌ للموكّل. */}
                 {stats.outcomes.decided > 0
-                  ? `${formatNumber(stats.outcomes.won)} رابحة من ${formatNumber(stats.outcomes.decided)} محسومة`
-                    + (stats.outcomes.settled ? ` · ${formatNumber(stats.outcomes.settled)} تسوية` : '')
+                  ? `${formatNumber(stats.outcomes.wins ?? stats.outcomes.won + stats.outcomes.settled)} كسب من ${formatNumber(stats.outcomes.decided)} محسومة`
+                    + (stats.outcomes.settled ? ` (منها ${formatNumber(stats.outcomes.settled)} تسوية)` : '')
                     + (stats.outcomes.lost ? ` · ${formatNumber(stats.outcomes.lost)} خاسرة` : '')
-                  : 'لا قضايا محسومة بعد'}
+                  : ranged ? 'لا قضايا حُسمت في الفترة' : 'لا قضايا محسومة بعد'}
                 {stats.outcomes.undecided > 0 && (
                   <span className="block text-warning-strong">
                     {`${formatNumber(stats.outcomes.undecided)} منتهية بلا نتيجة — سجّلها`}
@@ -181,11 +207,12 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
           icon={Award}
           color="bg-chart-5"
           trend={stats.growth?.winRate ?? undefined}
+          against={ranged ? 'period' : 'month'}
           onClick={go('cases', { status: 'completed' })}
         />
         {/* العددُ وقيمتُها التقديرية هذا العام — ما كان المكتب سيتقاضاه. */}
         <StatsCard
-          title="قضايا تطوّعية"
+          title={ranged ? 'قضايا تطوّعية في الفترة' : 'قضايا تطوّعية'}
           value={(stats.proBonoValue ?? 0) > 0
             ? <>{formatNumber(stats.proBonoCases ?? 0)} <span className="text-base font-medium text-muted-foreground">· <Money value={stats.proBonoValue ?? 0} /></span></>
             : stats.proBonoCases ?? 0}
@@ -196,7 +223,7 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
         {/* المحصَّلُ هذا العام: القضايا والإيرادُ العامّ بلا قضية — كلٌّ بمفرده. */}
         {stats.collectedThisYear && (
           <StatsCard
-            title="المحصَّل هذا العام"
+            title={ranged ? 'المحصَّل في الفترة' : 'المحصَّل هذا العام'}
             value={<>
               <Money value={stats.collectedThisYear.cases + stats.collectedThisYear.general} />
               {stats.collectedThisYear.general > 0 && (
@@ -211,7 +238,7 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
         )}
         {/* ما لم يُحصَّل من أتعاب القضايا الحاضرة — مجموعُ «المتبقّي». */}
         <StatsCard
-          title="مستحقّات غير محصّلة"
+          title={ranged ? 'مستحقّات غير محصّلة (الآن)' : 'مستحقّات غير محصّلة'}
           value={<Money value={stats.outstandingAmount ?? 0} />}
           icon={Wallet}
           color="bg-chart-2"

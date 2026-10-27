@@ -290,7 +290,8 @@ export default function Analytics() {
     const completedCases = filteredCases.filter(c => c.status === 'completed');
     /* الرابحةُ من المحسومة — ما له نتيجة — كما في لوحة التحكم. */
     const decidedCases = filteredCases.filter(c => c.outcome === 'won' || c.outcome === 'lost' || c.outcome === 'settled');
-    const wonCases = decidedCases.filter(c => c.outcome === 'won');
+    /* والتسويةُ والصلحُ كسبٌ للموكّل. */
+    const wonCases = decidedCases.filter(c => c.outcome === 'won' || c.outcome === 'settled');
     const winRate = decidedCases.length > 0 ? Math.round((wonCases.length / decidedCases.length) * 100) : 0;
     
     const totalProspects = prospects.length;

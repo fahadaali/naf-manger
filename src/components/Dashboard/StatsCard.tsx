@@ -4,21 +4,24 @@ import { Card } from '@/registry/naf/ui/card';
 import { Growth } from '../../types';
 import { formatNumber } from '@/registry/naf/lib/format';
 
-function trendLine(trend?: Growth) {
+/* و`against` ما يُقارَن به: «الشهر الماضي» بلا فترة، و«الفترة السابقة» بها. */
+function trendLine(trend?: Growth, against = 'period') {
   if (!trend) return null;
+  const vs = against === 'month' ? 'عن الشهر الماضي' : 'عن الفترة السابقة';
+  const here = against === 'month' ? 'هذا الشهر' : 'في الفترة';
 
   if (trend.percent !== null && trend.percent !== undefined) {
     const up = trend.percent >= 0;
     return {
       up,
       figure: `${up ? '+' : '−'}${formatNumber(Math.abs(trend.percent))}%`,
-      label: 'عن الشهر الماضي',
+      label: vs,
     };
   }
 
   /* لا نسبةَ من شهرٍ فارغ — لكنّ ثلاثةً جدداً خبرٌ يُقال. */
   if (trend.current > 0) {
-    return { up: true, figure: `+${formatNumber(trend.current)}`, label: 'هذا الشهر' };
+    return { up: true, figure: `+${formatNumber(trend.current)}`, label: here };
   }
 
   return null;
@@ -34,16 +37,18 @@ interface StatsCardProps {
      لا تُقرأ من شيء ولا تتغيّر. والآن هو ما تردّه `‎/api/stats‎`: عددُ
      الشهرَين، والنسبةُ بينهما حين تصحّ. */
   trend?: Growth;
+  /** ما يُقارَن به المؤشّر — `month` بلا فترةٍ مختارة. */
+  against?: 'month' | 'period';
   /** نقرةٌ تفتح الشاشةَ المعنيّة — والبطاقةُ حينها زرّ. */
   onClick?: () => void;
 }
 
-export default function StatsCard({ title, value, icon: Icon, color, trend, onClick }: StatsCardProps) {
+export default function StatsCard({ title, value, icon: Icon, color, trend, against = 'month', onClick }: StatsCardProps) {
   /* ثلاث حالات، ولكلٍّ صيغتُها:
      نسبةٌ تصحّ         → «‎+٢٠٠٪ عن الشهر الماضي‎»
      شهرٌ سابق فارغ      → «‎+٣ هذا الشهر‎» — ولا قسمةَ على صفر
      لا هذا ولا ذاك      → لا سطر أصلاً، فالفراغُ أصدقُ من صفرٍ مصطنع */
-  const line = trendLine(trend);
+  const line = trendLine(trend, against);
 
   const card = (
     <Card className={`p-6 h-full ${onClick ? 'transition-colors group-hover:bg-accent' : ''}`}>
