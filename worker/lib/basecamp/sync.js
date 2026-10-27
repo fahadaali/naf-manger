@@ -134,10 +134,20 @@ export async function writeFieldMap(env, map, userId) {
  * الملفّ بما اختاره المكتب — لا بقائمةٍ مكتوبةٍ في الشيفرة.
  */
 async function readVocabulary(env) {
-  const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = 'platform'`)
-    .first();
-  let stored = {};
-  try { stored = JSON.parse(row?.value ?? '{}') ?? {}; } catch { stored = {}; }
+  /* ═══ والمفتاحُ `settings` ═══
+     هو ما تكتبه شاشةُ «تكوين النظام» (`SETTINGS_KEY` في `queries.js`). وكان
+     يُقرأ هنا `platform` — مفتاحٌ لا يكتبه شيء — فأنواعُ القضايا وأنواعُ
+     الهوية وصفاتُ الأرقام التي ضبطها المكتب لا تبلغ الاستيرادَ ولا الاقتراحَ
+     الآلي، ويُقرأ الافتراضُ مكانها صامتاً. ويُقرأ `platform` بعده احتياطاً
+     لصفٍّ كُتب بيدٍ فيه، وما في `settings` أولى. */
+  const { results } = await env.DB.prepare(
+    `SELECT key, value FROM system_settings WHERE key IN ('settings', 'platform')`,
+  ).all();
+  const parse = (key) => {
+    const raw = (results ?? []).find((row) => row.key === key)?.value;
+    try { return JSON.parse(raw ?? '{}') ?? {}; } catch { return {}; }
+  };
+  const stored = { ...parse('platform'), ...parse('settings') };
   return {
     contactRelations: Array.isArray(stored.contactRelations) ? stored.contactRelations : undefined,
     idTypes: Array.isArray(stored.idTypes) ? stored.idTypes : undefined,

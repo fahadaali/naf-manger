@@ -644,6 +644,24 @@ r = await hit('GET', '/api/settings');
 check('و«مجاني — تطوّعي» في أنواع الأتعاب', r.body.data.feeTypes.includes('pro_bono'), r.body.data.feeTypes);
 
 // ═══════════════════════════════════════════════════════════
+group('«معدّل الربح» يُقاس بلحظة الإغلاق');
+
+/* قضيةٌ خاسرةٌ أُغلقت قبل أربعين يوماً — في النافذة السابقة وحدها. وما
+   أُغلق في فقرٍ سابقة من هذا الاختبار أُغلق الآن، فهو في النافذة الأخيرة. */
+const dayAgo = (days) => Math.floor(Date.now() / 1000) - days * 86400;
+db.prepare(
+  `INSERT INTO cases (id, case_number, case_type, client_id, client_name, status, outcome,
+                      closed_at, created_at, updated_at)
+   VALUES ('old-loss', 'ق-2026-201', 't', ?, 'شركة الأفق التجارية', 'completed', 'lost', ?, ?, ?)`,
+).run(clientId, dayAgo(40), dayAgo(90), dayAgo(40));
+
+r = await hit('GET', '/api/stats');
+const shift = r.body.data.growth?.winRate;
+check('للنافذتين معدّلان، والفرقُ بالنقاط',
+  shift && shift.previous === 0 && shift.percent === shift.current - shift.previous && shift.current > 0,
+  shift);
+
+// ═══════════════════════════════════════════════════════════
 group('الحذف — آخرَ ما يُختبر');
 r = await hit('DELETE', `/api/cases/${caseId}`);
 check('تُحذف القضية', r.body.ok, r.body);

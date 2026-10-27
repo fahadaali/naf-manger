@@ -581,12 +581,13 @@ export interface DashboardStats {
   conversionRate: number; // Prospects to clients conversion rate
   /** القضايا المقدَّمة مجاناً تطوّعاً — حاضرةً غيرَ مؤرشفة. */
   proBonoCases: number;
-  /* والنموّ لثلاثةٍ فقط: «معدّل الربح» لا عمودَ يقول متى أُغلقت قضيتُه،
-     فلا يُقاس نموُّه ولا يُفبرك له رقم. */
   growth?: {
     clients: Growth;
     prospects: Growth;
     cases: Growth;
+    /* «معدّل الربح» بـ`closed_at` — و`percent` فرقُ نقاطٍ لا نسبة، و`null`
+       حين تخلو إحدى النافذتين من قضيةٍ مغلقة. */
+    winRate?: Growth | null;
   };
 }
 
