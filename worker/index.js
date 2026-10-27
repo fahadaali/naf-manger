@@ -36,6 +36,19 @@ import {
   writeMap,
 } from './lib/basecamp/handlers.js';
 import { scheduledSync } from './lib/basecamp/cron.js';
+import { scheduledProspectSync } from './lib/basecamp/prospects/sync.js';
+import {
+  addProspectComment,
+  afterProspectWrite,
+  beforeProspectDelete,
+  configureProspectBoard,
+  convertWithCard,
+  listProspectComments,
+  moveProspect,
+  readProspectBoard,
+  receiveWebhook,
+  syncProspectBoard,
+} from './lib/basecamp/prospects/handlers.js';
 import { scheduledWafeqSync } from './lib/wafeq/sync.js';
 import { readConflicts } from './lib/conflicts.js';
 import { importCases } from './lib/case-import.js';
@@ -72,7 +85,6 @@ import {
   readDisplayStats,
 } from './lib/display.js';
 import {
-  convertProspect,
   exportAll,
   listDirectory,
   listMembers,
@@ -85,6 +97,7 @@ import {
 
 const FILES_PREFIX = '/api/files/';
 const DISPLAY_API_PREFIX = '/api/display/';
+const PROSPECT_WEBHOOK_PREFIX = '/api/basecamp/prospects/webhook/';
 
 export default {
   /* ═══ الجدولة ═══
@@ -94,13 +107,15 @@ export default {
     /* ووافق معها — مستقلّتان: سقوطُ إحداهما لا يُسقط الأخرى. */
     ctx.waitUntil(Promise.allSettled([
       scheduledSync(env),
+      /* ولوحةُ العملاء المحتملين — احتياطاً لـWebhook سقط. */
+      scheduledProspectSync(env),
       scheduledWafeqSync(env),
       /* والبريدُ اليوميّ والأسبوعيّ — في ساعته وحدها، والفحصُ في `notify.js`. */
       scheduledNotifications(env),
     ]));
   },
 
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const config = platformConfig(env);
 
@@ -144,6 +159,15 @@ export default {
        توجّه نفسها منه وتقرأ رمزَها من المسار. */
     if (url.pathname === '/display' || url.pathname.startsWith('/display/')) {
       return env.ASSETS.fetch(request);
+    }
+
+    /* ═══ Webhook لوحة العملاء المحتملين يسبق الحارس ═══
+       المنادي خادمُ بيسكامب ولا جلسةَ معه. وحراستُه سرٌّ في المسار يُقارَن
+       بما حُفظ عند الإعداد، والجسمُ لا يُوثَق به: يُؤخذ منه رقمُ البطاقة
+       وحده ويُقرأ حالُها من الواجهة. التفصيل في `basecamp/prospects/handlers.js`. */
+    if (url.pathname.startsWith(PROSPECT_WEBHOOK_PREFIX)) {
+      const secret = url.pathname.slice(PROSPECT_WEBHOOK_PREFIX.length).split('/')[0];
+      return receiveWebhook(request, env, ctx, secret);
     }
 
     /* ═══ الحارس ═══
@@ -251,7 +275,8 @@ export default {
         return readInsights(request, env, user, url);
       }
       /* ═══ بيسكامب ═══
-         الاتّجاه واحد: يُقرأ منه ولا يُكتب فيه. وكلُّ ما هنا للمسؤول وحده،
+         ربطُ المشاريع اتّجاهُه واحد: يُقرأ منه ولا يُكتب فيه. ولوحةُ العملاء
+         المحتملين (`‎/api/basecamp/prospects‎`) وحدها تكتب. وكلُّ ما هنا للمسؤول وحده،
          والفحصُ في `basecamp/handlers.js` لا هنا. و`callback` تحويلُ متصفّح
          لا نداءُ `fetch` — لكنه بعد الحارس كغيره، لأنّ من يعود من صفحة
          الإذن يحمل جلسته. */
@@ -287,6 +312,12 @@ export default {
         }
       }
       if (name === 'basecamp') {
+        /* لوحةُ العملاء المحتملين — الاتّجاهُ فيها اثنان، بخلاف ما تحتها. */
+        if (id === 'prospects' && !verb && request.method === 'GET') return readProspectBoard(env, user, url);
+        if (id === 'prospects' && verb === 'setup' && request.method === 'POST') {
+          return configureProspectBoard(request, env, user, url);
+        }
+        if (id === 'prospects' && verb === 'sync' && request.method === 'POST') return syncProspectBoard(env, user);
         if (id === 'status' && request.method === 'GET') return readStatus(env, user);
         if (id === 'connect' && request.method === 'GET') {
           return startConnect(request, env, user, url);
@@ -357,7 +388,22 @@ export default {
         return caseTimeline(env, user, id);
       }
       if (name === 'prospects' && id && verb === 'convert' && request.method === 'POST') {
-        return convertProspect(env, user, id);
+        return convertWithCard(env, user, id, ctx);
+      }
+      if (name === 'prospects' && id && verb === 'comments') {
+        if (request.method === 'GET') return listProspectComments(env, user, id);
+        if (request.method === 'POST') return addProspectComment(request, env, user, id, ctx);
+      }
+      if (name === 'prospects' && id && verb === 'status' && request.method === 'PATCH') {
+        return moveProspect(request, env, user, id, ctx);
+      }
+      /* وحذفُه يُعلّم بطاقتَه، فلا تُعيده المزامنةُ من بيسكامب. */
+      if (name === 'prospects' && !verb && (request.method === 'DELETE' || id === 'bulk')) {
+        await beforeProspectDelete(request, env, id);
+      }
+      /* وإنشاءُ عميلٍ محتملٍ أو تعديلُه يصل بطاقتَه في بيسكامب بعد الردّ. */
+      if (name === 'prospects' && !verb && id !== 'bulk' && ['POST', 'PATCH', 'PUT'].includes(request.method)) {
+        return afterProspectWrite(await handleResource(request, env, user, name, id), env, ctx);
       }
       if (name === 'marketers' && id && verb === 'stats' && request.method === 'GET') {
         return readMarketerStats(env, user, id);

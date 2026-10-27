@@ -10,6 +10,7 @@ import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
 import { BasecampReview } from '../types';
+import { ProspectBoardStatus, ProspectBoardSyncResult, ProspectComment } from '../types';
 import { BulkAction, BulkOutcome } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
@@ -127,6 +128,34 @@ export class LocalDatabase {
      يترك محتملاً نُسخ ولم يُحذف إن انقطعت الشبكة بينهما. */
   async convertProspectToClient(prospectId: string): Promise<Client | null> {
     return asClient(await api.post<any>(`/prospects/${encodeURIComponent(prospectId)}/convert`));
+  }
+
+  /* ═══ لوحةُ بيسكامب ═══
+     النقلُ بين الأعمدة تعديلُ حقلٍ واحد — والخادمُ يرسله إلى البطاقة بعده. */
+  async moveProspectStatus(prospectId: string, status: string): Promise<void> {
+    await api.patch(`/prospects/${encodeURIComponent(prospectId)}/status`, { status });
+  }
+
+  async getProspectComments(prospectId: string): Promise<{ comments: ProspectComment[]; basecampUrl: string | null }> {
+    return api.read(`/prospects/${encodeURIComponent(prospectId)}/comments`);
+  }
+
+  async addProspectComment(prospectId: string, body: string): Promise<ProspectComment> {
+    return api.post(`/prospects/${encodeURIComponent(prospectId)}/comments`, { body });
+  }
+
+  async getProspectBoard(): Promise<ProspectBoardStatus> {
+    return api.read('/basecamp/prospects');
+  }
+
+  async setupProspectBoard(projectId: string): Promise<{
+    projectName: string; columnsCreated: string[]; columnsRenamed: string[]; webhook: boolean; webhookError: string | null;
+  }> {
+    return api.post('/basecamp/prospects/setup', { projectId });
+  }
+
+  async syncProspectBoard(): Promise<ProspectBoardSyncResult> {
+    return api.post('/basecamp/prospects/sync');
   }
 
   // ── القضايا ──

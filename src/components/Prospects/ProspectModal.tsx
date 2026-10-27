@@ -10,6 +10,8 @@ import ProfileAvatar from '../Common/ProfileAvatar';
 import AttachmentList from '../Common/AttachmentList';
 import ContactNumbers from '../Common/ContactNumbers';
 import ConflictWarning from '../Common/ConflictWarning';
+import ProspectComments from './ProspectComments';
+import { useAuth } from '../../contexts/AuthContext';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
@@ -29,6 +31,7 @@ interface ProspectModalProps {
 }
 
 export default function ProspectModal({ prospect, onClose, onSave, isEditing = false }: ProspectModalProps) {
+  const { hasPermission } = useAuth();
   const [formData, setFormData] = useState({
     fullName: prospect?.fullName || '',
     idNumber: prospect?.idNumber || '',
@@ -36,7 +39,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
     phone: prospect?.phone || '',
     email: prospect?.email || '',
     clientType: prospect?.clientType || 'individual',
-    prospectStatus: prospect?.prospectStatus || 'مهتم',
+    prospectStatus: prospect?.prospectStatus || 'جديد',
     notes: prospect?.notes || '',
     commercialRegister: prospect?.commercialRegister || '',
     legalRepresentativeName: prospect?.legalRepresentative?.name || '',
@@ -259,6 +262,8 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
                 )}
               </div>
             </div>
+
+            <ProspectComments prospectId={prospect.id} canComment={hasPermission('prospects', 'update')} />
           </div>
         </DialogContent>
       </Dialog>

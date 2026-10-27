@@ -46,6 +46,19 @@ const FIELD_LABEL: Record<string, string> = {
   'client.clientType': 'نوع العميل',
   'client.commercialRegister': 'السجل التجاري',
   'client.notes': 'ملاحظات العميل',
+  /* وحقولُ العميل المحتمل من لوحة البطاقات. */
+  'prospect.fullName': 'الاسم',
+  'prospect.prospectStatus': 'الحالة',
+  'prospect.phone': 'رقم الجوال',
+  'prospect.email': 'البريد الإلكتروني',
+  'prospect.clientType': 'نوع العميل',
+  'prospect.idType': 'نوع الهوية',
+  'prospect.idNumber': 'رقم الهوية',
+  'prospect.commercialRegister': 'السجل التجاري',
+  'prospect.source': 'المصدر',
+  'prospect.expectedValue': 'القيمة المتوقعة (هللات)',
+  'prospect.followUpDate': 'موعد المتابعة',
+  'prospect.notes': 'الملاحظات',
 };
 
 const PLAN_ERROR: Record<string, string> = {
