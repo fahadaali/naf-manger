@@ -32,6 +32,10 @@ interface CaseModalProps {
   isEditing?: boolean;
 }
 
+/* اقتراحاتٌ لا قائمةٌ مغلقة: الجهاتُ أكثرُ من أن تُحصر. */
+const AUTHORITIES = ['المحكمة العامة', 'المحكمة التجارية', 'المحكمة العمالية', 'محكمة الأحوال الشخصية',
+  'ديوان المظالم', 'الشرطة', 'النيابة العامة', 'هيئة التحقيق', 'لجنة الفصل في المنازعات'];
+
 export default function CaseModal({ case: existingCase, onClose, onSave, isEditing = false }: CaseModalProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [marketers, setMarketers] = useState<Marketer[]>([]);
@@ -39,6 +43,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   const [members, setMembers] = useState<MemberEntry[]>([]);
   const [formData, setFormData] = useState({
     caseNumber: existingCase?.caseNumber || '',
+    authority: existingCase?.authority || '',
+    courtCaseNumber: existingCase?.courtCaseNumber || '',
     caseType: existingCase?.caseType || 'قضية تجارية',
     clientId: existingCase?.clientId || '',
     summary: existingCase?.summary || '',
@@ -109,7 +115,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     const newErrors: Record<string, string> = {};
 
     if (!formData.caseNumber.trim()) {
-      newErrors.caseNumber = 'رقم القضية مطلوب';
+      newErrors.caseNumber = 'رقم المشروع مطلوب';
     }
 
     if (!formData.clientId) {
@@ -228,9 +234,19 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <h3 className="text-lg font-semibold text-foreground mb-3">معلومات القضية</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground">رقم القضية</label>
+                  <label className="block text-sm font-medium text-foreground">رقم المشروع</label>
                   <p className="text-foreground font-medium"><bdi>{existingCase.caseNumber}</bdi></p>
                 </div>
+                {(existingCase.authority || existingCase.courtCaseNumber) && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground">رقم القضية لدى الجهة</label>
+                    <p className="text-foreground">
+                      {existingCase.authority && <span>{existingCase.authority}</span>}
+                      {existingCase.authority && existingCase.courtCaseNumber && ' — '}
+                      {existingCase.courtCaseNumber && <bdi>{existingCase.courtCaseNumber}</bdi>}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع القضية</label>
                   <p className="text-foreground">{existingCase.caseType}</p>
@@ -390,17 +406,48 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                رقم القضية *
+                رقم المشروع *
               </label>
+              {/* رقمُ المشروع المستورد معرّفُه في بيسكامب — مفتاحُ الربط، فلا يُعدَّل هنا. */}
               <Input
                 type="text"
                 value={formData.caseNumber}
                 onChange={(e) => handleInputChange('caseNumber', e.target.value)}
                 placeholder="NAF-2024-001"
-               aria-invalid={!!errors.caseNumber} />
+                readOnly={Boolean(existingCase?.basecampUrl)}
+                aria-invalid={!!errors.caseNumber} />
+              {existingCase?.basecampUrl && (
+                <p className="text-muted-foreground text-xs mt-1">معرّفُ المشروع في بيسكامب — لا يُعدَّل</p>
+              )}
               {errors.caseNumber && (
                 <p className="text-destructive text-sm mt-1">{errors.caseNumber}</p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                الجهة المختصة
+              </label>
+              <Input
+                type="text"
+                list="case-authorities"
+                value={formData.authority}
+                onChange={(e) => handleInputChange('authority', e.target.value)}
+                placeholder="المحكمة العامة بالرياض" />
+              <datalist id="case-authorities">
+                {AUTHORITIES.map((name) => <option key={name} value={name} />)}
+              </datalist>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                رقم القضية لدى الجهة
+              </label>
+              <Input
+                type="text"
+                value={formData.courtCaseNumber}
+                onChange={(e) => handleInputChange('courtCaseNumber', e.target.value)}
+                placeholder="4470123456" />
             </div>
 
             <div>

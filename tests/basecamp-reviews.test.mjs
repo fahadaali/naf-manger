@@ -61,7 +61,7 @@ globalThis.fetch = async () => ({
 const connection = { accountId: '9', token: 't' };
 const actor = { actorId: 'u1', actorName: 'فهد', source: 'اختبار' };
 
-/* ملفٌّ بلا رقم قضيةٍ وبلفظٍ لا يُفهم — سؤالان في مشروعٍ واحد. */
+/* ملفٌّ بلا رقم قضيةٍ وبلفظٍ لا يُفهم. */
 const DOC = `<div>
   <div>اسم العميل: شركة الأفق</div>
   <div>رقم الهوية: 7001234567</div>
@@ -81,8 +81,9 @@ check('القضيةُ كُتبت ولم تنتظر شيئاً',
 check('والعميلُ كذلك', db.prepare(`SELECT COUNT(*) n FROM clients`).get().n === 1);
 
 let open = await listOpen(env);
-check('وفُتح صفٌّ لرقمٍ مولَّد',
-  open.some((row) => row.kind === 'generated_number'), open.map((r) => r.kind));
+check('ولا صفَّ لرقمٍ مولَّد — رقمُ القضية معرّفُ المشروع',
+  !open.some((row) => row.kind === 'generated_number') &&
+    db.prepare(`SELECT case_number FROM cases`).get().case_number === '101', open.map((r) => r.kind));
 check('وصفٌّ للفظٍ لم يُفهم',
   open.some((row) => row.kind === 'unresolved_value'), open.map((r) => r.kind));
 check('واللفظُ يحمل قائمتَه ليُختار منها',

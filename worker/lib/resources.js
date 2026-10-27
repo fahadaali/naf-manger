@@ -114,6 +114,9 @@ export const RESOURCES = {
       opposingParties: ['opposing_parties', 'json'],
       /* المحامي المسؤول وفريقُه — أعضاءٌ بمعرّفاتهم. */
       lawyerId: ['lawyer_id'],
+      /* الجهةُ المختصة ورقمُ القضية لديها — تفصيلٌ لا مفتاح، و`caseNumber` رقمُ المشروع. */
+      authority: ['authority'],
+      courtCaseNumber: ['court_case_number'],
       team: ['team', 'json'],
       /* قيمةُ التطوّعي التقديرية وساعاتُه — `migrations/0021`. */
       proBonoValue: ['pro_bono_value', 'money'],

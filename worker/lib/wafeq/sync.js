@@ -16,7 +16,9 @@
 // `linked` و`ignored` يبقيان كما هما. وتبدُّلُ مبلغِ دفعةٍ مربوطة عند وافق
 // يُنقل إلى السجلّ — وافق مصدرُها، والدفترُ يتبعه.
 
-import { listAll, normalizePayment, readInvoice, invoiceText, WafeqError } from './api.js';
+import {
+  contactFields, invoiceText, listAll, normalizePayment, readContact, readInvoice, WafeqError,
+} from './api.js';
 import { recomputeCollected } from '../payments.js';
 import { toLatinDigits } from '../digits.js';
 import { normalizeArabic } from '../basecamp/discover.js';
@@ -30,7 +32,14 @@ const nowSeconds = () => Math.floor(Date.now() / 1000);
 const PAGES = { manual: 20, cron: 5 };
 
 /** سقفُ المرشّحين حين لا يُعرف الموكّل — قائمةٌ أطولُ تُضعف الاختيار. */
-const MAX_CANDIDATES = 30;
+const MAX_CANDIDATES = 40;
+
+/**
+ * سقفُ أسئلة الطراز في دورة وافق — مستقلٌّ عن سقف بيسكامب (٢٥) وأكبر منه:
+ * سؤالُ الدفعة قصيرٌ، والدفعاتُ المستوردة أوّلَ مرّةٍ بالمئات. وما بعده
+ * يُؤجَّل إلى الدورة التالية أو إلى «اربط بالذكاء الاصطناعي الآن».
+ */
+export const WAFEQ_AI_BUDGET = 60;
 
 const safeJson = (raw) => {
   try { return JSON.parse(raw ?? 'null'); } catch { return null; }
@@ -77,7 +86,8 @@ const distinctive = (caseNumber) => {
 async function loadContext(env) {
   const [{ results: cases }, { results: clients }] = await Promise.all([
     env.DB.prepare(
-      `SELECT id, case_number, case_type, summary, client_id, payment_status, fee_structure, updated_at
+      `SELECT id, case_number, court_case_number, case_type, summary, client_id, client_name, status,
+              payment_status, fee_structure, updated_at
          FROM cases WHERE archived_at IS NULL`,
     ).all(),
     env.DB.prepare(
@@ -113,25 +123,31 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
   const haystack = compact([payment.reference, payment.description, payment.invoiceText].join(' '));
   const client = findClient(context, payment);
 
-  // ١) رقمُ القضية حرفاً
-  const named = context.cases.filter((row) => mentions(haystack, row.case_number));
-  const strong = named.filter((row) => distinctive(row.case_number));
+  // ١) رقمُ المشروع أو رقمُ القضية لدى الجهة حرفاً
+  /* والمحاسبُ يكتب أيَّهما: رقمَ المشروع عندنا، أو رقمَ المحكمة الذي يعرفه
+     الموكّل. ورقمُ الجهة قد يتكرّر بين قضيتين — فلا يُربط إلا ما انفرد. */
+  const numberIn = (row) => [row.case_number, row.court_case_number].find((number) => mentions(haystack, number));
+  const named = context.cases.filter((row) => numberIn(row));
+  const strong = named.filter((row) => distinctive(numberIn(row)));
   if (strong.length === 1) {
     return {
       status: 'linked',
       caseId: strong[0].id,
       clientId: strong[0].client_id,
       matchBy: 'case_number',
-      reason: `رقمُ القضية «${strong[0].case_number}» في نصّ الدفعة`,
+      reason: `رقمُ القضية «${numberIn(strong[0])}» في نصّ الدفعة`,
     };
   }
 
-  // ٢) المرشّحون: قضايا الموكّل، أو ما ذُكر رقمُه، أو ما بقي عليه شيء
+  // ٢) المرشّحون: قضايا الموكّل، أو ما ذُكر رقمُه، أو أحدثُ القضايا المفتوحة
+  /* وكان الأخيرُ «ما بقي عليه شيء» — وأكثرُ القضايا بلا أتعابٍ مكتوبة، فتفرغ
+     القائمةُ ولا يُسأل الطرازُ أصلاً، بصمت. والمفتوحةُ كلُّها مرشّحةٌ الآن،
+     ومع كلٍّ اسمُ موكّلها: فيطابق الطرازُ اسمَ الدافع به. */
   let candidates = client ? context.cases.filter((row) => row.client_id === client.id) : [];
   if (!candidates.length && named.length) candidates = named;
   if (!candidates.length) {
     candidates = context.cases
-      .filter((row) => remainingOf(row) > 0)
+      .filter((row) => row.status !== 'completed')
       .sort((one, other) => Number(other.updated_at ?? 0) - Number(one.updated_at ?? 0))
       .slice(0, MAX_CANDIDATES);
   }
@@ -153,6 +169,7 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
     caseNumber: row.case_number,
     caseType: row.case_type,
     summary: row.summary,
+    clientName: row.client_name ?? '',
     remaining: remainingOf(row),
   }));
   const asked = await fingerprint({
@@ -160,7 +177,13 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
     candidates: shaped.map((item) => item.caseNumber).sort().join(','),
   });
 
-  if (ai?.enabled && shaped.length && asked !== previousFingerprint && ai.budget.spend()) {
+  /* ولماذا لم يُسأل — يُقال في الحصيلة لا يُسكت عنه. */
+  const aiSkipped = !ai?.enabled ? 'disabled'
+    : !shaped.length ? 'noCandidates'
+      : asked === previousFingerprint ? 'unchanged'
+        : null;
+
+  if (!aiSkipped && ai.budget.spend()) {
     const answer = await suggestCaseForPayment(env, { payment, candidates: shaped });
     if (answer) {
       const chosen = shaped.find((item) => item.caseNumber === answer.caseNumber);
@@ -196,7 +219,40 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
     status: 'unmatched',
     clientId: client?.id ?? null,
     reason: client ? `الدافعُ «${client.full_name}» وله أكثرُ من قضية` : 'لم يُعرف الدافع',
+    aiSkipped: aiSkipped ?? 'budget',
   };
+}
+
+/* ═══ الجهةُ بمعرّفها ═══
+   الدفعةُ تحمل الجهةَ معرّفاً في الغالب. فتُقرأ مرّةً لكلّ جهةٍ في الدورة —
+   أو تُؤخذ من فاتورةٍ حملتها — ولا يُسقط الدفعةَ سقوطُ قراءتها. */
+async function resolveContact(env, payment, cache) {
+  if (payment.contactName) return;
+  const fromInvoice = (payment.invoices ?? []).map((invoice) => invoice.contact).find((contact) => contact?.name);
+  if (fromInvoice) {
+    payment.contactName = fromInvoice.name;
+    payment.contactNumber ||= fromInvoice.number;
+    return;
+  }
+  if (!payment.contactId) return;
+  if (!cache.has(payment.contactId)) {
+    cache.set(payment.contactId, await readContact(env, payment.contactId).then(contactFields).catch(() => null));
+  }
+  const found = cache.get(payment.contactId);
+  if (found?.name) {
+    payment.contactName = found.name;
+    payment.contactNumber ||= found.number;
+  }
+}
+
+const newAiSummary = (ai) => ({
+  enabled: ai.enabled, used: 0, deferred: 0, failed: 0,
+  skipped: { disabled: 0, noCandidates: 0 },
+});
+
+/** يعدّ سببَ ترك الطراز — و`budget` يُعدّ في `deferred` و`unchanged` لا يُعدّ. */
+function countSkip(summary, verdict) {
+  if (verdict.aiSkipped === 'disabled' || verdict.aiSkipped === 'noCandidates') summary.ai.skipped[verdict.aiSkipped]++;
 }
 
 /**
@@ -279,8 +335,9 @@ async function invoiceTextOf(env, payment, cache) {
 export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي', dryRun = false, mode = 'manual' } = {}) {
   const listing = await listAll(env, 'payments/', { ordering: '-date' }, { maxPages: PAGES[mode] ?? PAGES.manual });
   const context = await loadContext(env);
-  const ai = { enabled: await aiEnabled(env), budget: newBudget() };
+  const ai = { enabled: await aiEnabled(env), budget: newBudget(WAFEQ_AI_BUDGET) };
   const invoices = new Map();
+  const contacts = new Map();
   const now = nowSeconds();
 
   const summary = {
@@ -292,7 +349,7 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
     unchanged: 0,
     updated: 0,
     truncated: listing.truncated,
-    ai: { enabled: ai.enabled, used: 0, deferred: 0, failed: 0 },
+    ai: newAiSummary(ai),
   };
   const items = [];
   let newest = null;
@@ -326,7 +383,9 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
     }
 
     payment.invoiceText = await invoiceTextOf(env, payment, invoices);
+    await resolveContact(env, payment, contacts);
     const verdict = await decide(env, context, payment, { ai, previousFingerprint: stored?.ai_fingerprint });
+    countSkip(summary, verdict);
 
     /* اقتراحٌ سبق ولم يتبدّل ما سُئل عنه: يبقى على ما كان — لا يُطمس
        باقتراحٍ أضعف لأنّ الطراز لم يُسأل ثانيةً. ورقمُ قضيةٍ ظهر يُقدَّم. */
@@ -353,11 +412,12 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
       `INSERT INTO wafeq_payments
          (external_id, payment_date, amount, currency, contact_name, contact_number, reference, description,
           invoice_text, status, case_id, suggested_case_id, client_id, match_by, reason, ai_fingerprint,
-          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          contact_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(external_id) DO UPDATE SET
          payment_date = excluded.payment_date, amount = excluded.amount, currency = excluded.currency,
          contact_name = excluded.contact_name, contact_number = excluded.contact_number,
+         contact_id = excluded.contact_id,
          reference = excluded.reference, description = excluded.description, invoice_text = excluded.invoice_text,
          status = excluded.status, case_id = excluded.case_id, suggested_case_id = excluded.suggested_case_id,
          client_id = excluded.client_id, match_by = excluded.match_by, reason = excluded.reason,
@@ -369,7 +429,7 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
         payment.contactNumber || null, payment.reference || null, payment.description || null,
         payment.invoiceText || null, final.status, final.caseId ?? null, final.suggestedCaseId ?? null,
         final.clientId ?? null, final.matchBy ?? null, final.reason ?? null, verdict.aiFingerprint ?? null,
-        stored?.created_at ?? now, now,
+        payment.contactId || null, stored?.created_at ?? now, now,
       )
       .run();
 
@@ -386,7 +446,7 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
     }
   }
 
-  summary.ai = { enabled: ai.enabled, used: ai.budget.used, deferred: ai.budget.deferred, failed: ai.budget.failed };
+  Object.assign(summary.ai, { used: ai.budget.used, deferred: ai.budget.deferred, failed: ai.budget.failed });
   if (dryRun) return { summary, items };
 
   await env.DB.prepare(
@@ -416,6 +476,87 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
     .catch(() => {});
 
   return { summary, items };
+}
+
+/**
+ * «اربط بالذكاء الاصطناعي الآن» — على الدفعات المخزّنة «بلا قضية».
+ *
+ * لا تُقرأ الدفعاتُ من وافق ثانيةً: يُبنى السؤالُ ممّا حُفظ، وتُقرأ الجهةُ
+ * بمعرّفها إن غاب اسمُها. والبصمةُ تمنع إعادةَ سؤالٍ لم يتبدّل، فضغطةٌ ثانيةٌ
+ * تمضي إلى ما بعد السقف — حتى تقول الحصيلةُ «لم يبقَ شيء».
+ *
+ * والنتيجةُ كالدورة: رقمٌ في النصّ يُربط، وما سواه اقتراحٌ يؤكّده إنسان.
+ */
+export async function rematchWafeq(env, { actorId, actorName } = {}) {
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM wafeq_payments WHERE status = 'unmatched' ORDER BY payment_date DESC, updated_at DESC LIMIT 1000`,
+  ).all();
+  const context = await loadContext(env);
+  const ai = { enabled: await aiEnabled(env), budget: newBudget(WAFEQ_AI_BUDGET) };
+  const contacts = new Map();
+  const now = nowSeconds();
+  const summary = { checked: 0, linked: 0, suggested: 0, unmatched: 0, ai: newAiSummary(ai) };
+
+  for (const row of results ?? []) {
+    summary.checked++;
+    const payment = {
+      externalId: row.external_id,
+      date: row.payment_date,
+      amount: Number(row.amount ?? 0) / 100,
+      contactId: row.contact_id,
+      contactName: row.contact_name ?? '',
+      contactNumber: row.contact_number ?? '',
+      reference: row.reference ?? '',
+      description: row.description ?? '',
+      invoiceText: row.invoice_text ?? '',
+    };
+    await resolveContact(env, payment, contacts);
+    const verdict = await decide(env, context, payment, { ai, previousFingerprint: row.ai_fingerprint });
+    countSkip(summary, verdict);
+    summary[verdict.status]++;
+
+    const contactFound = payment.contactName && payment.contactName !== (row.contact_name ?? '');
+    if (verdict.status === 'unmatched' && !verdict.aiFingerprint && !contactFound) continue;
+
+    await env.DB.prepare(
+      `UPDATE wafeq_payments SET status = ?, case_id = ?, suggested_case_id = ?, client_id = ?, match_by = ?,
+              reason = ?, ai_fingerprint = COALESCE(?, ai_fingerprint), contact_name = ?, contact_number = ?,
+              updated_at = ?
+        WHERE external_id = ?`,
+    )
+      .bind(verdict.status, verdict.caseId ?? null, verdict.suggestedCaseId ?? null, verdict.clientId ?? null,
+        verdict.matchBy ?? null, verdict.reason ?? null, verdict.aiFingerprint ?? null,
+        payment.contactName || null, payment.contactNumber || null, now, row.external_id)
+      .run();
+
+    if (verdict.status === 'linked') {
+      const linked = await linkPayment(env, row, verdict.caseId, actorId);
+      if (linked.paymentId) {
+        await env.DB.prepare(`UPDATE wafeq_payments SET payment_id = ? WHERE external_id = ?`)
+          .bind(linked.paymentId, row.external_id)
+          .run();
+      }
+    }
+  }
+
+  Object.assign(summary.ai, { used: ai.budget.used, deferred: ai.budget.deferred, failed: ai.budget.failed });
+
+  await env.DB.prepare(
+    `INSERT INTO activity_logs (id, type, description, user_id, user_name, entity_type, details, created_at)
+     VALUES (?, 'wafeq', ?, ?, ?, 'wafeq', ?, ?)`,
+  )
+    .bind(
+      crypto.randomUUID(),
+      `ربطُ وافق بالذكاء الاصطناعي: ${summary.linked} رُبطت، و${summary.suggested} مقترَحة، من ${summary.checked}`,
+      actorId ?? 'wafeq',
+      actorName ?? '',
+      JSON.stringify(summary),
+      now,
+    )
+    .run()
+    .catch(() => {});
+
+  return summary;
 }
 
 /** الدورةُ المجدولة: لا تعمل إلا بمفتاحٍ، وتفعيلٍ صريح، ومزامنةٍ يدويةٍ سبقت. */

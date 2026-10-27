@@ -149,6 +149,13 @@ export interface Case {
   /** قيمةُ العمل التطوّعي التقديرية (ريالات) وساعاتُه. */
   proBonoValue?: number | null;
   proBonoHours?: number | null;
+  /**
+   * الجهةُ المختصة (محكمة، شرطة، نيابة…) ورقمُ القضية لديها — معلومةٌ
+   * للتوثيق، تتكرّر وتغيب. أمّا `caseNumber` فرقمُ المشروع: معرّفُه في
+   * بيسكامب للمستوردة، والمفتاحُ الثابت.
+   */
+  authority?: string | null;
+  courtCaseNumber?: string | null;
 
   /* ═══ حقولٌ ثلاثةٌ حُذفت ═══
      كانت `commissionPayments` و`totalCommissionPaid` و`remainingCommission`
@@ -307,6 +314,8 @@ export interface WafeqStatus {
   lastSyncError?: string | null;
   newestPaymentDate?: string | null;
   counts?: Record<WafeqPaymentStatus, number>;
+  /** الطرازُ مربوطٌ بالمنصة، ومشغَّلٌ بمفتاح «التلخيص الآليّ». */
+  ai?: { available: boolean; enabled: boolean };
 }
 
 export type WafeqPaymentStatus = 'linked' | 'suggested' | 'unmatched' | 'ignored';
@@ -341,7 +350,40 @@ export interface WafeqSummary {
   unchanged: number;
   updated: number;
   truncated: boolean;
-  ai: { enabled: boolean; used: number; deferred: number; failed: number };
+  ai: WafeqAiSummary;
+}
+
+/** حصيلةُ الطراز في دورة: كم سُئل، وكم أُجّل، ولماذا تُرك. */
+export interface WafeqAiSummary {
+  enabled: boolean;
+  used: number;
+  deferred: number;
+  failed: number;
+  skipped?: { disabled: number; noCandidates: number };
+}
+
+/** حصيلةُ «اربط بالذكاء الاصطناعي الآن». */
+export interface WafeqRematch {
+  checked: number;
+  linked: number;
+  suggested: number;
+  unmatched: number;
+  ai: WafeqAiSummary;
+}
+
+/** أثرُ «إعادة استيراد بيسكامب من الصفر» — يُعرض قبل التنفيذ. */
+export interface BasecampResetImpact {
+  cases: number;
+  withLawyer: number;
+  withFees: number;
+  withAttachments: number;
+  withMarketer: number;
+  payments: Record<string, { count: number; amount: number }>;
+  commissions: { count: number; amount: number };
+  wafeqReturned: number;
+  projects: number;
+  conflicts: number;
+  reviews: number;
 }
 
 /** «اختبار الاتصال»: أسماءُ الحقول لا قيمُها. */
@@ -838,6 +880,8 @@ export interface CaseImportRow {
   clientPhone?: string;
   caseType?: string;
   summary?: string;
+  authority?: string;
+  courtCaseNumber?: string;
   status?: string;
   outcome?: string;
   lawyer?: string;

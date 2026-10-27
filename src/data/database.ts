@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
+import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -377,6 +377,11 @@ export class LocalDatabase {
     return await api.post<WafeqSummary>('/wafeq/sync');
   }
 
+  /* على المخزَّن «بلا قضية» — بلا قراءة وافق من جديد. */
+  async rematchWafeq(): Promise<WafeqRematch> {
+    return await api.post<WafeqRematch>('/wafeq/rematch');
+  }
+
   async setWafeqAutoSync(enabled: boolean): Promise<void> {
     await api.put('/wafeq/auto-sync', { enabled });
   }
@@ -456,6 +461,14 @@ export class LocalDatabase {
   /* التلخيصُ الآليّ: مفتاحُه هنا لأنّ ما يُلخَّص يأتي من الاستيراد. */
   async setBasecampAi(enabled: boolean): Promise<{ aiEnabled: boolean }> {
     return await api.put('/basecamp/ai', { enabled });
+  }
+
+  /* إعادةُ الاستيراد من الصفر: `dryRun` يعدّ، والتنفيذُ بعبارة التأكيد. */
+  async resetBasecampImport(
+    dryRun: boolean,
+    confirm?: string,
+  ): Promise<{ dryRun: boolean; impact: BasecampResetImpact }> {
+    return await api.post('/basecamp/reset', { dryRun, confirm });
   }
 
   /* ═══ ما يستحقّ نظرَك ═══

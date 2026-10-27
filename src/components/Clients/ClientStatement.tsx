@@ -58,10 +58,10 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
       [
         {
           name: 'القضايا',
-          headers: ['رقم القضية', 'نوع القضية', 'الأتعاب', 'المحصَّل', 'المتبقّي', 'ملاحظة'],
+          headers: ['رقم المشروع', 'نوع القضية', 'الأتعاب', 'المحصَّل', 'المتبقّي', 'ملاحظة'],
           rows: [
             ...rows.map((row) => ({
-              'رقم القضية': row.case_.caseNumber,
+              'رقم المشروع': row.case_.caseNumber,
               'نوع القضية': row.case_.caseType,
               'الأتعاب': row.total,
               'المحصَّل': row.collected,
@@ -69,7 +69,7 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
               'ملاحظة': row.proBono ? 'تطوّعية' : '',
             })),
             {
-              'رقم القضية': 'المجموع',
+              'رقم المشروع': 'المجموع',
               'الأتعاب': totals.total,
               'المحصَّل': totals.collected,
               'المتبقّي': totals.remaining,
@@ -78,10 +78,10 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
         },
         {
           name: 'الدفعات',
-          headers: ['التاريخ', 'رقم القضية', 'المبلغ', 'الطريقة', 'المرجع', 'ملاحظات'],
+          headers: ['التاريخ', 'رقم المشروع', 'المبلغ', 'الطريقة', 'المرجع', 'ملاحظات'],
           rows: payments.map((payment) => ({
             'التاريخ': isoDay(payment.paymentDate),
-            'رقم القضية': caseNumberOf(payment.caseId),
+            'رقم المشروع': caseNumberOf(payment.caseId),
             'المبلغ': payment.amount,
             'الطريقة': payment.method ?? '',
             'المرجع': payment.reference ?? '',

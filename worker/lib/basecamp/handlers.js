@@ -697,6 +697,8 @@ export async function listConflicts(env, user) {
 const CASE_COLUMN = {
   caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
   status: 'status', outcome: 'outcome', notes: 'notes',
+  opposingParties: 'opposing_parties', lawyerId: 'lawyer_id',
+  courtCaseNumber: 'court_case_number', authority: 'authority',
 };
 
 /* وحقولُ العميل تُسمّى في صفّ التعارض بسابقةِ `client.` — فالجدول واحد

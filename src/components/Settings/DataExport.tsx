@@ -167,7 +167,9 @@ export default function DataExport() {
         const row: any = {};
         
         if (selectedFields.cases.basicInfo) {
-          row['رقم القضية'] = case_.caseNumber;
+          row['رقم المشروع'] = case_.caseNumber;
+          row['الجهة المختصة'] = case_.authority ?? '';
+          row['رقم القضية لدى الجهة'] = case_.courtCaseNumber ?? '';
           row['نوع القضية'] = case_.caseType;
           row['العميل'] = case_.clientName;
           row['الحالة'] = case_.status;

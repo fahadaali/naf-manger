@@ -29,7 +29,9 @@ import { caseOutcomeLabel, caseStatusLabel, clientTypeLabel } from '../../lib/la
 /* وحقولُ العميل بسابقةِ `client.` كما تصل من الخادم: الجدولُ واحدٌ للطرفين،
    والسابقةُ تفرّق «الملاحظات» عن «ملاحظات العميل». */
 const FIELD_LABEL: Record<string, string> = {
-  caseNumber: 'رقم القضية',
+  caseNumber: 'رقم المشروع',
+  courtCaseNumber: 'رقم القضية لدى الجهة',
+  authority: 'الجهة المختصة',
   caseType: 'نوع المشروع',
   summary: 'موضوع المشروع',
   status: 'حالة المشروع',
