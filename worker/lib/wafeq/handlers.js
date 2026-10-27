@@ -7,6 +7,7 @@
 import { configured, firstPage, WafeqError } from './api.js';
 import { linkPayment, rematchWafeq, runWafeqSync, unlinkPayment } from './sync.js';
 import { aiEnabled } from '../ai/summarize.js';
+import { modelAvailable, modelInfo } from '../ai/model.js';
 
 const fail = (error, status) => Response.json({ ok: false, error }, { status });
 const ok = (data) => Response.json({ ok: true, data });
@@ -52,7 +53,7 @@ export async function readWafeqStatus(env, user) {
     newestPaymentDate: row?.cursor_date ?? null,
     counts: byStatus,
     /* الطرازُ مربوطٌ (`[ai]`) ومشغَّلٌ (مفتاحُ «التلخيص الآليّ» نفسُه). */
-    ai: { available: Boolean(env.AI), enabled: ai },
+    ai: { available: modelAvailable(env), enabled: ai, model: modelInfo(env, 'fast')?.model ?? null },
   });
 }
 
@@ -67,19 +68,21 @@ export async function testWafeq(env, user) {
   if (!configured(env)) return fail('not_configured', 503);
   try {
     const page = await firstPage(env, 'payments/');
-    const list = Array.isArray(page) ? page : Array.isArray(page?.results) ? page.results : [];
+    const list = listOf(page);
     const sample = list[0] && typeof list[0] === 'object' ? list[0] : {};
-    const nested = Object.fromEntries(
-      Object.entries(sample)
-        .filter(([, value]) => value && typeof value === 'object')
-        .map(([key, value]) => [key, Object.keys(Array.isArray(value) ? value[0] ?? {} : value)]),
-    );
+    /* والفاتورةُ والجهةُ تُقرآن كذلك: تفصيلُ الدفعة فيهما لا فيها. وسقوطُ
+       إحداهما يُقال ولا يُسقط الاختبار. */
+    const [invoice, contact] = await Promise.all([
+      firstPage(env, 'invoices/').then((read) => shapeOf(listOf(read)[0])).catch((error) => ({ error: error?.code ?? 'failed' })),
+      firstPage(env, 'contacts/').then((read) => shapeOf(listOf(read)[0])).catch((error) => ({ error: error?.code ?? 'failed' })),
+    ]);
     return ok({
       reachable: true,
       paginated: !Array.isArray(page) && 'next' in (page ?? {}),
       count: Array.isArray(page) ? page.length : page?.count ?? list.length,
-      fields: Object.keys(sample),
-      nested,
+      ...shapeOf(sample),
+      invoice,
+      contact,
     });
   } catch (error) {
     return failure(error, 'test_failed');
@@ -119,7 +122,7 @@ export async function syncWafeq(env, user) {
 /** «اربط بالذكاء الاصطناعي الآن» — على المخزَّن «بلا قضية»، بلا قراءة وافق. */
 export async function rematchWafeqPayments(env, user) {
   if (!isAdmin(user)) return fail('forbidden', 403);
-  if (!env.AI) return fail('ai_unavailable', 503);
+  if (!modelAvailable(env)) return fail('ai_unavailable', 503);
   try {
     return ok(await rematchWafeq(env, { actorId: user.id, actorName: user.name }));
   } catch (error) {
@@ -143,6 +146,21 @@ export async function setWafeqAutoSync(request, env, user) {
     .run();
   await logActivity(env, user, enabled ? 'فُتحت مزامنة وافق الآلية' : 'أُوقفت مزامنة وافق الآلية');
   return ok({ syncEnabled: enabled });
+}
+
+const listOf = (page) => (Array.isArray(page) ? page : Array.isArray(page?.results) ? page.results : []);
+
+/* أسماءُ الحقول وما تحتها — لا قيمُها. */
+function shapeOf(sample) {
+  const value = sample && typeof sample === 'object' ? sample : {};
+  return {
+    fields: Object.keys(value),
+    nested: Object.fromEntries(
+      Object.entries(value)
+        .filter(([, inner]) => inner && typeof inner === 'object')
+        .map(([key, inner]) => [key, Object.keys(Array.isArray(inner) ? inner[0] ?? {} : inner)]),
+    ),
+  };
 }
 
 /** المدفوعاتُ المقروءة — بحالةٍ، والأحدثُ أوّلاً. ومعها أرقامُ القضايا للعرض. */
@@ -173,6 +191,9 @@ export async function listWafeqPayments(env, user, url) {
     contactName: row.contact_name ?? '',
     reference: row.reference ?? '',
     description: row.description ?? '',
+    /* ما قُرئ من الفاتورة والمشروع — يُعرض ليُرى ما رآه الطراز. */
+    invoiceText: row.invoice_text ?? '',
+    projectName: row.project_name ?? '',
     status: row.status,
     caseId: row.case_id,
     caseNumber: row.case_number ?? null,

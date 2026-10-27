@@ -36,7 +36,7 @@ const SYSTEM = `أنت محاسبٌ في مكتب محاماة سعودي. تُ�
  * @returns {{ caseNumber: string, reason: string } | null}
  */
 export async function suggestCaseForPayment(env, { payment, candidates }) {
-  if (!env?.AI || !candidates?.length) return null;
+  if (!candidates?.length) return null;
 
   const answer = await ask(
     env,
@@ -48,6 +48,7 @@ export async function suggestCaseForPayment(env, { payment, candidates }) {
         الدافع: payment.contactName ?? '',
         المرجع: payment.reference ?? '',
         الوصف: payment.description ?? '',
+        المشروع_في_وافق: payment.projectName ?? '',
         الفواتير: String(payment.invoiceText ?? '').slice(0, 1200),
       },
       القضايا: candidates.map((item) => ({

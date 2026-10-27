@@ -647,5 +647,70 @@ docContent = FULL_NAME_DOC.replace('مطالبةٌ بمستحقّات نهاية
 await runSync(env, connection, actor);
 check('وتبدّلٌ في الكلام يُعيدها', calls.case === baseline + 1, `calls=${calls.case}`);
 
+// ═══════════════════════════════════════════════════════════
+group('موضوعٌ مقترح لقضيةٍ بلا موضوع');
+
+({ db, env } = setup());
+db.prepare(`UPDATE basecamp_projects SET status = 'archived'`).run();
+let topicCalls = 0;
+let topicPayload = null;
+env.AI = {
+  async run(model, input) {
+    const system = input.messages[0].content;
+    if (system.includes('موضوعَ القضية')) {
+      topicCalls++;
+      topicPayload = JSON.parse(input.messages[1].content);
+      return { response: '{"topic":"مطالبةٌ عمّالية بمستحقّات نهاية الخدمة ضدّ صاحب العمل.","outcome":"won"}' };
+    }
+    return { response: '{}' };
+  },
+};
+docContent = `<div>
+  <div>اسم العميل: محمد خالد عبدالله القحطاني</div>
+  <div>رقم الهوية: 1012345678</div>
+  <div>نوع المشروع: قضية عمالية</div>
+</div>`;
+let recordingReads = 0;
+globalThis.fetch = async (url) => {
+  if (String(url).includes('recordings.json')) {
+    recordingReads++;
+    return { ok: true, status: 200, headers: new Map(),
+      json: async () => [{ id: 5, type: 'Message', title: 'صدور الحكم', content: '<div>صدر الحكم لصالح موكّلنا</div>',
+        updated_at: '2026-09-01T00:00:00Z' }] };
+  }
+  return { ok: true, status: 200, headers: new Map(),
+    json: async () => ({ id: 901, title: 'بيانات المشروع', content: docContent, app_url: 'x', updated_at: 'x' }) };
+};
+applied = await runSync(env, connection, actor);
+const topicCase = () => db.prepare(`SELECT * FROM cases`).get();
+check('القضيةُ المنتهية بلا موضوعٍ يُكتب موضوعُها',
+  topicCase().summary.startsWith('مطالبةٌ عمّالية') && applied.ai?.topics === 1, { summary: topicCase().summary, ai: applied.ai });
+check('من نشاط المشروع مع الملفّ', recordingReads > 0 && topicPayload?.نشاط_المشروع?.some((line) => line.includes('صدور الحكم')),
+  topicPayload);
+check('ولا يخرج رقمُ الهوية', !JSON.stringify(topicPayload).includes('1012345678'));
+check('والنتيجةُ المنصوصة تُكتب', topicCase().outcome === 'won');
+const topicReview = db.prepare(`SELECT * FROM basecamp_reviews WHERE kind = 'ai_topic'`).get();
+check('ويُفتح سؤالُ مراجعة', Boolean(topicReview) && topicReview.case_id === topicCase().id, topicReview);
+
+await runSync(env, connection, actor);
+check('ومزامنةٌ ثانيةٌ لا تسأل ولا تمحو', topicCalls === 1 && topicCase().summary.startsWith('مطالبةٌ'),
+  { topicCalls, summary: topicCase().summary });
+
+const { resolveReview } = await import('../worker/lib/basecamp/handlers.js');
+await resolveReview({ json: async () => ({ resolution: 'set', value: 'موضوعٌ صحّحه المحامي' }) }, env,
+  { id: 'u1', role: 'admin', permissions: {} }, topicReview.id);
+check('والتعديلُ من المراجعة يُكتب', topicCase().summary === 'موضوعٌ صحّحه المحامي', topicCase().summary);
+
+// ── وموضوعٌ قائمٌ لا يُمسّ ──
+({ db, env } = setup());
+topicCalls = 0;
+env.AI = { async run(model, input) {
+  if (input.messages[0].content.includes('موضوعَ القضية')) topicCalls++;
+  return { response: '{}' };
+} };
+docContent = FULL_NAME_DOC;
+await runSync(env, connection, actor);
+check('وما له موضوعٌ لا يُقترح له', topicCalls === 0);
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

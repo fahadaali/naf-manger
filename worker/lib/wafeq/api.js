@@ -101,6 +101,10 @@ export async function readInvoice(env, id) {
   return call(env, urlOf(`invoices/${encodeURIComponent(id)}/`));
 }
 
+export async function readProject(env, id) {
+  return call(env, urlOf(`projects/${encodeURIComponent(id)}/`));
+}
+
 /* ═══ التوحيد ═══ */
 
 const first = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
@@ -160,21 +164,53 @@ function invoicesOf(raw) {
       id: text(invoice?.id ?? (typeof entry?.invoice === 'string' || typeof entry?.invoice === 'number' ? entry.invoice : entry?.id)),
       number: text(first(invoice?.invoice_number, invoice?.number, entry?.invoice_number)),
       text: invoice ? invoiceText(invoice) : '',
-      contact: contactFields(invoice?.contact),
+      contact: invoice ? invoiceContact(invoice) : null,
     };
   });
 }
 
-/** نصُّ الفاتورة: مرجعُها وملاحظاتُها ووصفُ بنودها — ما قد يحمل رقمَ القضية. */
+/* نصُّ بندٍ واحد: وصفُه، وإلا اسمُه، وإلا اسمُ الصنف الذي يحمله. */
+const lineText = (line) => {
+  if (!line || typeof line !== 'object') return '';
+  const item = line.item && typeof line.item === 'object' ? line.item : {};
+  return text(first(line.description, line.item_description, line.name, line.title, item.description, item.name));
+};
+
+/**
+ * نصُّ الفاتورة: رقمُها ومرجعُها وملاحظاتُها وشروطُها ووصفُ كلّ بند — وهو
+ * ما يكتب فيه المكتبُ تفصيلَ العمل («أتعاب قضية… لدى المحكمة…»).
+ *
+ * والأسماءُ تُجرَّب على صورها المحتملة: الدفعةُ عند وافق لا تحمل وصفاً
+ * (`reference` و`project` وحدهما)، فالفاتورةُ هي ما يقول لمن الدفعة ولأيّ عمل.
+ */
 export function invoiceText(invoice) {
   if (!invoice || typeof invoice !== 'object') return '';
-  const lines = Array.isArray(invoice.line_items) ? invoice.line_items
-    : Array.isArray(invoice.items) ? invoice.items : [];
+  const lines = first(invoice.line_items, invoice.items, invoice.lines, invoice.invoice_line_items);
   return [
     invoice.invoice_number, invoice.number, invoice.reference, invoice.notes, invoice.description,
-    ...lines.map((line) => first(line?.description, line?.name)),
+    invoice.terms, invoice.memo, invoice.subject, invoice.title,
+    ...(Array.isArray(lines) ? lines.map(lineText) : []),
   ].map(text).filter(Boolean).join(' | ');
 }
+
+/** جهةُ الفاتورة: كائناً (اسمُها ورقمُها) أو معرّفاً يُقرأ به. */
+export function invoiceContact(invoice) {
+  const raw = invoice?.contact;
+  if (raw && typeof raw === 'object') return { id: text(raw.id), ...contactFields(raw) };
+  if (typeof raw === 'string' || typeof raw === 'number') return { id: text(raw), name: '', number: '' };
+  return { id: text(invoice?.contact_id), name: text(invoice?.contact_name), number: '' };
+}
+
+/** المشروعُ عند وافق: معرّفاً أو كائناً. وقد يكون اسمُه اسمَ القضية. */
+function projectOf(raw) {
+  const project = raw.project;
+  if (project && typeof project === 'object') {
+    return { id: text(project.id), name: text(first(project.name, project.title)) };
+  }
+  return { id: text(first(project, raw.project_id)), name: '' };
+}
+
+export const projectName = (project) => text(first(project?.name, project?.title));
 
 /**
  * دفعةٌ كما يفهمها هذا الملفّ — أو `null` إن لم تُفهم.
@@ -193,8 +229,11 @@ export function normalizePayment(raw) {
   if (bills.length && !invoices.length) return null;
 
   const contact = contactOf(raw);
+  const project = projectOf(raw);
   return {
     externalId: id,
+    projectId: project.id,
+    projectName: project.name,
     date: dayOf(first(raw.date, raw.payment_date, raw.created_ts, raw.created_at)),
     amount,
     currency: text(first(raw.currency, raw.currency_code)) || null,

@@ -47,12 +47,16 @@ export function shapeRecording(recording, label) {
   const at = recording.updated_at ?? recording.created_at;
   if (!at) return null;
   const title = recording.title || recording.parent?.title || '';
+  /* والرسالةُ والتعليقُ لهما نصٌّ يُقتطف؛ والتعليقُ يُسمّى بأصله («في: …»). */
+  const hasBody = recording.type === 'Comment' || recording.type === 'Message';
   return {
     id: String(recording.id ?? ''),
     kind: recording.type ?? '',
     label: recording.type === 'Todo' && recording.completed ? 'مهمة أُنجزت' : label,
     title,
-    excerpt: recording.type === 'Comment' ? plain(recording.content) : '',
+    parentTitle: recording.type === 'Comment' ? recording.parent?.title ?? '' : '',
+    completed: recording.type === 'Todo' && Boolean(recording.completed),
+    excerpt: hasBody ? plain(recording.content) : '',
     author: recording.creator?.name ?? '',
     at,
     url: recording.app_url ?? null,

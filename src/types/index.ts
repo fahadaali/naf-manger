@@ -278,6 +278,9 @@ export interface CaseTimeline {
     kind: string;
     label: string;
     title: string;
+    /** للتعليق: عنوانُ ما عُلّق عليه. */
+    parentTitle?: string;
+    completed?: boolean;
     excerpt: string;
     author: string;
     at: string;
@@ -315,7 +318,7 @@ export interface WafeqStatus {
   newestPaymentDate?: string | null;
   counts?: Record<WafeqPaymentStatus, number>;
   /** الطرازُ مربوطٌ بالمنصة، ومشغَّلٌ بمفتاح «التلخيص الآليّ». */
-  ai?: { available: boolean; enabled: boolean };
+  ai?: { available: boolean; enabled: boolean; model?: string | null };
 }
 
 export type WafeqPaymentStatus = 'linked' | 'suggested' | 'unmatched' | 'ignored';
@@ -329,6 +332,9 @@ export interface WafeqPayment {
   contactName: string;
   reference: string;
   description: string;
+  /** ما قُرئ من فاتورتها ومشروعها عند وافق. */
+  invoiceText?: string;
+  projectName?: string;
   status: WafeqPaymentStatus;
   caseId?: string | null;
   caseNumber?: string | null;
@@ -350,6 +356,8 @@ export interface WafeqSummary {
   unchanged: number;
   updated: number;
   truncated: boolean;
+  /** فواتيرُ تعذّرت قراءتُها في الدورة. */
+  invoiceErrors?: number;
   ai: WafeqAiSummary;
 }
 
@@ -368,6 +376,7 @@ export interface WafeqRematch {
   linked: number;
   suggested: number;
   unmatched: number;
+  invoiceErrors?: number;
   ai: WafeqAiSummary;
 }
 
@@ -393,6 +402,9 @@ export interface WafeqProbe {
   count: number;
   fields: string[];
   nested: Record<string, string[]>;
+  /** وأسماءُ حقول الفاتورة والجهة — أو رمزُ سقوط قراءتها. */
+  invoice?: { fields?: string[]; nested?: Record<string, string[]>; error?: string };
+  contact?: { fields?: string[]; nested?: Record<string, string[]>; error?: string };
 }
 
 export interface BasecampStatus {
@@ -419,7 +431,8 @@ export interface BasecampStatus {
  */
 export interface BasecampReview {
   id: string;
-  kind: 'project_kind' | 'case_type' | 'unresolved_value' | 'similar_client' | 'generated_number' | 'unmatched_lawyer';
+  kind: 'project_kind' | 'case_type' | 'unresolved_value' | 'similar_client' | 'generated_number' | 'unmatched_lawyer'
+    | 'ai_topic';
   kindLabel: string;
   projectId: string;
   projectName: string;
@@ -445,6 +458,9 @@ export interface BasecampReview {
     newName?: string;
     existingName?: string;
     createdClientId?: string;
+    /** الموضوعُ المقترح والنتيجةُ التي كُتبت معه. */
+    topic?: string;
+    outcome?: 'won' | 'lost' | 'settled' | null;
   };
   createdAt: number;
 }

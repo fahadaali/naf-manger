@@ -8,6 +8,8 @@ import { Card } from '@/registry/naf/ui/card';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
+import { Textarea } from '@/registry/naf/ui/textarea';
+import { caseOutcomeLabel } from '../../lib/labels';
 import { formatNumber } from '@/registry/naf/lib/format';
 
 /* ═══ ما يستحقّ نظرَك ═══
@@ -27,6 +29,7 @@ const KIND_BADGE: Record<string, 'primary' | 'success' | 'outline'> = {
   similar_client: 'primary',
   generated_number: 'outline',
   unmatched_lawyer: 'outline',
+  ai_topic: 'outline',
 };
 
 export default function BasecampReviews({ onChanged }: { onChanged: () => void }) {
@@ -201,6 +204,39 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
                     size="sm"
                   >
                     اكتبه
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* ═══ موضوعٌ مقترح ═══
+                كُتب في الحقل الفارغ وحده؛ يُؤكَّد أو يُصحَّح هنا. */}
+            {review.kind === 'ai_topic' && (
+              <>
+                <p className="text-sm text-foreground flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+                  <span>
+                    {`صاغ الذكاءُ الاصطناعي موضوعاً من ملفّ المشروع ونشاطه: «${review.detail.topic ?? review.subject}»`}
+                    {review.detail.outcome && ` — والنتيجة: ${caseOutcomeLabel(review.detail.outcome)}`}
+                  </span>
+                </p>
+                <Textarea
+                  value={drafts[review.id] ?? review.detail.topic ?? review.subject}
+                  onChange={(event) => setDrafts({ ...drafts, [review.id]: event.target.value })}
+                  rows={2}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={() => settle(review, 'accept')} disabled={busy === review.id} size="sm">
+                    <CircleCheck aria-hidden="true" />
+                    صحيح
+                  </Button>
+                  <Button
+                    onClick={() => settle(review, 'set', drafts[review.id])}
+                    disabled={busy === review.id || !drafts[review.id]?.trim()}
+                    variant="outline"
+                    size="sm"
+                  >
+                    اكتب المعدَّل
                   </Button>
                 </div>
               </>

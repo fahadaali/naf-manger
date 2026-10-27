@@ -24,6 +24,10 @@ const comment = shapeRecording({
 }, 'تعليق');
 check('التعليقُ بعنوان أصله ونصٍّ مجرَّد',
   comment.title === 'المذكرة' && comment.excerpt === 'أُرسلت المذكرة للمحكمة' && comment.author === 'سارة', comment);
+check('والرسالةُ يُقتطف نصُّها',
+  shapeRecording({ id: 3, type: 'Message', title: 'صدور الحكم', content: '<p>صدر الحكم</p>', updated_at: 'x' }, 'رسالة')
+    .excerpt === 'صدر الحكم');
+check('والتعليقُ يحمل عنوانَ أصله', comment.parentTitle === 'المذكرة');
 check('والمهمةُ المنجزة تُسمّى بذلك',
   shapeRecording({ id: 1, type: 'Todo', title: 'تقديم', completed: true, updated_at: 'x' }, 'مهمة').label === 'مهمة أُنجزت');
 check('وتسجيلةٌ بلا تاريخٍ تُطرح', shapeRecording({ id: 2, type: 'Todo' }, 'مهمة') === null);

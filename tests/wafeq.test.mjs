@@ -297,5 +297,65 @@ check('وهو للمسؤول وحده', res.status === 403);
 res = await handlers.readWafeqStatus(env, { id: 'u1', role: 'admin' });
 check('والحالةُ تقول حالَ الطراز', (await bodyOf(res)).data.ai?.available === true);
 
+// ═══════════════════════════════════════════════════════════
+group('الفاتورةُ والجهةُ والمشروع — كما يردّها وافق');
+
+/* كما في «اختبار الاتصال» عند المكتب: الجهةُ معرّف، والفاتورةُ معرّف، ولا وصفَ في الدفعة. */
+({ db, env } = setup());
+db.prepare(`UPDATE cases SET payment_status = NULL`).run();
+asked = [];
+env.AI = { run: async (model, input) => { asked.push(JSON.parse(input.messages[1].content)); return { response: '{"case":"لا-أعرف"}' }; } };
+let reads = { invoice: 0, contact: 0, project: 0 };
+let invoiceDown = false;
+globalThis.fetch = async (url) => {
+  const path = new URL(url).pathname;
+  const json = (body) => ({ ok: true, status: 200, json: async () => body });
+  if (path.startsWith('/v1/invoices/inv-')) {
+    reads.invoice++;
+    if (invoiceDown) return { ok: false, status: 500, json: async () => ({}) };
+    return json({ id: 'inv-7', invoice_number: 'INV-7', contact: 'ct-noor',
+      line_items: [{ description: 'أتعاب الترافع في قضية الترخيص البلدي', item: { name: 'أتعاب' } }] });
+  }
+  if (path.startsWith('/v1/contacts/')) { reads.contact++; return json({ id: 'ct-noor', name: 'مؤسسة النور' }); }
+  if (path.startsWith('/v1/projects/')) { reads.project++; return json({ id: 'pr-1', name: 'ترخيص النور' }); }
+  return json({ count: payments.length, next: null, results: payments });
+};
+payments = [{ id: 't1', date: '2026-10-05', amount: 1500, reference: 'TRX-1', project: 'pr-1',
+  invoice_payments: [{ amount: 1500, amount_to_pcy: 1500, invoice: 'inv-7' }] }];
+result = await runWafeqSync(env, { actorId: 'u1' });
+check('وصفُ البند يُقرأ من الفاتورة بمعرّفها',
+  row('t1').invoice_text?.includes('الترافع في قضية الترخيص') && reads.invoice === 1, row('t1'));
+check('والجهةُ من الفاتورة حين لا تحملها الدفعة', row('t1').contact_name === 'مؤسسة النور' && row('t1').contact_id === 'ct-noor', row('t1'));
+check('فيُعرف الموكّلُ ويُقترح', row('t1').client_id === 'c-noor' && row('t1').status === 'suggested', row('t1'));
+check('واسمُ المشروع يُقرأ ويُحفظ', row('t1').project_name === 'ترخيص النور' && reads.project === 1);
+check('ومعرّفاتُ الفواتير تُحفظ', JSON.parse(row('t1').invoice_ids).includes('inv-7'));
+
+// ── فاتورةٌ سقطت قراءتُها: تُعدّ، ويُعيدها الزرّ ──
+({ db, env } = setup());
+env.AI = { run: async () => ({ response: '{"case":"لا-أعرف"}' }) };
+invoiceDown = true;
+payments = [{ id: 't2', date: '2026-10-06', amount: 800, reference: 'TRX-2',
+  invoice_payments: [{ amount: 800, invoice: 'inv-8' }] }];
+result = await runWafeqSync(env, { actorId: 'u1' });
+check('سقوطُ قراءة الفاتورة يُقال في الحصيلة', result.summary.invoiceErrors === 1 && !row('t2').invoice_text, result.summary);
+invoiceDown = false;
+res = await handlers.rematchWafeqPayments(env, { id: 'u1', role: 'admin' });
+check('و«اربط بالذكاء الاصطناعي» يعيد قراءتها بلا جلب الدفعات',
+  row('t2').invoice_text?.includes('الترافع') && row('t2').contact_name === 'مؤسسة النور', row('t2'));
+
+// ── والاختبارُ يعرض حقولَ الفاتورة والجهة ──
+globalThis.fetch = async (url) => {
+  const path = new URL(url).pathname;
+  const body = path.startsWith('/v1/invoices/') ? { results: [{ id: 'i', line_items: [{ description: 'x' }], notes: 'n' }] }
+    : path.startsWith('/v1/contacts/') ? { results: [{ id: 'c', name: 'سرّي' }] }
+      : { count: 1, next: null, results: [{ id: 'p', amount: 1, contact: 'c' }] };
+  return { ok: true, status: 200, json: async () => body };
+};
+res = await handlers.testWafeq(env, { id: 'u1', role: 'admin' });
+const shapes = (await bodyOf(res)).data;
+check('الاختبارُ يعرض حقولَ الفاتورة والجهة — لا قيمَها',
+  shapes.invoice?.nested?.line_items?.includes('description') && shapes.contact?.fields?.includes('name') &&
+    !JSON.stringify(shapes).includes('سرّي'), shapes);
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

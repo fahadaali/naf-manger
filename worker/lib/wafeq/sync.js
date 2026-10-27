@@ -17,7 +17,8 @@
 // يُنقل إلى السجلّ — وافق مصدرُها، والدفترُ يتبعه.
 
 import {
-  contactFields, invoiceText, listAll, normalizePayment, readContact, readInvoice, WafeqError,
+  contactFields, invoiceContact, invoiceText, listAll, normalizePayment, projectName, readContact, readInvoice,
+  readProject, WafeqError,
 } from './api.js';
 import { recomputeCollected } from '../payments.js';
 import { toLatinDigits } from '../digits.js';
@@ -120,7 +121,7 @@ function findClient(context, payment) {
  * @returns {{ status, caseId?, suggestedCaseId?, clientId?, matchBy?, reason?, aiFingerprint? }}
  */
 export async function decide(env, context, payment, { ai, previousFingerprint } = {}) {
-  const haystack = compact([payment.reference, payment.description, payment.invoiceText].join(' '));
+  const haystack = compact([payment.reference, payment.description, payment.invoiceText, payment.projectName].join(' '));
   const client = findClient(context, payment);
 
   // ١) رقمُ المشروع أو رقمُ القضية لدى الجهة حرفاً
@@ -173,7 +174,8 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
     remaining: remainingOf(row),
   }));
   const asked = await fingerprint({
-    payment: [payment.reference, payment.description, payment.invoiceText, payment.contactName, payment.amount].join('|'),
+    payment: [payment.reference, payment.description, payment.invoiceText, payment.contactName, payment.projectName,
+      payment.amount].join('|'),
     candidates: shaped.map((item) => item.caseNumber).sort().join(','),
   });
 
@@ -228,21 +230,35 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
    أو تُؤخذ من فاتورةٍ حملتها — ولا يُسقط الدفعةَ سقوطُ قراءتها. */
 async function resolveContact(env, payment, cache) {
   if (payment.contactName) return;
-  const fromInvoice = (payment.invoices ?? []).map((invoice) => invoice.contact).find((contact) => contact?.name);
+  const invoiceContacts = [payment.invoiceContact, ...(payment.invoices ?? []).map((invoice) => invoice.contact)]
+    .filter(Boolean);
+  const fromInvoice = invoiceContacts.find((contact) => contact.name);
   if (fromInvoice) {
     payment.contactName = fromInvoice.name;
     payment.contactNumber ||= fromInvoice.number;
     return;
   }
-  if (!payment.contactId) return;
-  if (!cache.has(payment.contactId)) {
-    cache.set(payment.contactId, await readContact(env, payment.contactId).then(contactFields).catch(() => null));
+  /* والمعرّفُ من الدفعة، وإلا من فاتورتها. */
+  const id = payment.contactId || invoiceContacts.find((contact) => contact.id)?.id;
+  if (!id) return;
+  payment.contactId ||= id;
+  if (!cache.has(id)) {
+    cache.set(id, await readContact(env, id).then(contactFields).catch(() => null));
   }
-  const found = cache.get(payment.contactId);
+  const found = cache.get(id);
   if (found?.name) {
     payment.contactName = found.name;
     payment.contactNumber ||= found.number;
   }
+}
+
+/* والمشروعُ عند وافق بمعرّفه — يُقرأ اسمُه مرّةً في الدورة، فقد يكون اسمَ القضية. */
+async function resolveProject(env, payment, cache) {
+  if (payment.projectName || !payment.projectId) return;
+  if (!cache.has(payment.projectId)) {
+    cache.set(payment.projectId, await readProject(env, payment.projectId).then(projectName).catch(() => ''));
+  }
+  payment.projectName = cache.get(payment.projectId) || '';
 }
 
 const newAiSummary = (ai) => ({
@@ -313,19 +329,30 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 /* نصُّ الفواتير: ما جاء مع الدفعة، وإلا تُقرأ الفاتورةُ بمعرّفها — مرّةً
    لكلّ فاتورةٍ في الدورة، ولا يُسقط الدفعةَ سقوطُ قراءتها. */
-async function invoiceTextOf(env, payment, cache) {
+async function invoiceTextOf(env, payment, cache, stats) {
   const parts = [];
   for (const invoice of payment.invoices ?? []) {
     if (invoice.number) parts.push(invoice.number);
     if (invoice.text) { parts.push(invoice.text); continue; }
     if (!invoice.id) continue;
     if (!cache.has(invoice.id)) {
-      cache.set(invoice.id, await readInvoice(env, invoice.id).then(invoiceText).catch(() => ''));
+      /* وسقوطُ القراءة يُعدّ ويُقال — كان يُبتلع فتبدو الدفعةُ بلا وصفٍ أصلاً. */
+      cache.set(invoice.id, await readInvoice(env, invoice.id)
+        .then((read) => ({ text: invoiceText(read), contact: invoiceContact(read) }))
+        .catch((error) => {
+          if (stats) stats.invoiceErrors++;
+          console.error('Wafeq: تعذّرت قراءة فاتورة —', error?.code ?? error?.message ?? error);
+          return { text: '', contact: null };
+        }));
     }
-    parts.push(cache.get(invoice.id));
+    const read = cache.get(invoice.id);
+    parts.push(read.text);
+    if (!payment.invoiceContact && (read.contact?.name || read.contact?.id)) payment.invoiceContact = read.contact;
   }
   return [...new Set(parts.filter(Boolean))].join(' | ').slice(0, 2000);
 }
+
+const invoiceIdsOf = (payment) => (payment.invoices ?? []).map((invoice) => invoice.id).filter(Boolean);
 
 /**
  * دورةٌ كاملة — أو معاينتُها.
@@ -338,6 +365,7 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
   const ai = { enabled: await aiEnabled(env), budget: newBudget(WAFEQ_AI_BUDGET) };
   const invoices = new Map();
   const contacts = new Map();
+  const projects = new Map();
   const now = nowSeconds();
 
   const summary = {
@@ -349,6 +377,7 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
     unchanged: 0,
     updated: 0,
     truncated: listing.truncated,
+    invoiceErrors: 0,
     ai: newAiSummary(ai),
   };
   const items = [];
@@ -382,8 +411,9 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
       continue;
     }
 
-    payment.invoiceText = await invoiceTextOf(env, payment, invoices);
+    payment.invoiceText = await invoiceTextOf(env, payment, invoices, summary);
     await resolveContact(env, payment, contacts);
+    await resolveProject(env, payment, projects);
     const verdict = await decide(env, context, payment, { ai, previousFingerprint: stored?.ai_fingerprint });
     countSkip(summary, verdict);
 
@@ -400,6 +430,8 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
       amount: payment.amount,
       contactName: payment.contactName,
       reference: payment.reference,
+      invoiceText: payment.invoiceText,
+      projectName: payment.projectName,
       status: final.status,
       caseId: final.caseId ?? null,
       suggestedCaseId: final.suggestedCaseId ?? null,
@@ -412,12 +444,13 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
       `INSERT INTO wafeq_payments
          (external_id, payment_date, amount, currency, contact_name, contact_number, reference, description,
           invoice_text, status, case_id, suggested_case_id, client_id, match_by, reason, ai_fingerprint,
-          contact_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          contact_id, invoice_ids, project_id, project_name, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(external_id) DO UPDATE SET
          payment_date = excluded.payment_date, amount = excluded.amount, currency = excluded.currency,
          contact_name = excluded.contact_name, contact_number = excluded.contact_number,
-         contact_id = excluded.contact_id,
+         contact_id = excluded.contact_id, invoice_ids = excluded.invoice_ids,
+         project_id = excluded.project_id, project_name = excluded.project_name,
          reference = excluded.reference, description = excluded.description, invoice_text = excluded.invoice_text,
          status = excluded.status, case_id = excluded.case_id, suggested_case_id = excluded.suggested_case_id,
          client_id = excluded.client_id, match_by = excluded.match_by, reason = excluded.reason,
@@ -429,7 +462,8 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
         payment.contactNumber || null, payment.reference || null, payment.description || null,
         payment.invoiceText || null, final.status, final.caseId ?? null, final.suggestedCaseId ?? null,
         final.clientId ?? null, final.matchBy ?? null, final.reason ?? null, verdict.aiFingerprint ?? null,
-        payment.contactId || null, stored?.created_at ?? now, now,
+        payment.contactId || null, JSON.stringify(invoiceIdsOf(payment)), payment.projectId || null,
+        payment.projectName || null, stored?.created_at ?? now, now,
       )
       .run();
 
@@ -494,8 +528,10 @@ export async function rematchWafeq(env, { actorId, actorName } = {}) {
   const context = await loadContext(env);
   const ai = { enabled: await aiEnabled(env), budget: newBudget(WAFEQ_AI_BUDGET) };
   const contacts = new Map();
+  const projects = new Map();
+  const invoices = new Map();
   const now = nowSeconds();
-  const summary = { checked: 0, linked: 0, suggested: 0, unmatched: 0, ai: newAiSummary(ai) };
+  const summary = { checked: 0, linked: 0, suggested: 0, unmatched: 0, invoiceErrors: 0, ai: newAiSummary(ai) };
 
   for (const row of results ?? []) {
     summary.checked++;
@@ -509,24 +545,36 @@ export async function rematchWafeq(env, { actorId, actorName } = {}) {
       reference: row.reference ?? '',
       description: row.description ?? '',
       invoiceText: row.invoice_text ?? '',
+      projectId: row.project_id ?? '',
+      projectName: row.project_name ?? '',
+      invoices: safeJson(row.invoice_ids)?.map?.((id) => ({ id: String(id) })) ?? [],
     };
+    /* فاتورةٌ لم يُحفظ نصُّها — قراءةٌ سقطت، أو دفعةٌ قُرئت قبل حفظ معرّفاتها —
+       تُقرأ الآن بمعرّفها. */
+    if (!payment.invoiceText && payment.invoices.length) {
+      payment.invoiceText = await invoiceTextOf(env, payment, invoices, summary);
+    }
     await resolveContact(env, payment, contacts);
+    await resolveProject(env, payment, projects);
     const verdict = await decide(env, context, payment, { ai, previousFingerprint: row.ai_fingerprint });
     countSkip(summary, verdict);
     summary[verdict.status]++;
 
-    const contactFound = payment.contactName && payment.contactName !== (row.contact_name ?? '');
-    if (verdict.status === 'unmatched' && !verdict.aiFingerprint && !contactFound) continue;
+    const learned = (payment.contactName && payment.contactName !== (row.contact_name ?? ''))
+      || (payment.invoiceText && payment.invoiceText !== (row.invoice_text ?? ''))
+      || (payment.projectName && payment.projectName !== (row.project_name ?? ''));
+    if (verdict.status === 'unmatched' && !verdict.aiFingerprint && !learned) continue;
 
     await env.DB.prepare(
       `UPDATE wafeq_payments SET status = ?, case_id = ?, suggested_case_id = ?, client_id = ?, match_by = ?,
               reason = ?, ai_fingerprint = COALESCE(?, ai_fingerprint), contact_name = ?, contact_number = ?,
-              updated_at = ?
+              contact_id = ?, invoice_text = ?, project_name = ?, updated_at = ?
         WHERE external_id = ?`,
     )
       .bind(verdict.status, verdict.caseId ?? null, verdict.suggestedCaseId ?? null, verdict.clientId ?? null,
         verdict.matchBy ?? null, verdict.reason ?? null, verdict.aiFingerprint ?? null,
-        payment.contactName || null, payment.contactNumber || null, now, row.external_id)
+        payment.contactName || null, payment.contactNumber || null, payment.contactId || null,
+        payment.invoiceText || null, payment.projectName || null, now, row.external_id)
       .run();
 
     if (verdict.status === 'linked') {

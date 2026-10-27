@@ -39,11 +39,13 @@ import {
 import { normalizeArabic } from './discover.js';
 import { fullerName, nameRelation } from './names.js';
 import { openReview } from './reviews.js';
+import { readTimeline } from './timeline.js';
 import {
   aiEnabled,
   fingerprint,
   newBudget,
   suggestCaseType,
+  suggestTopic,
   summarizeCase,
   summarizeClient,
 } from '../ai/summarize.js';
@@ -526,6 +528,9 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
      ما قرأته الخريطةُ سيّدٌ لا يُنقَض — والسؤالُ عمّا بقي فارغاً وحده،
      ولا يُنادى إلا حين يدلّ الظاهرُ على أنّ شكلَ الملفّ تبدّل. */
   const text = htmlToText(document.content ?? '');
+  /* نصُّ الملفّ للموضوع المقترح بعد الكتابة — في سياق الدورة لا في الخطّة،
+     فالخطّةُ تُردّ إلى المعاينة ولا يُرسل فيها ملفٌّ كامل. */
+  ai?.documents?.set(row.project_id, text.slice(0, 3000));
   plan.aiFields = await recoverMissing(env, { parsed, text, vocab, ai, synced, plan });
 
   /* ═══ ولفظٌ لم يفهمه الجدولُ ولا الجذور ═══
@@ -816,7 +821,7 @@ export async function buildPlan(env, connection) {
   vocab.members = (members ?? []).map((row) => ({ id: row.user_id, name: row.display_name }));
   /* سياقُ الاستدلال يُبنى مرّةً للدورة كلِّها: السقفُ سقفُ الدورة لا
      سقفُ المشروع الواحد، وإلا استدلّ حسابٌ فيه ثلاثمئة مشروعٍ ثلاثمئة مرّة. */
-  const ai = { enabled: await aiEnabled(env), budget: newBudget() };
+  const ai = { enabled: await aiEnabled(env), budget: newBudget(), documents: new Map() };
   const policy = await readConflictPolicy(env);
   const seen = { clients: new Set() };
   const plans = [];
@@ -1174,6 +1179,73 @@ async function applyPlan(env, plan, actorId, ai) {
  * اثنتان مكتملتان» جملةٌ لا يعرفها مشروعٌ واحد. والبصمةُ على القائمة
  * كلِّها — فقضيةٌ رابعة تبدّلها، وإعادةُ مزامنةٍ بلا تبدّلٍ لا تبدّلها.
  */
+/** سقفُ الموضوعات المقترحة في الدورة — كلٌّ منها يقرأ نشاطَ مشروعه من بيسكامب. */
+export const TOPIC_BUDGET = 15;
+
+/**
+ * ═══ موضوعٌ مقترح لقضيةٍ بلا موضوع ═══
+ *
+ * القضايا المنتهية خاصّةً لا يحمل ملفُّها «موضوع المشروع». فيُصاغ لها موضوعٌ
+ * مختصر من نصّ الملفّ وأحدثِ نشاط المشروع، **ويُكتب في الحقل الفارغ وحده**
+ * — لا فوق ما كتبه إنسانٌ أو حمله الملفّ — ويُفتح صفُّ مراجعةٍ ليُؤكَّد أو
+ * يُعدَّل. والنتيجةُ تُكتب كذلك إن نُصّ عليها وكانت فارغة.
+ *
+ * والمنتهيةُ أوّلاً، وبسقفٍ مستقلّ، وبصمةٌ على نصّ الملفّ تمنع إعادةَ السؤال:
+ * النشاطُ يتبدّل كلَّ يوم، والموضوعُ لا.
+ */
+async function suggestTopics(env, connection, results, ai) {
+  if (!ai?.enabled) return 0;
+  const budget = newBudget(TOPIC_BUDGET);
+  const wanted = [];
+  for (const result of results) {
+    if (!result.caseId || !ai.documents?.has(result.projectId)) continue;
+    const row = await env.DB.prepare(
+      `SELECT id, summary, status, outcome, case_type, ai_topic_hash FROM cases WHERE id = ?`,
+    ).bind(result.caseId).first();
+    if (!row || String(row.summary ?? '').trim()) continue;
+    wanted.push({ result, row });
+  }
+  wanted.sort((one, other) => Number(other.row.status === 'completed') - Number(one.row.status === 'completed'));
+
+  let written = 0;
+  for (const { result, row } of wanted) {
+    const text = ai.documents.get(result.projectId);
+    const hash = await fingerprint({ text, caseType: row.case_type ?? '' });
+    if (row.ai_topic_hash === hash || !budget.spend()) continue;
+
+    const activity = await readTimeline(env, connection, result.projectId)
+      .then((timeline) => timeline.events.map((event) =>
+        [event.label, event.title, event.excerpt].filter(Boolean).join(' — ')))
+      .catch(() => []);
+    const answer = await suggestTopic(env, { text, activity, caseType: row.case_type });
+    if (!answer) {
+      /* لا تُثبَّت البصمةُ على سقوط: يُعاد في الدورة التالية. */
+      ai.budget.failed++;
+      continue;
+    }
+
+    const now = nowSeconds();
+    await env.DB.prepare(
+      `UPDATE cases SET summary = ?, ai_topic_hash = ?, updated_at = ?
+        WHERE id = ? AND (summary IS NULL OR TRIM(summary) = '')`,
+    ).bind(answer.topic, hash, now, row.id).run();
+    if (answer.outcome && !row.outcome) {
+      await env.DB.prepare(`UPDATE cases SET outcome = ? WHERE id = ? AND outcome IS NULL`)
+        .bind(answer.outcome, row.id).run();
+    }
+    await openReview(env, {
+      kind: 'ai_topic',
+      projectId: result.projectId,
+      caseId: row.id,
+      subject: answer.topic,
+      fingerprint: hash,
+      detail: { topic: answer.topic, outcome: answer.outcome && !row.outcome ? answer.outcome : null },
+    }).catch(() => {});
+    written++;
+  }
+  return written;
+}
+
 async function summarizeClients(env, results, ai) {
   if (!ai?.enabled) return 0;
 
@@ -1252,6 +1324,7 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
      بعد الدفعة كلِّها لا بعد كل مشروع: للموكّل قضايا موزّعةٌ على مشاريع،
      وتلخيصُها عند أوّلها يلخّص نصفَها ثم يعيد عند ثانيها. */
   const summarizedClients = await summarizeClients(env, results, ai);
+  const topics = await suggestTopics(env, connection, results, ai);
 
   const applied = {
     ...summary,
@@ -1264,6 +1337,7 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
       enabled: ai.enabled,
       cases: results.filter((r) => r.summarized).length,
       clients: summarizedClients,
+      topics,
       deferred: ai.budget.deferred,
       failed: ai.budget.failed,
     },
