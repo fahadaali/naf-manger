@@ -175,7 +175,7 @@ check('سطرٌ بعد عنوانٍ ممتلئ لا يُلحق به',
 // ═══════════════════════════════════════════════════════════
 group('الدمج الثلاثي — الحالات الأربع');
 
-const { buildPlan, runSync } = await import('../worker/lib/basecamp/sync.js');
+const { buildPlan, runSync, writeConflictPolicy } = await import('../worker/lib/basecamp/sync.js');
 
 const now = Math.floor(Date.now() / 1000);
 const setup = () => {
@@ -191,6 +191,12 @@ const setup = () => {
     `INSERT INTO basecamp_connection (id, account_id, account_name, access_token, refresh_token,
                                       expires_at, connected_by, connected_at)
      VALUES (1, '9', 'ناف', 'a', 'r', 9999999999, 'u1', ?)`,
+  ).run(now);
+  /* الحالاتُ الأربع تُقاس على «اسألني»: فيها وحدها يظهر التعارضُ صفّاً.
+     والافتراضُ — المنصةُ هي المعتمدة — مُختبَرٌ في `basecamp-reviews`. */
+  db.prepare(
+    `INSERT INTO system_settings (key, value, updated_by, updated_at)
+     VALUES ('basecamp_conflict_policy', '{"policy":"ask"}', 'u1', ?)`,
   ).run(now);
   return { db, env };
 };
@@ -496,6 +502,91 @@ db.prepare(`UPDATE cases SET summary = 'تصحيحٌ كتبه المحامي'`).
 applied = await runSync(env, connection, actor);
 check('صورةٌ قديمةٌ تُقرأ حقولَ قضية', applied.conflicts === 0, applied);
 check('وما مسّته اليدُ يبقى', kase().summary === 'تصحيحٌ كتبه المحامي', kase().summary);
+
+// ═══════════════════════════════════════════════════════════
+group('كلُّ تحديثٍ مربوطٌ بمعرّف المشروع');
+
+globalThis.fetch = async () => ({
+  ok: true, status: 200, headers: new Map(),
+  json: async () => ({ id: 901, title: 'بيانات المشروع', content: docContent, app_url: 'x', updated_at: 'x' }),
+});
+
+// ── رقمٌ تبدّل في ملفّ مشروعٍ مربوط → القضيةُ نفسُها ──
+({ db, env } = setup());
+await writeConflictPolicy(env, 'platform', 'u1');
+docContent = DOC;
+await runSync(env, connection, actor);
+const firstId = kase().id;
+
+docContent = DOC.replace('ق-2026-014', 'ق-2026-099');
+applied = await runSync(env, connection, actor);
+check('تبدّلُ الرقم في الملفّ يُحدّث القضيةَ نفسَها',
+  db.prepare(`SELECT COUNT(*) n FROM cases`).get().n === 1 && kase().id === firstId &&
+    kase().case_number === 'ق-2026-099',
+  db.prepare(`SELECT id, case_number FROM cases`).all());
+
+/* والتحديثُ في السجلّ منسوبٌ إلى مشروعه. */
+const logged = JSON.parse(
+  db.prepare(`SELECT details FROM activity_logs WHERE type = 'basecamp' ORDER BY created_at DESC, rowid DESC`).get().details,
+);
+check('والسجلُّ يسمّي المشروعَ وقضيتَه',
+  logged.projects?.some((entry) => entry.projectId === '101' && entry.caseId === firstId),
+  logged.projects);
+
+// ── رقمٌ لقضيةٍ يربطها مشروعٌ آخر → لا يُكتب فيها ──
+({ db, env } = setup());
+docContent = DOC;
+await runSync(env, connection, actor);
+const ownerCase = kase();
+
+db.prepare(
+  `INSERT INTO basecamp_projects (project_id, name, app_url, status, vault_id, doc_id, kind,
+                                  created_at, updated_at)
+   VALUES ('103', 'مشروعٌ نُسخ ملفُّه', 'https://3.basecamp.com/1/projects/103', 'active', '13', '903',
+           'client', ?, ?)`,
+).run(now, now);
+/* والمشروعُ المالك خارجَ الدفعة — وإلا ردّ `seen` الثاني «مكرّراً» قبل أن
+   يبلغ هذا الحارس. وهي حالُ مشروعٍ صُنّف بعدها داخلياً، أو حُذف ملفُّه. */
+db.prepare(`UPDATE basecamp_projects SET kind = 'internal' WHERE project_id = '101'`).run();
+docContent = DOC.replace('نزاعٌ على عقد توريد', 'موضوعُ مشروعٍ آخر');
+plan = await buildPlan(env, connection);
+const copied = plan.plans.find((p) => p.projectId === '103');
+check('رقمٌ لقضية مشروعٍ آخر → خطأٌ مسمّى', copied.error === 'case_number_taken', copied);
+await runSync(env, connection, actor);
+check('ولا تُمسّ قضيةُ المشروع الآخر',
+  db.prepare(`SELECT summary FROM cases WHERE id = ?`).get(ownerCase.id).summary === ownerCase.summary,
+  db.prepare(`SELECT summary FROM cases WHERE id = ?`).get(ownerCase.id));
+check('ولا يُربط المشروعُ بها',
+  !db.prepare(`SELECT case_id FROM basecamp_projects WHERE project_id = '103'`).get().case_id);
+
+// ── المشروعُ المؤرشف منتهٍ ──
+({ db, env } = setup());
+await writeConflictPolicy(env, 'platform', 'u1');
+docContent = DOC; // «قيد المعالجة» في الملفّ
+await runSync(env, connection, actor);
+check('قبل الأرشفة: كما في الملفّ', kase().status === 'in-progress', kase().status);
+
+db.prepare(`UPDATE basecamp_projects SET status = 'archived' WHERE project_id = '101'`).run();
+await runSync(env, connection, actor);
+check('مشروعٌ أُرشف في بيسكامب → القضيةُ مكتملة', kase().status === 'completed', kase().status);
+check('ولا تُؤرشف في المنصة', kase().archived_at === null, kase().archived_at);
+
+/* وحالةٌ عدّلتها يدٌ في المنصة تبقى — المنصةُ هي المعتمدة. */
+({ db, env } = setup());
+await writeConflictPolicy(env, 'platform', 'u1');
+docContent = DOC;
+await runSync(env, connection, actor);
+db.prepare(`UPDATE cases SET status = 'postponed'`).run();
+db.prepare(`UPDATE basecamp_projects SET status = 'archived' WHERE project_id = '101'`).run();
+await runSync(env, connection, actor);
+check('وحالةٌ عدّلتها يدٌ في المنصة لا تُدهس', kase().status === 'postponed', kase().status);
+
+// ── مشروعٌ مؤرشفٌ يُستورد أوّلَ مرّة ──
+({ db, env } = setup());
+db.prepare(`UPDATE basecamp_projects SET status = 'archived' WHERE project_id = '101'`).run();
+docContent = DOC;
+await runSync(env, connection, actor);
+check('ومشروعٌ مؤرشفٌ يُستورد مكتملاً', kase().status === 'completed', kase().status);
 
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

@@ -206,7 +206,8 @@ const withPolicy = async (policy) => {
   /* يدٌ تمسّ الحقل، ثمّ يتبدّل عندهم — تبدّلُ الطرفين. */
   fresh.db.prepare(`UPDATE cases SET summary = 'تصحيحٌ كتبه المحامي'`).run();
   docContent = DOC.replace('نتيجة المشروع: تحت الدراسة', 'موضوع المشروع: نزاعٌ على عقد توريد');
-  if (policy !== 'ask') await writeConflictPolicy(fresh.env, policy, 'u1');
+  /* و`null` بلا سياسةٍ محفوظة — فيُقرأ الافتراض. */
+  if (policy) await writeConflictPolicy(fresh.env, policy, 'u1');
   const result = await runSync(fresh.env, connection, actor);
   return { ...fresh, result };
 };
@@ -224,6 +225,16 @@ check('«خذ من بيسكامب» تكتب قيمتَهم',
   trial.db.prepare(`SELECT summary FROM cases`).get().summary === 'نزاعٌ على عقد توريد',
   trial.db.prepare(`SELECT summary FROM cases`).get());
 check('ولا تُسجّل اختلافاً', trial.result.conflicts === 0, trial.result);
+
+/* ═══ والافتراضُ أنّ المنصة هي المعتمدة ═══
+   مكتبٌ لم يختر سياسةً: ما عُدِّل في المنصة يبقى وإن خالف بيسكامب، ولا
+   يُفتح له اختلاف. */
+trial = await withPolicy(null);
+check('بلا سياسةٍ محفوظة: ما في المنصة هو المعتمد',
+  trial.result.conflictPolicy === 'platform' &&
+    trial.db.prepare(`SELECT summary FROM cases`).get().summary === 'تصحيحٌ كتبه المحامي',
+  trial.result);
+check('ولا يُفتح اختلاف', trial.result.conflicts === 0, trial.result);
 
 trial = await withPolicy('platform');
 check('«أبقِ ما في المنصة» تُبقي ما كُتب',

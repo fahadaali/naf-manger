@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Archive, ChevronDown, CircleCheck, ExternalLink, Plus, Search, TriangleAlert } from 'lucide-react';
+import { Archive, ChevronDown, CircleCheck, ExternalLink, HandHeart, Plus, Search, TriangleAlert } from 'lucide-react';
 import { BulkAction, Case } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
@@ -20,6 +20,16 @@ import { Alert } from '@/registry/naf/ui/alert';
 import { messageTone } from '../../lib/status-message';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 import { Card } from '@/registry/naf/ui/card';
+
+/* القضيةُ المقدَّمة مجاناً تطوّعاً — تُعلَّم في البطاقة والجدول معاً. */
+function ProBonoBadge() {
+  return (
+    <Badge variant="outline">
+      <HandHeart aria-hidden="true" />
+      تطوّعي
+    </Badge>
+  );
+}
 
 export default function CasesView() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -333,6 +343,7 @@ export default function CasesView() {
                         مؤرشفة
                       </Badge>
                     )}
+                    {case_.feeStructure?.type === 'pro_bono' && <ProBonoBadge />}
                     <Badge variant={variant}>
                       <Icon aria-hidden="true" />
                       {statusOf(case_.status).label}
@@ -468,6 +479,9 @@ export default function CasesView() {
                         </Badge>
                       );
                     })()}
+                    {case_.feeStructure?.type === 'pro_bono' && (
+                      <div className="mt-1"><ProBonoBadge /></div>
+                    )}
                     {case_.outcome && (() => {
                       const { variant, Icon } = outcomeOf(case_.outcome);
                       return (

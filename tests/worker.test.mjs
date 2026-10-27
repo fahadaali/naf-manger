@@ -617,6 +617,33 @@ r = await hit('POST', '/api/clients/bulk', { action: 'delete', ids: batch });
 check('وإعادةُ الحذف تقول صفراً ولا تسقط', r.body.ok && r.body.data.affected === 0, r.body);
 
 // ═══════════════════════════════════════════════════════════
+group('القضايا التطوّعية — بلا إيرادٍ ولا عمولة');
+
+/* ومبلغٌ بقي في صفّها من قبل أن تُعلَّم تطوّعاً: لا يُحسب إيراداً. */
+const statsBefore = (await hit('GET', `/api/marketers/${marketerId}/stats`)).body.data;
+r = await hit('POST', '/api/cases', {
+  caseNumber: 'ق-2026-077', caseType: 'قضية أحوال', clientId, clientName: 'شركة الأفق التجارية',
+  status: 'in-progress', marketerId,
+  feeStructure: { type: 'pro_bono' },
+  paymentStatus: { totalAmount: 9000, collectedAmount: 9000, remainingAmount: 0, collectionStatus: 'fully_paid' },
+  commissionStructure: { type: 'percentage', value: 10 },
+});
+check('تُنشأ قضيةٌ تطوّعية', r.status === 201 && r.body.data?.feeStructure?.type === 'pro_bono', r.body);
+
+const statsAfter = (await hit('GET', `/api/marketers/${marketerId}/stats`)).body.data;
+check('تُعدّ في قضايا المسوّق', statsAfter.totalCases === statsBefore.totalCases + 1, statsAfter);
+check('ولا تُعدّ في إيراده ولا عمولته',
+  statsAfter.totalRevenue === statsBefore.totalRevenue &&
+    statsAfter.totalCommissionEarned === statsBefore.totalCommissionEarned,
+  { statsBefore, statsAfter });
+
+r = await hit('GET', '/api/stats');
+check('واللوحةُ تعدّ التطوّعية', r.body.data.proBonoCases === 1, r.body.data);
+
+r = await hit('GET', '/api/settings');
+check('و«مجاني — تطوّعي» في أنواع الأتعاب', r.body.data.feeTypes.includes('pro_bono'), r.body.data.feeTypes);
+
+// ═══════════════════════════════════════════════════════════
 group('الحذف — آخرَ ما يُختبر');
 r = await hit('DELETE', `/api/cases/${caseId}`);
 check('تُحذف القضية', r.body.ok, r.body);
