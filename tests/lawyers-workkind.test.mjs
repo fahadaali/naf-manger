@@ -108,10 +108,46 @@ group('نسبةُ كسب القضايا');
   add.run('u1', 'u1', 'قضية تجارية', null, now, now);
   add.run('j1', 'j1', 'صياغة عقود', null, now, now);
   const decided = (await bodyOf(await readStats(env2))).data;
-  check('الرابحةُ من المحسومة لا من كلّ المكتملة', decided.winRate === 50, decided.winRate);
+  check('الكسبُ — رابحةٌ أو تسوية — من المحسومة لا من كلّ المكتملة', decided.winRate === 75, decided.winRate);
   check('ومكوّناتُها، وما انتهى بلا نتيجة — بلا العمل القانوني',
     decided.outcomes.won === 2 && decided.outcomes.lost === 1 && decided.outcomes.settled === 1 &&
-      decided.outcomes.decided === 4 && decided.outcomes.undecided === 1, decided.outcomes);
+      decided.outcomes.wins === 3 && decided.outcomes.decided === 4 && decided.outcomes.undecided === 1, decided.outcomes);
+}
+
+// ═══════════════════════════════════════════════════════════
+group('فترةُ اللوحة');
+
+{
+  const { readRange } = await import('../worker/lib/queries.js');
+  const quarter = readRange('2026-04-01', '2026-06-30');
+  check('الفترةُ تُقارَن بالسابقة المساوية لها', quarter.prevFrom === '2026-01-01' && quarter.prevTo === '2026-03-31', quarter);
+  check('وما لا يُفهم يُردّ للكلّ', readRange('2026-13-40x', '2026-01-01') === null && readRange('2026-05-01', '2026-04-01') === null);
+
+  const db3 = freshDatabase();
+  const env3 = makeEnv(db3);
+  const at = (date) => Math.floor(Date.parse(`${date}T12:00:00Z`) / 1000);
+  db3.prepare(`INSERT INTO clients (id, full_name, join_date, created_at, updated_at) VALUES
+    ('a', 'أ', '2026-05-10', 1, 1), ('b', 'ب', '2026-02-10', 1, 1), ('c', 'ج', '2025-01-01', 1, 1)`).run();
+  const add = db3.prepare(
+    `INSERT INTO cases (id, case_number, case_type, client_id, client_name, status, outcome, closed_at, created_at, updated_at)
+     VALUES (?, ?, 'قضية', 'a', 'أ', ?, ?, ?, ?, ?)`,
+  );
+  add.run('q2-won', '1', 'completed', 'won', at('2026-05-20'), at('2026-04-02'), 1);
+  add.run('q2-lost', '2', 'completed', 'lost', at('2026-06-01'), at('2026-04-05'), 1);
+  add.run('q1-won', '3', 'completed', 'settled', at('2026-02-01'), at('2026-01-15'), 1);
+  add.run('q2-open', '4', 'in-progress', null, null, at('2026-05-05'), 1);
+  db3.prepare(`INSERT INTO client_payments (id, case_id, client_id, amount, payment_date, created_by, created_at) VALUES
+    ('p1', 'q2-won', 'a', 100000, '2026-05-21', 'u', 1), ('p2', 'q1-won', 'a', 50000, '2026-02-02', 'u', 1)`).run();
+
+  const ranged = (await bodyOf(await readStats(env3, { from: '2026-04-01', to: '2026-06-30' }))).data;
+  check('العملاءُ والقضايا بما بدأ في الفترة', ranged.totalClients === 1 && ranged.totalCases === 3, ranged);
+  check('ونسبةُ الكسب بما حُسم فيها', ranged.winRate === 50 && ranged.outcomes.decided === 2, ranged.outcomes);
+  check('والمحصَّلُ بدفعاتها', ranged.collectedThisYear.cases === 1000, ranged.collectedThisYear);
+  check('والمؤشّرُ عن الفترة السابقة', ranged.growth.clients.current === 1 && ranged.growth.clients.previous === 1 &&
+    ranged.growth.winRate?.previous === 100 && ranged.growth.winRate?.current === 50, ranged.growth);
+  check('والجاري الآن لا في الفترة', ranged.ongoingByKind.litigation === 1, ranged.ongoingByKind);
+  const all = (await bodyOf(await readStats(env3))).data;
+  check('وبلا فترةٍ الكلّ', all.totalClients === 3 && all.totalCases === 4 && all.range === null);
 }
 
 const { parseDocument, DEFAULT_FIELD_MAP } = await import('../worker/lib/basecamp/parse.js');

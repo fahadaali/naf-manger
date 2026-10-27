@@ -213,7 +213,7 @@ async function sendWeekly(env) {
     lines: [
       `العملاء: ${stats.totalClients ?? 0} · المحتملون: ${stats.totalProspects ?? 0}`,
       `القضايا: ${stats.totalCases ?? 0} · المنظورة: ${stats.pendingCases ?? 0} · المكتملة: ${stats.completedCases ?? 0}`,
-      `نسبة كسب القضايا: ${stats.winRate ?? 0}% (الرابحة من المحسومة) · القضايا التطوّعية: ${stats.proBonoCases ?? 0}`,
+      `نسبة كسب القضايا: ${stats.winRate ?? 0}% (الرابحة والتسوية من المحسومة) · القضايا التطوّعية: ${stats.proBonoCases ?? 0}`,
       `مستحقّاتٌ غير محصّلة: ${stats.outstandingAmount ?? 0} ريال`,
       `ينتظر نظرك: ${conflicts} اختلافاً و${reviews} مراجعةً في بيسكامب، و${waiting} دفعةً من وافق بلا ربطٍ مؤكَّد.`,
     ],

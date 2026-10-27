@@ -227,7 +227,8 @@ export default function CasesView({ initialFilter }: { initialFilter?: ViewFilte
   /* نسبةُ كسب القضايا: الرابحةُ من المحسومة — ما له نتيجة — لا من كلّ
      المكتملة: العقدُ المكتمل ليس قضيةً خاسرة. */
   const decidedCases = visibleCases.filter((c) => c.outcome === 'won' || c.outcome === 'lost' || c.outcome === 'settled');
-  const wonCases = decidedCases.filter((c) => c.outcome === 'won');
+  /* والتسويةُ والصلحُ كسبٌ للموكّل. */
+  const wonCases = decidedCases.filter((c) => c.outcome === 'won' || c.outcome === 'settled');
   const winRate = decidedCases.length > 0 ? Math.round((wonCases.length / decidedCases.length) * 100) : 0;
 
   return (
