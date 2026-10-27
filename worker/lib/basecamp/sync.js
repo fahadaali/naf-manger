@@ -291,7 +291,7 @@ const fallbackNumber = (prefix, projectId) => `${prefix}-${projectId}`;
  * توكيلٌ في ملفّ غيره، وقضيةٌ تُنسب إلى من ليس صاحبَها. فيُردّ في
  * `candidate` ليُقال في المعاينة، ويبقى الحكمُ لمن يقرأ.
  */
-async function findClient(env, { idNumber, fullName }) {
+export async function findClient(env, { idNumber, fullName }) {
   if (idNumber) {
     const byId = await env.DB.prepare(`SELECT * FROM clients WHERE id_number = ?`)
       .bind(idNumber)
