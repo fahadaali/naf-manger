@@ -162,6 +162,8 @@ export interface Case {
    * و`summaryRaw` الموضوعُ كما ورد من بيسكامب قبل الصياغة.
    */
   title?: string | null;
+  /** نوعُ العمل — وغيابُه «يُستنتج» (`src/lib/work-kind.ts`). */
+  workKind?: 'litigation' | 'legal_work' | null;
   aiTitle?: string | null;
   aiSummaryText?: string | null;
   summaryRaw?: string | null;
@@ -355,6 +357,31 @@ export interface WafeqPayment {
   clientName?: string | null;
   matchBy?: 'case_number' | 'client' | 'ai' | 'manual' | 'project_name' | 'wafeq_project' | null;
   reason: string;
+}
+
+/**
+ * محامٍ — من قائمة الإعدادات لا من حسابات المنصة. و`memberId` حسابُه إن كان
+ * له، وبه تعمل «قضاياي».
+ */
+export interface Lawyer {
+  id: string;
+  name: string;
+  title: string;
+  email: string;
+  phone: string;
+  memberId: string | null;
+  isActive: boolean;
+  openCases: number;
+}
+
+/** ما تفتحه لوحةُ التحكم في شاشةٍ أخرى — تصفيةٌ تُطبَّق عند الوصول. */
+export interface ViewFilter {
+  status?: string;
+  workKind?: 'litigation' | 'legal_work';
+  lawyer?: string;
+  clientType?: string;
+  /** يتبدّل مع كلّ نقرة فتُطبَّق التصفيةُ ولو تكرّرت. */
+  stamp?: number;
 }
 
 /** إيرادٌ عامّ بلا قضية — من وافق، لكشف حساب الموكّل. */
@@ -777,6 +804,8 @@ export interface DashboardStats {
   outstandingAmount: number;
   /** القيمةُ التقديرية للعمل التطوّعي في السنة الجارية — ريالات. */
   proBonoValue?: number;
+  /** الجاري بنوعه: قضايا منظورة، وأعمالٌ قانونية مستمرّة. */
+  ongoingByKind?: { litigation?: number; legalWork?: number };
   /** المحصَّل هذا العام: دفعاتُ القضايا، والإيرادُ العامّ بلا قضية — ريالات. */
   collectedThisYear?: { cases: number; general: number };
   /** القضايا المفتوحة لكلّ محامٍ مسؤول. و`lawyerId: null` هي «بلا محامٍ». */

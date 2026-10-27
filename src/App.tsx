@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ViewFilter } from './types';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
@@ -20,6 +21,12 @@ import ErrorBoundary from './components/Common/ErrorBoundary';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard');
+  /* تصفيةٌ تحملها نقرةٌ في لوحة التحكم إلى شاشتها — وتُمسح بالتنقّل من الشريط. */
+  const [viewFilter, setViewFilter] = useState<ViewFilter | null>(null);
+  const navigate = (view: string, filter?: ViewFilter) => {
+    setViewFilter(filter ? { ...filter, stamp: Date.now() } : null);
+    setCurrentView(view);
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isAuthenticated, loading } = useAuth();
 
@@ -69,13 +76,13 @@ function AppContent() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onNavigate={navigate} />;
       case 'clients':
-        return <ClientsView />;
+        return <ClientsView initialFilter={viewFilter} />;
       case 'prospects':
         return <ProspectsView />;
       case 'cases':
-        return <CasesView />;
+        return <CasesView initialFilter={viewFilter} />;
       case 'analytics':
         return <Analytics />;
       case 'reports':
@@ -85,7 +92,7 @@ function AppContent() {
       case 'marketers':
         return <MarketersView />;
       default:
-        return <Dashboard />;
+        return <Dashboard onNavigate={navigate} />;
     }
   };
 
@@ -102,7 +109,7 @@ function AppContent() {
       <Sidebar 
         currentView={currentView} 
         onViewChange={(view) => {
-          setCurrentView(view);
+          navigate(view);
           setSidebarOpen(false);
         }}
         isOpen={sidebarOpen}
@@ -121,7 +128,7 @@ function AppContent() {
         <Header 
           currentView={currentView} 
           onMenuClick={() => setSidebarOpen(true)}
-          onNavigate={setCurrentView}
+          onNavigate={(view) => navigate(view)}
         />
         
         <main className="flex-1 p-4 sm:p-6 overflow-auto">

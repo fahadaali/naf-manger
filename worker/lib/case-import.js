@@ -71,7 +71,7 @@ function closed(target, raw) {
   const value = String(raw ?? '').trim();
   if (!value) return null;
   const codes = target === 'case.status'
-    ? ['pending', 'in-progress', 'completed', 'postponed']
+    ? ['in-progress', 'completed', 'postponed']
     : ['won', 'lost', 'settled'];
   if (codes.includes(value)) return value;
   const coerced = coerceTarget(target, value);
@@ -134,7 +134,7 @@ async function planRow(env, raw, line, seen, members) {
 
   const status = closed('case.status', raw.status);
   if (status === undefined) plan.warnings.push(`حالةٌ لم تُفهم: «${raw.status}» — تُكتب «منظورة»`);
-  values.status = status || 'pending';
+  values.status = status || 'in-progress';
 
   const outcome = closed('case.outcome', raw.outcome);
   if (outcome === undefined) plan.warnings.push(`نتيجةٌ لم تُفهم: «${raw.outcome}» — لم تُكتب`);
@@ -165,7 +165,7 @@ async function planRow(env, raw, line, seen, members) {
     const exact = members.filter((member) => normalizeArabic(member.name) === normalizeArabic(lawyer));
     const close = exact.length ? exact : members.filter((member) => nameRelation(member.name, lawyer) !== 'different');
     if (close.length === 1) values.lawyerId = close[0].id;
-    else plan.warnings.push(`المحامي «${lawyer}» لم يُعرف بين الأعضاء — لم يُكتب`);
+    else plan.warnings.push(`المحامي «${lawyer}» لم يُعرف بين المحامين — لم يُكتب`);
   }
 
   if (raw.opposingParties) {
@@ -196,7 +196,7 @@ export async function importCases(request, env, user) {
   const dryRun = body?.dryRun !== false;
 
   const { results } = await env.DB.prepare(
-    `SELECT user_id, display_name FROM members WHERE is_active = 1 AND display_name IS NOT NULL`,
+    `SELECT id AS user_id, name AS display_name FROM lawyers WHERE is_active = 1`,
   ).all();
   const members = (results ?? []).map((row) => ({ id: row.user_id, name: row.display_name }));
 

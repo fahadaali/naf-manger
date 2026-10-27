@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Award, Banknote, FileText, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
+import { Award, Banknote, FileText, Gavel, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
 import { Money } from '@/registry/naf/currency/money';
 import { Card } from '@/registry/naf/ui/card';
 import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
 import { db } from '../../data/database';
-import { DashboardStats } from '../../types';
+import { DashboardStats, ViewFilter } from '../../types';
 import { useChartPalette } from '../../lib/chart-tokens';
 import { formatNumber } from '@/registry/naf/lib/format';
 import { useSettingList } from '../../lib/use-settings';
@@ -29,7 +29,11 @@ const EMPTY_STATS: DashboardStats = {
   outstandingAmount: 0,
 };
 
-export default function Dashboard() {
+/** نقرةٌ في اللوحة تفتح شاشتَها بالتصفية المناسبة — `App.tsx`. */
+type Navigate = (view: string, filter?: ViewFilter) => void;
+
+export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}) {
+  const go = (view: string, filter?: ViewFilter) => () => onNavigate?.(view, filter);
   // لوحة الرسوم تُقرأ من الرموز وتُعاد قراءتها عند تبديل المظهر
   const palette = useChartPalette();
 
@@ -67,6 +71,17 @@ export default function Dashboard() {
    *
    * والقيمُ المسجَّلة في الصفوف تُضمّ إلى المكوَّنة: نوعٌ حُذف من التكوين
    * وبقيت له صفوفٌ لا يسقط من الرسم فتنقص الحصيلة عن مجموعها. */
+  /* نقرةٌ على قطعةٍ أو عمود — بفهرسها في البيانات. والمؤشّرُ يدلّ أنها تُنقر. */
+  const clickable = (open: (index: number) => void) => ({
+    onClick: (_event: unknown, elements: { index: number }[]) => {
+      if (elements?.length) open(elements[0].index);
+    },
+    onHover: (event: { native?: { target?: { style?: CSSStyleDeclaration } } }, elements: unknown[]) => {
+      const style = event?.native?.target?.style;
+      if (style) style.cursor = elements?.length ? 'pointer' : 'default';
+    },
+  });
+
   const configuredTypes = useSettingList('clientTypes');
   const configuredStatuses = useSettingList('caseStatuses');
 
@@ -109,6 +124,7 @@ export default function Dashboard() {
           icon={Users}
           color="bg-chart-1"
           trend={stats.growth?.clients}
+          onClick={go('clients')}
         />
         <StatsCard
           title="العملاء المحتملين"
@@ -116,6 +132,7 @@ export default function Dashboard() {
           icon={UserPlus}
           color="bg-chart-2"
           trend={stats.growth?.prospects}
+          onClick={go('prospects')}
         />
         <StatsCard
           title="إجمالي القضايا"
@@ -123,12 +140,22 @@ export default function Dashboard() {
           icon={FileText}
           color="bg-chart-3"
           trend={stats.growth?.cases}
+          onClick={go('cases')}
+        />
+        {/* «جارية» بنوعها — قضايا منظورة أمام جهة، وأعمالٌ قانونية مستمرّة. */}
+        <StatsCard
+          title="قضايا منظورة"
+          value={stats.ongoingByKind?.litigation ?? 0}
+          icon={Gavel}
+          color="bg-chart-4"
+          onClick={go('cases', { status: 'in-progress', workKind: 'litigation' })}
         />
         <StatsCard
-          title="القضايا المنظورة"
-          value={stats.pendingCases}
+          title="أعمال قانونية مستمرة"
+          value={stats.ongoingByKind?.legalWork ?? 0}
           icon={TrendingUp}
-          color="bg-chart-4"
+          color="bg-chart-2"
+          onClick={go('cases', { status: 'in-progress', workKind: 'legal_work' })}
         />
         <StatsCard
           title="معدل الربح"
@@ -136,6 +163,7 @@ export default function Dashboard() {
           icon={Award}
           color="bg-chart-5"
           trend={stats.growth?.winRate ?? undefined}
+          onClick={go('cases', { status: 'completed' })}
         />
         {/* العددُ وقيمتُها التقديرية هذا العام — ما كان المكتب سيتقاضاه. */}
         <StatsCard
@@ -145,6 +173,7 @@ export default function Dashboard() {
             : stats.proBonoCases ?? 0}
           icon={HandHeart}
           color="bg-chart-1"
+          onClick={go('cases')}
         />
         {/* المحصَّلُ هذا العام: القضايا والإيرادُ العامّ بلا قضية — كلٌّ بمفرده. */}
         {stats.collectedThisYear && (
@@ -168,6 +197,7 @@ export default function Dashboard() {
           value={<Money value={stats.outstandingAmount ?? 0} />}
           icon={Wallet}
           color="bg-chart-2"
+          onClick={go('cases')}
         />
       </div>
 
@@ -175,15 +205,18 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* والرسمان يُنقران: القطعةُ تفتح عملاءَ نوعها، والعمودُ قضايا حالته. */}
             <ChartCard
               title="توزيع العملاء حسب النوع"
               type="doughnut"
               data={clientTypeData}
+              options={clickable((index) => go('clients', { clientType: clientTypes[index] })())}
             />
             <ChartCard
               title="حالة القضايا"
               type="bar"
               data={caseStatusData}
+              options={clickable((index) => go('cases', { status: caseStatuses[index] })())}
             />
           </div>
 
@@ -196,19 +229,26 @@ export default function Dashboard() {
                 {(stats.casesByLawyer ?? []).map((row) => {
                   const top = Math.max(...(stats.casesByLawyer ?? []).map((entry) => entry.open), 1);
                   return (
-                    <li key={row.lawyerId ?? 'none'} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className={row.lawyerId ? 'text-foreground' : 'text-warning-strong font-medium'}>
-                          {row.lawyerId ? row.name || 'عضو' : 'بلا محامٍ'}
+                    <li key={row.lawyerId ?? 'none'}>
+                      {/* الصفُّ زرٌّ يفتح قضايا المحامي — والمحتوى `span` لا `div`: الزرُّ لا يحمل كتلاً. */}
+                      <button
+                        type="button"
+                        onClick={go('cases', { lawyer: row.lawyerId ?? 'none' })}
+                        className="block w-full space-y-1 rounded-md p-1 text-start hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary"
+                      >
+                        <span className="flex justify-between text-sm">
+                          <span className={row.lawyerId ? 'text-foreground' : 'text-warning-strong font-medium'}>
+                            {row.lawyerId ? row.name || 'محامٍ' : 'بلا محامٍ'}
+                          </span>
+                          <bdi className="text-muted-foreground">{formatNumber(row.open)}</bdi>
                         </span>
-                        <bdi className="text-muted-foreground">{formatNumber(row.open)}</bdi>
-                      </div>
-                      <div className="h-2 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${row.lawyerId ? 'bg-primary' : 'bg-warning'}`}
-                          style={{ width: `${(row.open / top) * 100}%` }}
-                        />
-                      </div>
+                        <span className="block h-2 rounded-full bg-muted overflow-hidden">
+                          <span
+                            className={`block h-full rounded-full ${row.lawyerId ? 'bg-primary' : 'bg-warning'}`}
+                            style={{ width: `${(row.open / top) * 100}%` }}
+                          />
+                        </span>
+                      </button>
                     </li>
                   );
                 })}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Archive, ChevronDown, CircleCheck, ExternalLink, HandHeart, Plus, Search, TriangleAlert } from 'lucide-react';
-import { BulkAction, Case, MemberEntry } from '../../types';
+import { BulkAction, Case, Lawyer, ViewFilter } from '../../types';
+import { WORK_KIND_LABEL, WorkKind, isOngoing, workKindOf } from '../../lib/work-kind';
 import { useAuth } from '../../contexts/AuthContext';
 import CaseModal from './CaseModal';
 import RowCheckbox from '../Common/RowCheckbox';
@@ -31,7 +32,7 @@ function ProBonoBadge() {
   );
 }
 
-export default function CasesView() {
+export default function CasesView({ initialFilter }: { initialFilter?: ViewFilter | null } = {}) {
   const [cases, setCases] = useState<Case[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -41,17 +42,35 @@ export default function CasesView() {
   const [viewingCase, setViewingCase] = useState<Case | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const { hasPermission, user } = useAuth();
-  /* «قضاياي» و«بلا محامٍ» — والأسماءُ من دليل الأعضاء لا من القضية. */
-  const [filterLawyer, setFilterLawyer] = useState<'all' | 'mine' | 'none'>('all');
-  const [members, setMembers] = useState<MemberEntry[]>([]);
+  /* «قضاياي» و«بلا محامٍ» ومحامٍ بعينه — والأسماءُ من قائمة المحامين في
+     الإعدادات. و«قضاياي» قضايا المحامي المربوط بحسابي (ومعرّفي نفسُه لما
+     زُرع قبل القائمة: `migrations/0028`). */
+  const [filterLawyer, setFilterLawyer] = useState<string>('all');
+  const [filterWorkKind, setFilterWorkKind] = useState<'all' | WorkKind>('all');
+  const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   useEffect(() => {
-    db.getDirectory().then(setMembers);
+    db.getLawyers().then(setLawyers);
   }, []);
-  const lawyerName = (id?: string | null) => (id ? members.find((member) => member.id === id)?.name ?? '' : '');
+  const lawyerName = (id?: string | null) => (id ? lawyers.find((lawyer) => lawyer.id === id)?.name ?? '' : '');
+  const mine = new Set([user?.id ?? '', ...lawyers.filter((lawyer) => lawyer.memberId && lawyer.memberId === user?.id).map((lawyer) => lawyer.id)]);
+  mine.delete('');
   const matchesLawyer = (case_: Case) =>
     filterLawyer === 'all'
       || (filterLawyer === 'none' && !case_.lawyerId)
-      || (filterLawyer === 'mine' && Boolean(user?.id) && (case_.lawyerId === user?.id || (case_.team ?? []).includes(user?.id ?? '')));
+      || (filterLawyer === 'mine' && (mine.has(case_.lawyerId ?? '') || (case_.team ?? []).some((id) => mine.has(id))))
+      || (case_.lawyerId === filterLawyer || (case_.team ?? []).includes(filterLawyer));
+  const matchesWorkKind = (case_: Case) => filterWorkKind === 'all' || workKindOf(case_) === filterWorkKind;
+
+  /* ═══ تصفيةٌ من لوحة التحكم ═══ تُطبَّق عند الوصول، ومع كلّ نقرةٍ جديدة. */
+  useEffect(() => {
+    if (!initialFilter) return;
+    setFilterStatus(initialFilter.status ?? 'all');
+    setFilterWorkKind(initialFilter.workKind ?? 'all');
+    setFilterLawyer(initialFilter.lawyer ?? 'all');
+    setFilterType('all');
+    setSearchTerm('');
+    setShowCompletedCases(initialFilter.status === 'completed');
+  }, [initialFilter?.stamp]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showCompletedCases, setShowCompletedCases] = useState(false);
   const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
   /* القضايا تُقرأ جدولاً في الغالب — ففيها رقمٌ وعميلٌ وحالةٌ وتاريخ،
@@ -103,10 +122,11 @@ export default function CasesView() {
   const filteredActiveCases = activeCases.filter(case_ => {
     const matchesSearch = matchesText(case_);
     
-    const matchesStatus = filterStatus === 'all' || case_.status === filterStatus;
+    const matchesStatus = filterStatus === 'all' || case_.status === filterStatus
+      || (filterStatus === 'in-progress' && isOngoing(case_.status));
     const matchesType = filterType === 'all' || case_.caseType === filterType;
     
-    return matchesSearch && matchesStatus && matchesType && matchesLawyer(case_);
+    return matchesSearch && matchesStatus && matchesType && matchesLawyer(case_) && matchesWorkKind(case_);
   });
 
   const filteredCompletedCases = completedCases.filter(case_ => {
@@ -115,7 +135,7 @@ export default function CasesView() {
     const matchesStatus = filterStatus === 'all' || filterStatus === 'completed';
     const matchesType = filterType === 'all' || case_.caseType === filterType;
     
-    return matchesSearch && matchesStatus && matchesType && matchesLawyer(case_);
+    return matchesSearch && matchesStatus && matchesType && matchesLawyer(case_) && matchesWorkKind(case_);
   });
 
   /* التحديدُ يشمل النشطةَ والمكتملةَ المعروضتين معاً: من فتح الجدولين
@@ -258,13 +278,25 @@ export default function CasesView() {
               ))}
             </Select>
             <Select
+              value={filterWorkKind}
+              onChange={(e) => setFilterWorkKind(e.target.value as 'all' | WorkKind)}
+              aria-label="تصفية بنوع العمل"
+            >
+              <option value="all">القضايا والأعمال</option>
+              <option value="litigation">{WORK_KIND_LABEL.litigation}</option>
+              <option value="legal_work">{WORK_KIND_LABEL.legal_work}</option>
+            </Select>
+            <Select
               value={filterLawyer}
-              onChange={(e) => setFilterLawyer(e.target.value as 'all' | 'mine' | 'none')}
+              onChange={(e) => setFilterLawyer(e.target.value)}
               aria-label="تصفية بالمحامي"
             >
               <option value="all">كل المحامين</option>
               <option value="mine">قضاياي</option>
               <option value="none">بلا محامٍ</option>
+              {lawyers.map((lawyer) => (
+                <option key={lawyer.id} value={lawyer.id}>{lawyer.name}</option>
+              ))}
             </Select>
             <Select
               value={archiveView}
@@ -305,15 +337,22 @@ export default function CasesView() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">
           <p className="text-xs sm:text-sm text-muted-foreground">إجمالي القضايا</p>
           <p className="text-xl sm:text-2xl font-bold text-foreground"><bdi>{formatNumber(visibleCases.length)}</bdi></p>
         </Card>
+        {/* «جارية» بنوعها: قضايا منظورة أمام جهة، وأعمالٌ قانونية مستمرّة. */}
         <Card className="p-4">
-          <p className="text-xs sm:text-sm text-muted-foreground">قيد المعالجة</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">قضايا منظورة</p>
           <p className="text-xl sm:text-2xl font-bold text-primary">
-            <bdi>{formatNumber(activeCases.filter(c => c.status === 'in-progress').length)}</bdi>
+            <bdi>{formatNumber(activeCases.filter((c) => isOngoing(c.status) && workKindOf(c) === 'litigation').length)}</bdi>
+          </p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">أعمال قانونية مستمرة</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">
+            <bdi>{formatNumber(activeCases.filter((c) => isOngoing(c.status) && workKindOf(c) === 'legal_work').length)}</bdi>
           </p>
         </Card>
         <Card className="p-4">

@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact, WafeqProjectLink, GeneralPayment } from '../types';
+import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact, WafeqProjectLink, GeneralPayment, Lawyer } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -416,6 +416,24 @@ export class LocalDatabase {
   ): Promise<void> {
     const target = action === 'general' ? { clientId: targetId || null } : targetId ? { caseId: targetId } : {};
     await api.post(`/wafeq/decide/${encodeURIComponent(externalId)}`, { action, ...target });
+  }
+
+  /* ═══ المحامون ═══ قائمةٌ من الإعدادات — `worker/lib/lawyers.js`. */
+  async getLawyers(): Promise<Lawyer[]> {
+    return await listOr(api.read<Lawyer[]>('/lawyers'), 'المحامين');
+  }
+
+  async saveLawyer(lawyer: Partial<Lawyer> & { name: string }): Promise<Lawyer> {
+    const body = { name: lawyer.name, title: lawyer.title, email: lawyer.email, phone: lawyer.phone,
+      memberId: lawyer.memberId ?? null, isActive: lawyer.isActive !== false };
+    return lawyer.id
+      ? await api.put<Lawyer>(`/lawyers/${encodeURIComponent(lawyer.id)}`, body)
+      : await api.post<Lawyer>('/lawyers', body);
+  }
+
+  /* ومن عليه قضايا يُوقف ولا يُحذف — تُعاد قراءةُ القائمة بعدها لترى أيَّهما وقع. */
+  async deleteLawyer(id: string): Promise<void> {
+    await api.remove('lawyers', id);
   }
 
   async getClientGeneralPayments(clientId: string): Promise<GeneralPayment[]> {

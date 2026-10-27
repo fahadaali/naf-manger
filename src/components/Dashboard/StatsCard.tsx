@@ -34,17 +34,19 @@ interface StatsCardProps {
      لا تُقرأ من شيء ولا تتغيّر. والآن هو ما تردّه `‎/api/stats‎`: عددُ
      الشهرَين، والنسبةُ بينهما حين تصحّ. */
   trend?: Growth;
+  /** نقرةٌ تفتح الشاشةَ المعنيّة — والبطاقةُ حينها زرّ. */
+  onClick?: () => void;
 }
 
-export default function StatsCard({ title, value, icon: Icon, color, trend }: StatsCardProps) {
+export default function StatsCard({ title, value, icon: Icon, color, trend, onClick }: StatsCardProps) {
   /* ثلاث حالات، ولكلٍّ صيغتُها:
      نسبةٌ تصحّ         → «‎+٢٠٠٪ عن الشهر الماضي‎»
      شهرٌ سابق فارغ      → «‎+٣ هذا الشهر‎» — ولا قسمةَ على صفر
      لا هذا ولا ذاك      → لا سطر أصلاً، فالفراغُ أصدقُ من صفرٍ مصطنع */
   const line = trendLine(trend);
 
-  return (
-    <Card className="p-6">
+  const card = (
+    <Card className={`p-6 h-full ${onClick ? 'transition-colors group-hover:bg-accent' : ''}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -69,4 +71,11 @@ export default function StatsCard({ title, value, icon: Icon, color, trend }: St
       </div>
     </Card>
   );
+
+  /* زرٌّ لا بطاقةٌ تُنقر: يبلغه لوحُ المفاتيح ويُقرأ زرّاً. */
+  return onClick ? (
+    <button type="button" onClick={onClick} className="group block w-full text-start rounded-xl focus-visible:outline-2 focus-visible:outline-primary">
+      {card}
+    </button>
+  ) : card;
 }

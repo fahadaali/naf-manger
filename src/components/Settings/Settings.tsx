@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
    الملفّ نداءً للشاشة لا رسماً لأيقونة — تستدعي نفسَها بلا قرار توقّف،
    فتنمو شجرةُ التصيير حتى يعلق المتصفّح والجهاز معه.
    فالأيقونة تُستعار باسمٍ صريح، ويبقى الاسم الأصلي للشاشة وحدها. */
-import { Bell, Check, CircleCheck, ExternalLink, FileOutput, Globe, Import, Info, Landmark, Link2, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
+import { Bell, Check, CircleCheck, ExternalLink, FileOutput, Globe, Import, Info, Landmark, Link2, Mail, Scale, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
 import DataImport from './DataImport';
 import BasecampSync from './BasecampSync';
 import WafeqSync from './WafeqSync';
+import LawyersSettings from './LawyersSettings';
 import MailSettings from './MailSettings';
 import { useAuth } from '../../contexts/AuthContext';
 import GeneralSettings from './GeneralSettings';
@@ -99,6 +100,7 @@ export default function Settings() {
       color: 'green',
       tabs: [
         { id: 'users', label: 'إدارة المستخدمين', icon: Users, description: 'إضافة وتعديل المستخدمين والصلاحيات', permission: 'users.read' },
+        { id: 'lawyers', label: 'المحامون', icon: Scale, description: 'المحامون الذين تُسند إليهم القضايا — ولو بلا دخولٍ على المنصة', permission: 'settings.update' },
         { id: 'export', label: 'تصدير البيانات', icon: FileOutput, description: 'تصدير بيانات العملاء والقضايا', permission: 'settings.read' },
         { id: 'import', label: 'استيراد البيانات', icon: Import, description: 'استيراد البيانات من ملفات Excel', permission: 'settings.update' },
         { id: 'basecamp', label: 'الربط ببيسكامب', icon: Link2, description: 'استيراد بيانات العملاء من بيسكامب ومزامنتها', permission: 'admin.only' },
@@ -325,6 +327,9 @@ export default function Settings() {
 
       case 'wafeq':
         return <WafeqSync />;
+
+      case 'lawyers':
+        return <LawyersSettings />;
 
       case 'security':
         return (

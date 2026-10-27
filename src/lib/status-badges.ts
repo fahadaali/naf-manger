@@ -44,7 +44,8 @@ export interface StatusBadge {
 const STATUS: Record<string, { variant: Variant; Icon: typeof Clock }> = {
   completed: { variant: 'success', Icon: CircleCheck },
   'in-progress': { variant: 'primary', Icon: LoaderCircle },
-  pending: { variant: 'warning', Icon: Clock },
+  /* `pending` القديمة «جارية» كذلك — `migrations/0028`. */
+  pending: { variant: 'primary', Icon: LoaderCircle },
   postponed: { variant: 'destructive', Icon: CalendarX },
 };
 
