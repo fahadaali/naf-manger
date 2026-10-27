@@ -27,9 +27,11 @@ const RELATIONSHIP_TYPE: Record<string, string> = {
   external_company: 'شركة خارجية',
 }
 
+/* «منظورة» و«قيد المعالجة» صارتا «جارية» (`migrations/0028`). و`pending`
+   باقٍ وجهاً لصفٍّ قديمٍ أو مستورَدٍ لم يُرحَّل — يُقرأ «جارية» كذلك. */
 const CASE_STATUS: Record<string, string> = {
-  pending: 'منظورة',
-  'in-progress': 'قيد المعالجة',
+  'in-progress': 'جارية',
+  pending: 'جارية',
   completed: 'مكتملة',
   postponed: 'مؤجلة',
 }

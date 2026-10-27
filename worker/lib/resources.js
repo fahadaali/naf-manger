@@ -119,6 +119,8 @@ export const RESOURCES = {
       courtCaseNumber: ['court_case_number'],
       /* عنوانُ القضية والموضوعُ المصاغ — `migrations/0027`. والآليّان للقراءة. */
       title: ['title'],
+      /* نوعُ العمل: `litigation` أو `legal_work` — وغيابُه «يُستنتج» (`lib/work-kind.js`). */
+      workKind: ['work_kind'],
       aiTitle: ['ai_title'],
       aiSummaryText: ['ai_summary_text'],
       summaryRaw: ['summary_raw'],

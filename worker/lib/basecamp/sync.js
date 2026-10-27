@@ -674,7 +674,7 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
     if (close.length === 1) {
       caseValues.lawyerId = close[0].id;
     } else {
-      plan.warnings.push(`المحامي «${named}» لم يُعرف بين الأعضاء — لم يُكتب`);
+      plan.warnings.push(`المحامي «${named}» لم يُعرف بين المحامين — لم يُكتب`);
       plan.reviews.push({
         kind: 'unmatched_lawyer',
         subject: named,
@@ -821,8 +821,9 @@ export async function buildPlan(env, connection) {
 
   const vocab = await readVocabulary(env);
   /* والأعضاءُ مرّةً للدورة: بهم يُطابَق «المحامي المسؤول». */
+  /* المحامون من قائمتهم في الإعدادات — لا من حسابات المنصة. */
   const { results: members } = await env.DB.prepare(
-    `SELECT user_id, display_name FROM members WHERE is_active = 1 AND display_name IS NOT NULL`,
+    `SELECT id AS user_id, name AS display_name FROM lawyers WHERE is_active = 1`,
   ).all();
   vocab.members = (members ?? []).map((row) => ({ id: row.user_id, name: row.display_name }));
   /* سياقُ الاستدلال يُبنى مرّةً للدورة كلِّها: السقفُ سقفُ الدورة لا
@@ -1007,7 +1008,7 @@ async function applyPlan(env, plan, actorId, ai) {
         clientId,
         plan.client.values.fullName,
         values.summary ?? '',
-        values.status ?? 'pending',
+        values.status ?? 'in-progress',
         values.outcome ?? null,
         values.notes ?? '',
         values.opposingParties ?? '[]',

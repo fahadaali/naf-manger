@@ -9,6 +9,7 @@ import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel, collectionStatusLabel, feeTypeLabel } from '../../lib/labels';
 import { caseOutcomeBadge, caseStatusBadge } from '../../lib/status-badges';
+import { WORK_KIND_LABEL, workKindOf } from '../../lib/work-kind';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate } from '@/registry/naf/lib/format';
 import { Dialog, DialogContent, DialogTitle } from '@/registry/naf/ui/dialog';
@@ -44,6 +45,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   const [formData, setFormData] = useState({
     caseNumber: existingCase?.caseNumber || '',
     title: existingCase?.title || '',
+    /* «تلقائي» يعني يُستنتج — فيُحفظ فارغاً. */
+    workKind: existingCase?.workKind || '',
     authority: existingCase?.authority || '',
     courtCaseNumber: existingCase?.courtCaseNumber || '',
     caseType: existingCase?.caseType || 'قضية تجارية',
@@ -52,7 +55,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     /* حاشيةٌ على القضية غيرُ موضوعها — ويستوردها ربطُ بيسكامب من
        «بيانات المشروع». وحقلٌ يُستورَد ولا تُظهره شاشةٌ بيانٌ مخبوء. */
     notes: existingCase?.notes || '',
-    status: existingCase?.status || 'pending',
+    status: existingCase?.status === 'pending' ? 'in-progress' : existingCase?.status || 'in-progress',
     basecampUrl: existingCase?.basecampUrl || '',
     outcome: existingCase?.outcome || '',
     // Marketer fields
@@ -120,7 +123,11 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
         // تحميل قائمة المسوّقين النشطين
         const allMarketers = await db.getMarketers();
         setMarketers(allMarketers.filter(m => m.status === 'active'));
-        setMembers(await db.getDirectory());
+        /* المحامون من قائمتهم في الإعدادات — لا من حسابات المنصة. والموقوفُ
+           يبقى لقراءة اسمه في قضاياه، ولا يُعرض للاختيار. */
+        setMembers((await db.getLawyers()).map((lawyer) => ({
+          id: lawyer.id, name: lawyer.name, role: lawyer.isActive ? 'active' : 'inactive',
+        })));
       } catch (error) {
         console.error('Error loading data:', error);
         setClients([]);
@@ -217,6 +224,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
       commissionStructure,
       attachments,
       lawyerId: formData.lawyerId || null,
+      workKind: formData.workKind || null,
       /* والمسؤولُ ليس من فريقه — هو فوقه. */
       team: team.filter((id) => id && id !== formData.lawyerId),
       /* قيمةُ التطوّعي وساعاتُه للتطوّعية وحدها؛ وغيرُها يُفرَّغ فلا يُجمع. */
@@ -270,6 +278,10 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 <div>
                   <label className="block text-sm font-medium text-foreground">نوع القضية</label>
                   <p className="text-foreground">{existingCase.caseType}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground">نوع العمل</label>
+                  <p className="text-foreground">{WORK_KIND_LABEL[workKindOf(existingCase)]}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">العميل</label>
@@ -505,6 +517,17 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
+                نوع العمل
+              </label>
+              <Select value={formData.workKind} onChange={(e) => handleInputChange('workKind', e.target.value)}>
+                <option value="">{`تلقائي — ${WORK_KIND_LABEL[workKindOf({ ...formData, workKind: null })]}`}</option>
+                <option value="litigation">{WORK_KIND_LABEL.litigation}</option>
+                <option value="legal_work">{WORK_KIND_LABEL.legal_work}</option>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
                 نوع القضية *
               </label>
               <Select
@@ -577,7 +600,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <label className="block text-sm font-medium text-foreground mb-2">المحامي المسؤول</label>
               <Select value={formData.lawyerId} onChange={(e) => handleInputChange('lawyerId', e.target.value)}>
                 <option value="">بلا محامٍ</option>
-                {members.map((member) => (
+                {members.filter((member) => member.role !== 'inactive' || member.id === formData.lawyerId).map((member) => (
                   <option key={member.id} value={member.id}>{member.name || member.id}</option>
                 ))}
               </Select>
@@ -585,7 +608,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             <div>
               <p className="block text-sm font-medium text-foreground mb-2">الفريق (اختياري)</p>
               <div className="flex flex-wrap gap-2">
-                {members.filter((member) => member.id !== formData.lawyerId).map((member) => {
+                {members.filter((member) => member.id !== formData.lawyerId
+                  && (member.role !== 'inactive' || team.includes(member.id))).map((member) => {
                   const on = team.includes(member.id);
                   return (
                     <Button

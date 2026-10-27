@@ -41,6 +41,7 @@ import { readConflicts } from './lib/conflicts.js';
 import { importCases } from './lib/case-import.js';
 import { caseTimeline } from './lib/basecamp/timeline.js';
 import { resetBasecampImport } from './lib/basecamp/reset.js';
+import { createLawyer, deleteLawyer, listLawyers, updateLawyer } from './lib/lawyers.js';
 import { readMailStatus, sendTestMail } from './lib/mail.js';
 import { listNotifications, markNotificationsRead, scheduledNotifications } from './lib/notify.js';
 import {
@@ -333,6 +334,13 @@ export default {
       }
       /* استيرادُ القضايا من ملف — معاينةٌ ثم تنفيذ، والتفصيل في `lib/case-import.js`. */
       /* إيرادُ موكّلٍ بلا قضية من وافق — لكشف حسابه. */
+      /* ═══ المحامون ═══ قائمةٌ من الإعدادات — والتصاريحُ في `lib/lawyers.js`. */
+      if (name === 'lawyers') {
+        if (!id && request.method === 'GET') return listLawyers(env, user);
+        if (!id && request.method === 'POST') return createLawyer(request, env, user);
+        if (id && !verb && request.method === 'PUT') return updateLawyer(request, env, user, decodeURIComponent(id));
+        if (id && !verb && request.method === 'DELETE') return deleteLawyer(env, user, decodeURIComponent(id));
+      }
       /* صياغةُ عنوان القضية وموضوعها — بطلب صاحبها. */
       if (name === 'cases' && id && verb === 'phrase' && request.method === 'POST') {
         return phraseOneCase(env, user, decodeURIComponent(id));

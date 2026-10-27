@@ -37,7 +37,7 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
   const [busy, setBusy] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
-  /* الأعضاءُ لسؤال «محامٍ لم يُعرف» — يُختار منهم من كتب الملفُّ اسمَه. */
+  /* المحامون لسؤال «محامٍ لم يُعرف» — يُختار منهم من كتب الملفُّ اسمَه. */
   const [members, setMembers] = useState<MemberEntry[]>([]);
 
   const load = async () => {
@@ -46,7 +46,9 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
 
   useEffect(() => {
     load();
-    db.getDirectory().then(setMembers);
+    /* المحامي المسؤول يُختار من قائمة المحامين — لا من حسابات المنصة. */
+    db.getLawyers().then((rows) => setMembers(rows.filter((lawyer) => lawyer.isActive)
+      .map((lawyer) => ({ id: lawyer.id, name: lawyer.name, role: '' }))));
   }, []);
 
   const settle = async (review: BasecampReview, resolution: string, value?: string) => {
@@ -279,7 +281,7 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
             {review.kind === 'unmatched_lawyer' && (
               <>
                 <p className="text-sm text-foreground">
-                  {`الملفُّ يقول المحامي المسؤول «${review.subject}» — ولم يُعرف بين الأعضاء. اختر العضو.`}
+                  {`الملفُّ يقول المحامي المسؤول «${review.subject}» — ولم يُعرف بين المحامين. اختره من القائمة، أو أضفه من «الإعدادات ← المحامون».`}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <Select
@@ -287,7 +289,7 @@ export default function BasecampReviews({ onChanged }: { onChanged: () => void }
                     onChange={(event) => setDrafts({ ...drafts, [review.id]: event.target.value })}
                     className="max-w-56"
                   >
-                    <option value="">اختر العضو</option>
+                    <option value="">اختر المحامي</option>
                     {members.map((member) => (
                       <option key={member.id} value={member.id}>{member.name}</option>
                     ))}

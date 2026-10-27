@@ -1,6 +1,7 @@
 // المسارات التي لا يكفيها CRUD: الإعدادات والأعضاء والإحصاءات والتحويل.
 
 import { RESOURCES, toClient } from './resources.js';
+import { WORK_KIND_SQL } from './work-kind.js';
 import { may } from './crud.js';
 import { KNOWN_ROLES, permissionsFor } from './roles.js';
 import { logActivity } from './activity.js';
@@ -38,7 +39,8 @@ const DEFAULT_SETTINGS = {
      تُحرَّران من «تكوين النظام»، وأوّلُ `contactRelations` هو الافتراض. */
   contactRelations: ['أصيل', 'وكيل', 'أب', 'أم', 'أخ', 'ابن', 'زوج', 'أخرى'],
   idTypes: ['هوية وطنية', 'إقامة', 'سجل تجاري'],
-  caseStatuses: ['pending', 'in-progress', 'completed', 'postponed'],
+  /* و`pending` («منظورة») دُمجت في «جارية» — `migrations/0028`. */
+  caseStatuses: ['in-progress', 'completed', 'postponed'],
 
   /* ═══ ثلاثُ قوائم كانت تخالف ما تكتبه الشاشات ═══
    *
@@ -378,6 +380,7 @@ const WINDOW = {
 export async function readStats(env, { publicBoard = false } = {}) {
   const [
     clients, prospects, cases, newClients, newProspects, newCases, proBono, closed, outstanding, byLawyer, collected,
+    ongoing,
   ] = await env.DB.batch([
     env.DB.prepare(
       `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
@@ -456,8 +459,8 @@ export async function readStats(env, { publicBoard = false } = {}) {
        القضايا المفتوحة لكلّ محامٍ مسؤول، باسمه. و«بلا محامٍ» صفٌّ بذاته —
        قضيةٌ لا يحملها أحدٌ أولى بالنظر من غيرها. */
     env.DB.prepare(
-      `SELECT c.lawyer_id id, m.display_name name, COUNT(*) n
-         FROM cases c LEFT JOIN members m ON m.user_id = c.lawyer_id
+      `SELECT c.lawyer_id id, COALESCE(l.name, m.display_name) name, COUNT(*) n
+         FROM cases c LEFT JOIN lawyers l ON l.id = c.lawyer_id LEFT JOIN members m ON m.user_id = c.lawyer_id
         WHERE c.archived_at IS NULL AND c.status <> 'completed'
         GROUP BY c.lawyer_id ORDER BY n DESC`,
     ),
@@ -471,6 +474,14 @@ export async function readStats(env, { publicBoard = false } = {}) {
            WHERE payment_date >= date('now', 'start of year')) cases_total,
          (SELECT COALESCE(SUM(amount), 0) FROM wafeq_payments
            WHERE status = 'general' AND payment_date >= date('now', 'start of year')) general_total`,
+    ),
+
+    /* ═══ الجاري بنوعه ═══
+       قضيةٌ منظورة أمام جهة غيرُ عملٍ قانونيٍّ مستمرّ — `lib/work-kind.js`. */
+    env.DB.prepare(
+      `SELECT ${WORK_KIND_SQL} kind, COUNT(*) n FROM cases
+        WHERE archived_at IS NULL AND status IN ('in-progress', 'pending')
+        GROUP BY kind`,
     ),
   ]);
 
@@ -505,7 +516,11 @@ export async function readStats(env, { publicBoard = false } = {}) {
       totalClients,
       totalProspects,
       totalCases,
-      pendingCases: casesByStatus.pending ?? 0,
+      /* «الجارية» — و`pending` القديمة منها (`migrations/0028`). */
+      pendingCases: (casesByStatus['in-progress'] ?? 0) + (casesByStatus.pending ?? 0),
+      ongoingByKind: Object.fromEntries(
+        (ongoing.results ?? []).map((row) => [row.kind === 'litigation' ? 'litigation' : 'legalWork', Number(row.n ?? 0)]),
+      ),
       completedCases,
       winRate: completedCases > 0 ? Math.round((wonCases / completedCases) * 100) : 0,
       clientsByType,

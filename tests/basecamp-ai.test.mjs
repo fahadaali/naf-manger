@@ -389,9 +389,9 @@ check('ملفٌّ بلا حقولٍ معنونة يُقرأ ولا يُردّ',
   plan.plans[0].error === null, plan.plans[0].error);
 check('ويُستخرج اسمُ الموكّل',
   plan.plans[0].client.values.fullName === 'محمد خالد عبدالله القحطاني', plan.plans[0].client?.values);
-/* والقيمةُ تمرّ بمدقّق حقلها: «منظورة» تصير `pending` كما لو جاءت من عنوان. */
+/* والقيمةُ تمرّ بمدقّق حقلها: «منظورة» تصير «جارية» (`in-progress`) كما لو جاءت من عنوان. */
 check('والمفرداتُ تُوحَّد كما من عنوانٍ معروف',
-  plan.plans[0].case.values.status === 'pending', plan.plans[0].case.values);
+  plan.plans[0].case.values.status === 'in-progress', plan.plans[0].case.values);
 check('ويُسمّى ما قرأه الطراز',
   plan.plans[0].aiFields.includes('client.fullName'), plan.plans[0].aiFields);
 
