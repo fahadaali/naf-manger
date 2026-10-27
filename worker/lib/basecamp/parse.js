@@ -138,8 +138,9 @@ const ENTITIES = {
     'قطاع حكومي': 'government', 'جهة رسمية': 'government',
   },
   status: {
-    'منظورة': 'pending', 'جديدة': 'pending', 'قيد النظر': 'pending',
-    'لم تبدأ': 'pending', 'بانتظار': 'pending',
+    /* «منظورة» و«قيد المعالجة» حالةٌ واحدة: جارية (`migrations/0028`). */
+    'منظورة': 'in-progress', 'جديدة': 'in-progress', 'قيد النظر': 'in-progress',
+    'لم تبدأ': 'in-progress', 'بانتظار': 'in-progress',
     'قيد المعالجة': 'in-progress', 'جارية': 'in-progress', 'قيد العمل': 'in-progress',
     'قائمة': 'in-progress', 'تحت الإجراء': 'in-progress', 'مستمرة': 'in-progress',
     'مكتملة': 'completed', 'منتهية': 'completed', 'مغلقة': 'completed',
@@ -262,7 +263,7 @@ const ROOTS = {
     [/انته|منته|منجز|مكتمل|غلق|قفل/, 'completed'],
     [/قيد|جاري|جاريه|مستمر/, 'in-progress'],
     [/موجل|متوقف|معلق/, 'postponed'],
-    [/منظور|بانتظار/, 'pending'],
+    [/منظور|بانتظار/, 'in-progress'],
   ],
   'client.clientType': [
     [/شرك|مؤسس|موسس|منشا/, 'company'],
@@ -328,7 +329,7 @@ export const CLOSED_CODES = {
     individual: 'فرد', company: 'شركة', association: 'جمعية', government: 'جهة حكومية',
   },
   'case.status': {
-    pending: 'منظورة', 'in-progress': 'قيد المعالجة', completed: 'مكتملة', postponed: 'مؤجلة',
+    'in-progress': 'جارية', completed: 'مكتملة', postponed: 'مؤجلة',
   },
   'case.outcome': { won: 'رابحة', lost: 'خاسرة', settled: 'تسوية' },
 };

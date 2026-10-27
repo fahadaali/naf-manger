@@ -35,6 +35,13 @@ function setup() {
        ('m-khalid', 'خالد الزهراني', 'khalid@naf.sa', 'lawyer', 1, ?),
        ('m-off', 'منى الحربي', 'mona@naf.sa', 'lawyer', 0, ?)`,
   ).run(now, now, now);
+  /* المحامون من قائمتهم في الإعدادات (`migrations/0028`) — بمعرّفات الأعضاء كما يزرعها الترحيل. */
+  db.prepare(
+    `INSERT INTO lawyers (id, name, member_id, is_active, created_at, updated_at) VALUES
+       ('m-sara', 'سارة عبدالله المطيري', 'm-sara', 1, ?, ?),
+       ('m-khalid', 'خالد الزهراني', 'm-khalid', 1, ?, ?),
+       ('m-off', 'منى الحربي', 'm-off', 0, ?, ?)`,
+  ).run(now, now, now, now, now, now);
   db.prepare(
     `INSERT INTO basecamp_projects (project_id, name, app_url, status, vault_id, doc_id, kind, created_at, updated_at)
      VALUES ('101', 'م', 'https://3.basecamp.com/1/projects/101', 'active', '11', '901', 'client', ?, ?)`,

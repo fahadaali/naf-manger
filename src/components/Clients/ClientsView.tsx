@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Archive, CircleCheck, ExternalLink, Plus, Search, TriangleAlert } from 'lucide-react';
-import { BulkAction, Client } from '../../types';
+import { BulkAction, Client, ViewFilter } from '../../types';
 import ClientCard from './ClientCard';
 import ClientModal from './ClientModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
@@ -23,7 +23,7 @@ import { messageTone } from '../../lib/status-message';
 import { Card } from '@/registry/naf/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/registry/naf/ui/table';
 
-export default function ClientsView() {
+export default function ClientsView({ initialFilter }: { initialFilter?: ViewFilter | null } = {}) {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showClientModal, setShowClientModal] = useState(false);
@@ -34,6 +34,12 @@ export default function ClientsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  /* تصفيةٌ من لوحة التحكم — نوعُ العميل من رسم «توزيع العملاء». */
+  useEffect(() => {
+    if (!initialFilter) return;
+    setFilterType(initialFilter.clientType ?? 'all');
+    setFilterStatus('all');
+  }, [initialFilter?.stamp]); // eslint-disable-line react-hooks/exhaustive-deps
   /* المؤرشفُ مخفيٌّ افتراضاً — وهو الغرضُ منه. و«المؤرشفة» تُظهرها وحدها
      ليُرجَع منها أو يُحذف. */
   const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');

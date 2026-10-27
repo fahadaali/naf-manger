@@ -228,7 +228,7 @@ export async function resolveReview(request, env, user, reviewId) {
        أو يُترك. ويُحسم السؤالُ للاسم نفسِه — فلا يُعاد في كل دورة. */
     if (choice === 'set') {
       if (!value) return fail('invalid_value', 400);
-      const member = await env.DB.prepare(`SELECT user_id FROM members WHERE user_id = ? AND is_active = 1`)
+      const member = await env.DB.prepare(`SELECT id FROM lawyers WHERE id = ? AND is_active = 1`)
         .bind(value)
         .first();
       if (!member) return fail('invalid_value', 400);

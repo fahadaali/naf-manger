@@ -61,7 +61,10 @@ const FIELDS = {
       type: 'text',
     },
     /* اسمُ المحامي المسؤول من دليل الأعضاء — تعبيرٌ ثابتٌ من هذا الملفّ. */
-    lawyerName: { column: '(SELECT display_name FROM members WHERE user_id = cases.lawyer_id)', type: 'text' },
+    lawyerName: {
+      column: '(SELECT COALESCE((SELECT name FROM lawyers WHERE id = cases.lawyer_id), (SELECT display_name FROM members WHERE user_id = cases.lawyer_id)))',
+      type: 'text',
+    },
     proBonoValue: { column: 'pro_bono_value', type: 'money' },
     proBonoHours: { column: 'pro_bono_hours', type: 'text' },
     createdDate: { column: 'created_at', type: 'epoch' },

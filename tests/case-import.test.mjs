@@ -33,6 +33,9 @@ db.prepare(
 db.prepare(
   `INSERT INTO members (user_id, display_name, role, is_active, created_at) VALUES ('m-sara', 'سارة المطيري', 'lawyer', 1, ?)`,
 ).run(now);
+db.prepare(
+  `INSERT INTO lawyers (id, name, is_active, created_at, updated_at) VALUES ('m-sara', 'سارة المطيري', 1, ?, ?)`,
+).run(now, now);
 
 const admin = { id: 'u1', name: 'فهد', role: 'admin', permissions: { cases: { create: true }, clients: { create: true } } };
 const ROWS = [
@@ -79,7 +82,7 @@ check('الهويةُ تُطابَق وإن اختلف الاسم', kase('ق-100
 check('والاسمُ الموحَّد يُطابَق', kase('ق-101').client_id === 'c-noor');
 check('والحالةُ والنتيجةُ رموزاً', kase('ق-100').status === 'completed' && kase('ق-100').outcome === 'won');
 check('و«ربحانة» تُفهم بالجذر', kase('ق-101').outcome === 'won', kase('ق-101').outcome);
-check('و«تحت الدراسة» لا تُكتب حالةً', kase('ق-101').status === 'pending', kase('ق-101').status);
+check('و«تحت الدراسة» لا تُكتب حالةً — والافتراضُ «جارية»', kase('ق-101').status === 'in-progress', kase('ق-101').status);
 check('والمحامي يُطابَق بعضو', kase('ق-100').lawyer_id === 'm-sara');
 check('وتاريخُ الإنشاء من الملفّ',
   new Date(kase('ق-100').created_at * 1000).toISOString().slice(0, 10) === '2025-03-07');
