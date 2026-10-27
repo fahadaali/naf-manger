@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ReportSchedule from './ReportSchedule';
 import { ChartColumn, Eye, Plus, Settings, Table2, Trash2, TriangleAlert, X } from 'lucide-react';
 import { CustomReport, ReportField, ReportFilter, ReportResult, ReportVisualization } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,6 +33,7 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
     visualization: report?.visualization || { type: 'table' },
     isTemplate: report?.isTemplate || false,
     isPublic: report?.isPublic || false,
+    schedule: report?.schedule ?? { enabled: false, frequency: 'weekly', recipients: [] },
     createdBy: report?.createdBy || user?.id || '',
     createdDate: report?.createdDate || new Date(),
     lastModified: new Date()
@@ -275,6 +277,12 @@ export default function ReportBuilder({ report, onSave, onClose }: ReportBuilder
                   <span className="text-sm text-foreground">تقرير عام (مرئي لجميع المستخدمين)</span>
                 </label>
               </div>
+
+              <ReportSchedule
+                value={reportData.schedule ?? { enabled: false, frequency: 'weekly', recipients: [] }}
+                onChange={(schedule) => setReportData((prev) => ({ ...prev, schedule }))}
+                isAdmin={user?.role === 'admin'}
+              />
             </div>
           )}
 

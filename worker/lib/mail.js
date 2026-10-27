@@ -37,21 +37,42 @@ export const escapeHtml = (value) =>
  * `lines` نصوصٌ تُهرَّب هنا — لا HTML جاهزٌ من المنادي، فلا يتسرّب وسمٌ من
  * بيانات موكّل إلى رسالةٍ تُفتح في بريد غيره.
  */
-export function renderMail(title, lines) {
+export function renderMail(title, lines, table = null) {
   const body = lines
     .map((line) => `<p style="margin:0 0 8px">${escapeHtml(line).replace(/\n/g, '<br>')}</p>`)
-    .join('');
+    .join('') + renderTable(table);
   return `<!doctype html><html lang="ar" dir="rtl"><body style="font-family:Tahoma,Arial,sans-serif;direction:rtl;text-align:right;line-height:1.7">
 <h2 style="margin:0 0 12px">${escapeHtml(title)}</h2>${body}
 <p style="margin-top:16px;color:#888;font-size:12px">نظام إدارة العملاء — شركة ناف</p></body></html>`;
 }
 
+/* جدولٌ — للتقارير المجدولة. خلاياه نصوصٌ تُهرَّب كبقية الرسالة. */
+function renderTable(table) {
+  if (!table?.headers?.length) return '';
+  const cell = (value, tag) =>
+    `<${tag} style="border:1px solid #ddd;padding:4px 8px;text-align:right">${escapeHtml(value ?? '')}</${tag}>`;
+  const head = `<tr>${table.headers.map((header) => cell(header, 'th')).join('')}</tr>`;
+  const rows = (table.rows ?? []).map((row) => `<tr>${row.map((value) => cell(value, 'td')).join('')}</tr>`).join('');
+  return `<table style="border-collapse:collapse;margin-top:8px;font-size:13px">${head}${rows}</table>`;
+}
+
+/** نصٌّ إلى base64 — UTF-8، لمرفقات Resend. */
+export function toBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let at = 0; at < bytes.length; at += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
+  }
+  return btoa(binary);
+}
+
 /**
  * يرسل رسالة. ولا يرمي: يردّ `{ ok, id }` أو `{ ok: false, error }`.
  *
- * @param {{ to: string | string[], subject: string, title?: string, lines?: string[], text?: string }} message
+ * @param {{ to: string | string[], subject: string, title?: string, lines?: string[], text?: string,
+ *           table?: { headers: string[], rows: string[][] }, attachments?: { filename: string, content: string }[] }} message
  */
-export async function sendMail(env, { to, subject, title, lines = [], text }) {
+export async function sendMail(env, { to, subject, title, lines = [], text, table = null, attachments = [] }) {
   if (!mailConfigured(env)) return { ok: false, error: 'not_configured' };
 
   const recipients = (Array.isArray(to) ? to : [to])
@@ -72,8 +93,9 @@ export async function sendMail(env, { to, subject, title, lines = [], text }) {
         from: env.MAIL_FROM,
         to: recipients,
         subject,
-        html: renderMail(title ?? subject, lines),
+        html: renderMail(title ?? subject, lines, table),
         text: text ?? [title ?? subject, ...lines].join('\n'),
+        ...(attachments.length ? { attachments } : {}),
       }),
       signal: controller.signal,
     });

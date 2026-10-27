@@ -234,6 +234,12 @@ function toReport(row) {
     visualization: definition.visualization ?? { type: 'table' },
     isPublic: Number(row.is_public) === 1,
     isTemplate: Number(row.is_template) === 1,
+    schedule: {
+      enabled: Boolean(row.schedule_frequency),
+      frequency: row.schedule_frequency ?? 'weekly',
+      recipients: safeList(row.schedule_recipients),
+      lastSentAt: row.last_sent_at ? new Date(row.last_sent_at * 1000).toISOString() : null,
+    },
     createdBy: row.created_by,
     createdDate: new Date(row.created_at * 1000).toISOString(),
     lastModified: new Date(row.updated_at * 1000).toISOString(),
@@ -250,6 +256,35 @@ export async function listReports(env, user) {
     .all();
 
   return Response.json({ ok: true, data: (results ?? []).map(toReport) });
+}
+
+const safeList = (raw) => {
+  try {
+    const parsed = JSON.parse(raw ?? '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const FREQUENCIES = ['daily', 'weekly', 'monthly'];
+
+/**
+ * الإرسالُ الدوريّ من الجسم: تكرارٌ من القائمة، ومستلمون معرّفاتُ أعضاء — أو
+ * بريدٌ خارجيّ إن كان الكاتبُ مسؤولاً. فغيرُه لا يُرسل بياناتِ المكتب إلى
+ * عنوانٍ خارجه من باب جدولة تقرير.
+ */
+function readSchedule(body, user) {
+  const schedule = body?.schedule;
+  if (!schedule?.enabled || !FREQUENCIES.includes(schedule.frequency)) {
+    return { frequency: null, recipients: [] };
+  }
+  const recipients = [...new Set((Array.isArray(schedule.recipients) ? schedule.recipients : [])
+    .map((entry) => String(entry ?? '').trim())
+    .filter(Boolean)
+    .filter((entry) => !entry.includes('@') || (user.role === 'admin' && /^\S+@\S+\.\S+$/.test(entry))))]
+    .slice(0, 50);
+  return { frequency: schedule.frequency, recipients };
 }
 
 function readInput(body) {
@@ -286,14 +321,16 @@ export async function createReport(request, env, user) {
 
   const parsed = readInput(body);
   if (parsed.error) return fail(parsed.error, 400);
+  const schedule = readSchedule(body, user);
 
   const id = crypto.randomUUID();
   const now = nowSeconds();
 
   await env.DB.prepare(
     `INSERT INTO custom_reports
-       (id, name, description, data_source, definition, is_public, is_template, created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, name, description, data_source, definition, is_public, is_template, created_by, created_at, updated_at,
+        schedule_frequency, schedule_recipients)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -306,6 +343,8 @@ export async function createReport(request, env, user) {
       user.id,
       now,
       now,
+      schedule.frequency,
+      JSON.stringify(schedule.recipients),
     )
     .run();
 
@@ -329,10 +368,18 @@ export async function updateReport(request, env, user, id) {
 
   const parsed = readInput(body);
   if (parsed.error) return fail(parsed.error, 400);
+  /* ومستلمٌ خارجيّ حفظه مسؤولٌ لا يُسقطه تعديلُ غيره: يُطرح من الجسم ما لا
+     يملك كاتبُه، ويبقى ما كان محفوظاً منه. */
+  const schedule = readSchedule(body, user);
+  if (user.role !== 'admin' && schedule.frequency) {
+    const kept = safeList(existing.schedule_recipients).filter((entry) => String(entry).includes('@'));
+    schedule.recipients = [...new Set([...schedule.recipients, ...kept])];
+  }
 
   await env.DB.prepare(
     `UPDATE custom_reports
-       SET name = ?, description = ?, data_source = ?, definition = ?, is_public = ?, is_template = ?, updated_at = ?
+       SET name = ?, description = ?, data_source = ?, definition = ?, is_public = ?, is_template = ?, updated_at = ?,
+           schedule_frequency = ?, schedule_recipients = ?
      WHERE id = ?`,
   )
     .bind(
@@ -343,6 +390,8 @@ export async function updateReport(request, env, user, id) {
       parsed.value.isPublic ? 1 : 0,
       parsed.value.isTemplate ? 1 : 0,
       nowSeconds(),
+      schedule.frequency,
+      JSON.stringify(schedule.recipients),
       id,
     )
     .run();
@@ -374,26 +423,33 @@ export async function runReport(env, user, id) {
     return fail('forbidden', 403);
   }
 
+  const executed = await executeReport(env, row);
+  if (executed.error) return fail(executed.error, 400);
+  return Response.json({ ok: true, data: executed });
+}
+
+/**
+ * تشغيلُ صفّ تقريرٍ محفوظ — للشاشة وللإرسال الدوريّ معاً، فلا يفترقان.
+ *
+ * والأعمدةُ تُردّ مع الصفوف: العارضُ يرسم ترويستَه منها ولا يخمّنها من أوّل
+ * صفّ — وأوّلُ صفٍّ قد يخلو من عمودٍ قيمتُه فارغة.
+ */
+export async function executeReport(env, row) {
   const report = toReport(row);
   const definition = sanitizeDefinition(report.dataSource, report);
-  if (definition.error) return fail(definition.error, 400);
+  if (definition.error) return { error: definition.error };
 
   const query = buildQuery(report.dataSource, definition.value);
   const { results } = await env.DB.prepare(query.sql).bind(...query.params).all();
 
-  return Response.json({
-    ok: true,
-    data: {
-      rows: shapeRows(report.dataSource, results ?? []),
-      grouped: query.grouped,
-      /* الأعمدة تُردّ مع الصفوف: العارض يرسم ترويسته منها ولا يخمّنها من
-         أول صفّ — وأولُ صفٍّ قد يخلو من عمودٍ قيمتُه فارغة. */
-      columns: query.grouped
-        ? [definition.value.grouping[0].fieldId, 'count',
-           ...definition.value.aggregations.map((a) => `${a.fieldId}_${a.function}`)]
-        : definition.value.fields,
-    },
-  });
+  return {
+    rows: shapeRows(report.dataSource, results ?? []),
+    grouped: query.grouped,
+    columns: query.grouped
+      ? [definition.value.grouping[0].fieldId, 'count',
+         ...definition.value.aggregations.map((a) => `${a.fieldId}_${a.function}`)]
+      : definition.value.fields,
+  };
 }
 
 /** معاينةُ تعريفٍ لم يُحفظ بعد — يستعملها الباني قبل الحفظ. */

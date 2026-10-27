@@ -20,6 +20,7 @@ import { sendMail, mailConfigured } from './mail.js';
 import { permissionsFor } from './roles.js';
 import { DEFAULT_NOTIFICATION_PREFS } from './handlers.js';
 import { readStats } from './queries.js';
+import { scheduledReports } from './report-schedule.js';
 
 const safeJson = (raw) => {
   try { return JSON.parse(raw ?? 'null'); } catch { return null; }
@@ -112,7 +113,13 @@ export async function notifyEvent(env, user, { resource, action, row }) {
 /** وقتُ الرياض — المكتبُ يقول «الصباح» بساعته لا بساعة غرينتش. */
 const riyadh = (now) => {
   const shifted = new Date(now.getTime() + 3 * 3600 * 1000);
-  return { day: shifted.toISOString().slice(0, 10), hour: shifted.getUTCHours(), weekday: shifted.getUTCDay() };
+  return {
+    day: shifted.toISOString().slice(0, 10),
+    hour: shifted.getUTCHours(),
+    weekday: shifted.getUTCDay(),
+    dayOfMonth: shifted.getUTCDate(),
+    at: now.getTime(),
+  };
 };
 
 /** الساعةُ التي تُرسل فيها اليومية والأسبوعية — الثامنة صباحاً بالرياض. */
@@ -182,7 +189,8 @@ async function sendWeekly(env) {
 /** يُنادى من الجدولة كلَّ ساعة، ولا يعمل إلا في ساعته ومرّةً في يومه. */
 export async function scheduledNotifications(env, now = new Date()) {
   if (!mailConfigured(env)) return;
-  const { day, hour, weekday } = riyadh(now);
+  const when = riyadh(now);
+  const { day, hour, weekday } = when;
   if (hour !== SEND_HOUR) return;
 
   try {
@@ -197,6 +205,8 @@ export async function scheduledNotifications(env, now = new Date()) {
       state.weekly = day;
     }
     await writeState(env, state);
+    /* والتقاريرُ المجدولة — ولكلٍّ منها حارسُه (`last_sent_at`). */
+    await scheduledReports(env, when);
   } catch (error) {
     console.error('Notify/cron: تعذّر الإرسال —', error?.message ?? error);
   }
