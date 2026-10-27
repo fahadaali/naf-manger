@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ExternalLink, HandHeart, Sparkles } from 'lucide-react';
 import { Attachment, Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import AttachmentList from '../Common/AttachmentList';
+import CasePayments from './CasePayments';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel, collectionStatusLabel, feeTypeLabel } from '../../lib/labels';
@@ -14,6 +15,13 @@ import { Select } from '@/registry/naf/ui/select';
 import { Input } from '@/registry/naf/ui/input';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
+
+/** حالةُ التحصيل من الرقمين — مرآةُ `collectionStatusOf` في `worker/lib/payments.js`. */
+function derivedCollectionStatus(total: number, collected: number): PaymentStatus['collectionStatus'] {
+  if (collected <= 0) return 'unpaid';
+  if (total > 0 && collected >= total) return 'fully_paid';
+  return 'partially_paid';
+}
 
 interface CaseModalProps {
   case?: Case;
@@ -65,7 +73,6 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   const caseTypes = useSettingList('caseTypes', formData.caseType);
   const caseStatuses = useSettingList('caseStatuses', formData.status);
   const feeTypes = useSettingList('feeTypes', formData.feeType);
-  const collectionStatuses = useSettingList('collectionStatuses', formData.collectionStatus);
 
   useEffect(() => {
     // تحميل قائمة العملاء
@@ -148,7 +155,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
       totalAmount,
       collectedAmount,
       remainingAmount: totalAmount - collectedAmount,
-      collectionStatus: proBono ? 'unpaid' : formData.collectionStatus as PaymentStatus['collectionStatus']
+      /* والحالةُ تُشتقّ من الرقمين كما يشتقّها الخادم — وهو يكتبها ثانيةً
+         من سجلّ الدفعات بعد الحفظ، فما يُرسل هنا لا يُعتمد. */
+      collectionStatus: derivedCollectionStatus(totalAmount, collectedAmount)
     };
     
     // Build commission structure
@@ -546,42 +555,45 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   placeholder="50000"
                 />
               </div>
-              
+
+              {/* ═══ المحصَّلُ مجموعُ الدفعات لا رقمٌ يُكتب ═══
+                  كان حقلاً يُكتب بيد، فيُكتب فوقه ويضيع ما قبله. وصار يُقرأ من
+                  سجلّ الدفعات أدناه — والخادمُ يكتبه، والشاشةُ تعرضه. */}
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  المبلغ المحصل بالريال
-                </label>
-                <Input
-                  type="number"
-                  value={formData.collectedAmount}
-                  onChange={(e) => handleInputChange('collectedAmount', e.target.value)}
-                  placeholder="30000"
-                />
+                <p className="block text-sm font-medium text-foreground mb-2">المبلغ المحصَّل</p>
+                <p className="py-2 text-foreground font-medium">
+                  <Money value={parseFloat(formData.collectedAmount) || 0} />
+                </p>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  حالة التحصيل
-                </label>
-                <Select
-                  value={formData.collectionStatus}
-                  onChange={(e) => handleInputChange('collectionStatus', e.target.value)}
-                >
-                  {collectionStatuses.map((status) => (
-                    <option key={status} value={status}>{collectionStatusLabel(status)}</option>
+                <p className="block text-sm font-medium text-foreground mb-2">حالة التحصيل</p>
+                <p className="py-2 text-foreground">
+                  {collectionStatusLabel(derivedCollectionStatus(
+                    parseFloat(formData.totalAmount) || 0,
+                    parseFloat(formData.collectedAmount) || 0,
                   ))}
-                </Select>
+                </p>
               </div>
             </div>
-            
-            {formData.totalAmount && formData.collectedAmount && (
+
+            {formData.totalAmount && (
               <div className="p-3 bg-card rounded border">
                 <p className="text-sm text-muted-foreground">
                   المبلغ المتبقي: <span className="font-medium text-destructive">
-                    <Money value={(parseFloat(formData.totalAmount) - parseFloat(formData.collectedAmount))} />
+                    <Money value={Math.max((parseFloat(formData.totalAmount) || 0) - (parseFloat(formData.collectedAmount) || 0), 0)} />
                   </span>
                 </p>
               </div>
+            )}
+
+            {existingCase?.id ? (
+              <CasePayments
+                caseId={existingCase.id}
+                onCollectedChange={(collected) => handleInputChange('collectedAmount', String(collected))}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">تُسجَّل الدفعات بعد حفظ القضية.</p>
             )}
           </div>
 

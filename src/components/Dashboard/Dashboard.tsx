@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Award, FileText, HandHeart, TrendingUp, UserPlus, Users } from 'lucide-react';
+import { Award, FileText, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
+import { Money } from '@/registry/naf/currency/money';
 import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
@@ -24,6 +25,7 @@ const EMPTY_STATS: DashboardStats = {
   casesByStatus: { pending: 0, 'in-progress': 0, completed: 0, postponed: 0 },
   conversionRate: 0,
   proBonoCases: 0,
+  outstandingAmount: 0,
 };
 
 export default function Dashboard() {
@@ -96,7 +98,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* والمؤشّرات تأتي من `‎/api/stats‎` محسوبةً — كانت أرقاماً مكتوبةً
             هنا لا تُقرأ من شيء ولا تتغيّر: «‎+١٢٪‎» و«‎+٨٪‎» و«‎+٥٪‎» في كل
             فتحةٍ منذ أوّل يوم. */}
@@ -139,6 +141,13 @@ export default function Dashboard() {
           value={stats.proBonoCases ?? 0}
           icon={HandHeart}
           color="bg-chart-1"
+        />
+        {/* ما لم يُحصَّل من أتعاب القضايا الحاضرة — مجموعُ «المتبقّي». */}
+        <StatsCard
+          title="مستحقّات غير محصّلة"
+          value={<Money value={stats.outstandingAmount ?? 0} />}
+          icon={Wallet}
+          color="bg-chart-2"
         />
       </div>
 

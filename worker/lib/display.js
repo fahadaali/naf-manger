@@ -47,7 +47,7 @@ export async function readDisplayStats(env, token) {
     .bind(nowSeconds(), token)
     .run();
 
-  const [response] = await Promise.all([readStats(env), seen.catch(() => {})]);
+  const [response] = await Promise.all([readStats(env, { publicBoard: true }), seen.catch(() => {})]);
 
   /* لا يُخبَّأ في وسيطٍ مشترك: الردّ يخصّ منصةً بعينها، ورمزُه في المسار. */
   const headers = new Headers(response.headers);

@@ -26,6 +26,7 @@ const ENTITY = {
   cases: { one: 'القضية', type: 'case' },
   marketers: { one: 'المسوّق', type: 'marketer' },
   commissions: { one: 'دفعة العمولة', type: 'commission' },
+  clientPayments: { one: 'دفعة العميل', type: 'client_payment' },
 };
 
 /** فعلُ الرسالة ونوعُ السطر. */

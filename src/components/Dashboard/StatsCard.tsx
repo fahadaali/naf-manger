@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Card } from '@/registry/naf/ui/card';
 import { Growth } from '../../types';
@@ -25,7 +26,7 @@ function trendLine(trend?: Growth) {
 
 interface StatsCardProps {
   title: string;
-  value: string | number;
+  value: ReactNode;
   icon: LucideIcon;
   color: string;
   /* ═══ المؤشّر يأتي محسوباً أو لا يأتي ═══

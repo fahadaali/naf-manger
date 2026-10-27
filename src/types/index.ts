@@ -581,6 +581,8 @@ export interface DashboardStats {
   conversionRate: number; // Prospects to clients conversion rate
   /** القضايا المقدَّمة مجاناً تطوّعاً — حاضرةً غيرَ مؤرشفة. */
   proBonoCases: number;
+  /** ما لم يُحصَّل بعدُ من أتعاب القضايا الحاضرة — ريالات. */
+  outstandingAmount: number;
   growth?: {
     clients: Growth;
     prospects: Growth;
@@ -748,6 +750,27 @@ export interface PaymentStatus {
   remainingAmount: number;
   collectionStatus: 'fully_paid' | 'partially_paid' | 'unpaid';
   lastPaymentDate?: Date;
+}
+
+/**
+ * دفعةٌ من الموكّل على قضية — `migrations/0018`.
+ *
+ * والمحصَّلُ في `PaymentStatus` مجموعُها، يكتبه الخادم. و`source` يقول من أين
+ * جاءت: `manual` سُجّلت في الشاشة، و`opening` رصيدٌ افتتاحيٌّ من الرقم الذي
+ * كان يُكتب بيدٍ قبل السجلّ، و`wafeq` قُرئت من وافق فلا تُحذف هنا.
+ */
+export interface ClientPayment {
+  id: string;
+  caseId: string;
+  clientId?: string;
+  amount: number;
+  paymentDate: Date;
+  method?: string;
+  reference?: string;
+  notes?: string;
+  source: 'manual' | 'opening' | 'wafeq';
+  externalId?: string | null;
+  createdBy?: string;
 }
 
 export interface CommissionPayment {

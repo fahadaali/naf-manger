@@ -51,7 +51,12 @@ const FIELDS = {
     marketerName: { column: 'marketer_name', type: 'text' },
     /* نوعُ الأتعاب في بنية JSON لا في عمود — والتعبيرُ ثابتٌ من هذا الملفّ
        كبقية الأعمدة، فلا يدخل الجملةَ نصٌّ وارد. وبه تُعزل التطوّعية. */
-    feeType: { column: "json_extract(fee_structure, '$.type')", type: 'text' },
+    /* و`CASE` يحرس صفّاً تالفاً: `json_extract` على نصٍّ ليس JSON يرمي،
+       فيسقط التقريرُ كلُّه لأجل صفٍّ واحد. */
+    feeType: {
+      column: "(CASE WHEN json_valid(fee_structure) THEN json_extract(fee_structure, '$.type') END)",
+      type: 'text',
+    },
     createdDate: { column: 'created_at', type: 'epoch' },
     updatedDate: { column: 'updated_at', type: 'epoch' },
   },

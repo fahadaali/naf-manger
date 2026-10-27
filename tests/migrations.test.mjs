@@ -292,3 +292,37 @@ test('الإغلاقُ يُكتب ويُمحى مع الحالة، وحفظٌ ب
   assert.equal(closedOf(db, 'k'), null);
   db.close();
 });
+
+/* ═══ الرصيدُ الافتتاحيّ لا يغيّر رقماً ═══
+ *
+ * المحصَّلُ الذي كان يُكتب بيدٍ يصير دفعةً واحدة بالمبلغ نفسِه، فلا يتبدّل
+ * رقمٌ في أيّ شاشة حين يصير المحصَّلُ مجموعَ السجلّ.
+ */
+const LEDGER = '0018_client_payments.sql';
+const applyLedger = (db) => db.exec(fs.readFileSync(path.join(DIR, LEDGER), 'utf8'));
+
+test('كلُّ محصَّلٍ قديم يصير دفعةً افتتاحية بالمبلغ نفسِه، والتطوّعيةُ خارجها', () => {
+  const db = upTo(LEDGER);
+  db.prepare(`INSERT INTO clients (id, full_name, created_at, updated_at) VALUES ('c', 'س', 1, 1)`).run();
+  const insert = db.prepare(
+    `INSERT INTO cases (id, case_number, case_type, client_id, client_name, payment_status, fee_structure,
+                        created_at, updated_at)
+     VALUES (?, ?, 't', 'c', 'س', ?, ?, 1700000000, 1700000000)`,
+  );
+  insert.run('paid', '1', JSON.stringify({ totalAmount: 5000, collectedAmount: 1250.5 }), null);
+  insert.run('none', '2', JSON.stringify({ totalAmount: 5000, collectedAmount: 0 }), null);
+  insert.run('free', '3', JSON.stringify({ collectedAmount: 900 }), JSON.stringify({ type: 'pro_bono' }));
+  insert.run('broken', '4', 'ليس JSON', null);
+
+  applyLedger(db);
+  applyLedger(db); // والتشغيلُ مرّتين تشغيلٌ واحد
+
+  const rows = db.prepare(`SELECT case_id, client_id, amount, source, payment_date FROM client_payments`).all();
+  assert.equal(rows.length, 1, JSON.stringify(rows));
+  assert.equal(rows[0].case_id, 'paid');
+  assert.equal(rows[0].client_id, 'c');
+  assert.equal(rows[0].amount, 125050); // هللات
+  assert.equal(rows[0].source, 'opening');
+  assert.equal(rows[0].payment_date, '2023-11-14');
+  db.close();
+});
