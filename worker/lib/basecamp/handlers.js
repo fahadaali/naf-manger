@@ -209,6 +209,23 @@ export async function resolveReview(request, env, user, reviewId) {
     } else if (choice !== 'accept') {
       return fail('invalid_resolution', 400);
     }
+  } else if (row.kind === 'unmatched_lawyer') {
+    /* اسمُ محامٍ في الملفّ لم يُطابَق بعضو: يُختار العضو فيُكتب في القضية،
+       أو يُترك. ويُحسم السؤالُ للاسم نفسِه — فلا يُعاد في كل دورة. */
+    if (choice === 'set') {
+      if (!value) return fail('invalid_value', 400);
+      const member = await env.DB.prepare(`SELECT user_id FROM members WHERE user_id = ? AND is_active = 1`)
+        .bind(value)
+        .first();
+      if (!member) return fail('invalid_value', 400);
+      if (row.case_id) {
+        await env.DB.prepare(`UPDATE cases SET lawyer_id = ?, updated_at = ? WHERE id = ?`)
+          .bind(value, now, row.case_id)
+          .run();
+      }
+    } else if (choice !== 'ignore') {
+      return fail('invalid_resolution', 400);
+    }
   } else if (row.kind === 'similar_client') {
     /* «هما واحد» تدمج المُنشأ حديثاً في القائم، و«مختلفان» تُغلق السؤال. */
     if (choice === 'merge') {

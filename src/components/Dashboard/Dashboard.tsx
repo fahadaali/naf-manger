@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Award, FileText, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
 import { Money } from '@/registry/naf/currency/money';
+import { Card } from '@/registry/naf/ui/card';
 import StatsCard from './StatsCard';
 import ChartCard from './ChartCard';
 import ActivityFeed from './ActivityFeed';
@@ -136,9 +137,12 @@ export default function Dashboard() {
           color="bg-chart-5"
           trend={stats.growth?.winRate ?? undefined}
         />
+        {/* العددُ وقيمتُها التقديرية هذا العام — ما كان المكتب سيتقاضاه. */}
         <StatsCard
           title="قضايا تطوّعية"
-          value={stats.proBonoCases ?? 0}
+          value={(stats.proBonoValue ?? 0) > 0
+            ? <>{formatNumber(stats.proBonoCases ?? 0)} <span className="text-base font-medium text-muted-foreground">· <Money value={stats.proBonoValue ?? 0} /></span></>
+            : stats.proBonoCases ?? 0}
           icon={HandHeart}
           color="bg-chart-1"
         />
@@ -166,6 +170,35 @@ export default function Dashboard() {
               data={caseStatusData}
             />
           </div>
+
+          {/* ═══ حِملُ المحامين ═══
+              القضايا المفتوحة لكلّ محامٍ مسؤول — و«بلا محامٍ» أولى بالنظر. */}
+          {(stats.casesByLawyer ?? []).length > 0 && (
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">حِمل المحامين — القضايا المفتوحة</h3>
+              <ul className="space-y-3">
+                {(stats.casesByLawyer ?? []).map((row) => {
+                  const top = Math.max(...(stats.casesByLawyer ?? []).map((entry) => entry.open), 1);
+                  return (
+                    <li key={row.lawyerId ?? 'none'} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className={row.lawyerId ? 'text-foreground' : 'text-warning-strong font-medium'}>
+                          {row.lawyerId ? row.name || 'عضو' : 'بلا محامٍ'}
+                        </span>
+                        <bdi className="text-muted-foreground">{formatNumber(row.open)}</bdi>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${row.lawyerId ? 'bg-primary' : 'bg-warning'}`}
+                          style={{ width: `${(row.open / top) * 100}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          )}
         </div>
         
         <div className="lg:col-span-1">

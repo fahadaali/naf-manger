@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { ConflictCheck, CustomReport, MailStatus, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
+import { ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -153,6 +153,12 @@ export class LocalDatabase {
   /* ═══ الأعضاء ═══
      المصادقة مركزية: لا يُنشأ عضوٌ من هنا ولا تُحذف هوية. المركز يمنح
      الوصول، وأولُ دخولٍ يُنشئ الصفّ، وهذه الشاشة ترقّي وتوقف لا أكثر. */
+  /* دليلُ الأعضاء — لمنسدلات «المحامي المسؤول». الاسمُ والدورُ وحدهما، ولكلّ
+     من يقرأ القضايا؛ لا `users.read`. */
+  async getDirectory(): Promise<MemberEntry[]> {
+    return await listOr(api.read<MemberEntry[]>('/members/directory'), 'دليل الأعضاء');
+  }
+
   async getUsers(): Promise<User[]> {
     return (await listOr(api.read<any[]>('/members'), 'الأعضاء')).map(asUser);
   }

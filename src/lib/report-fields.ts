@@ -34,6 +34,9 @@ export const REPORT_FIELDS: Record<string, ReportField[]> = {
     { id: 'outcome', name: 'النتيجة', type: 'select', source: 'cases', options: ['won', 'lost', 'settled'] },
     { id: 'clientName', name: 'اسم العميل', type: 'text', source: 'cases' },
     { id: 'marketerName', name: 'المسوّق', type: 'text', source: 'cases' },
+    { id: 'lawyerName', name: 'المحامي المسؤول', type: 'text', source: 'cases' },
+    { id: 'proBonoValue', name: 'قيمة التطوّعي التقديرية', type: 'number', source: 'cases', aggregatable: true },
+    { id: 'proBonoHours', name: 'ساعات التطوّعي', type: 'number', source: 'cases', aggregatable: true },
     { id: 'feeType', name: 'نوع الأتعاب', type: 'select', source: 'cases', options: ['advance_only', 'deferred_only', 'advance_and_deferred', 'pro_bono'] },
     { id: 'createdDate', name: 'تاريخ الإنشاء', type: 'date', source: 'cases' },
     { id: 'updatedDate', name: 'تاريخ التحديث', type: 'date', source: 'cases' }

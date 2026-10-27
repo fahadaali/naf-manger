@@ -29,6 +29,7 @@ export const REVIEW_KINDS = {
   unresolved_value: 'لفظٌ لم يُفهم',
   similar_client: 'عميلٌ يشبه عميلاً',
   generated_number: 'رقمُ قضيةٍ مولَّد',
+  unmatched_lawyer: 'محامٍ لم يُعرف',
 };
 
 /**

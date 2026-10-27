@@ -32,6 +32,8 @@ export const TARGETS = {
   'case.outcome': { label: 'نتيجة المشروع', entity: 'case' },
   'case.notes': { label: 'ملاحظات المشروع', entity: 'case' },
   'case.opposingParties': { label: 'الطرف الخصم', entity: 'case' },
+  /* اسمٌ يُطابَق بعضوٍ في المزامنة — لا يُكتب نصّاً. */
+  'case.lawyer': { label: 'المحامي المسؤول', entity: 'case' },
 };
 
 /**
@@ -99,6 +101,10 @@ export const DEFAULT_FIELD_MAP = {
   'الطرف الخصم': 'case.opposingParties',
   'الطرف الآخر': 'case.opposingParties',
   'اسم الخصم': 'case.opposingParties',
+  'المحامي المسؤول': 'case.lawyer',
+  'المحامي': 'case.lawyer',
+  'المحامي المختص': 'case.lawyer',
+  'المستشار المسؤول': 'case.lawyer',
 };
 
 /** مفرداتٌ افتراضية — والمعتمَدُ ما في «تكوين النظام». */

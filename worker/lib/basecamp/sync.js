@@ -69,7 +69,7 @@ export const CLIENT_FIELDS = [
   'fullName', 'idNumber', 'idType', 'phone', 'contacts', 'email', 'clientType',
   'commercialRegister', 'legalRepresentative', 'notes',
 ];
-export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome', 'notes', 'opposingParties'];
+export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome', 'notes', 'opposingParties', 'lawyerId'];
 
 /* و`contacts` خارج الدمج: مصفوفةٌ تُضمّ ضمّاً — أرقامٌ تُزاد ولا يُحذف
    منها رقم — فلا معنى لمقارنةِ «قبلُ وبعدُ» فيها ولا لتعارضٍ عليها. */
@@ -86,6 +86,7 @@ const CLIENT_COLUMN = {
 const CASE_COLUMN = {
   caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
   status: 'status', outcome: 'outcome', notes: 'notes', opposingParties: 'opposing_parties',
+  lawyerId: 'lawyer_id',
 };
 
 /**
@@ -647,6 +648,31 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
   if (Array.isArray(caseValues.opposingParties)) {
     caseValues.opposingParties = JSON.stringify(caseValues.opposingParties);
   }
+
+  /* ═══ المحامي المسؤول اسمٌ في الملفّ، وعضوٌ في المنصة ═══
+     يُطابَق بأسماء الأعضاء المفعَّلين موحَّدةً — والمختصرُ من الأتمّ. وعضوٌ
+     واحدٌ يطابقه يُكتب معرّفُه؛ وما لم يُطابَق أو طابق اثنين **لا يُكتب**
+     ويُفتح له صفُّ مراجعة يُختار فيه العضو. فاسمٌ حرٌّ في عمود عضو يُسقط
+     «قضاياي» و«حِمل المحامين» صامتاً. */
+  if (caseValues.lawyer) {
+    const named = caseValues.lawyer;
+    delete caseValues.lawyer;
+    const target = normalizeArabic(named);
+    const exact = (vocab.members ?? []).filter((member) => normalizeArabic(member.name) === target);
+    const close = exact.length ? exact
+      : (vocab.members ?? []).filter((member) => nameRelation(member.name, named) !== 'different');
+    if (close.length === 1) {
+      caseValues.lawyerId = close[0].id;
+    } else {
+      plan.warnings.push(`المحامي «${named}» لم يُعرف بين الأعضاء — لم يُكتب`);
+      plan.reviews.push({
+        kind: 'unmatched_lawyer',
+        subject: named,
+        fingerprint: `lawyer:${target}`,
+        detail: { name: named, candidates: close.map((member) => member.id) },
+      });
+    }
+  }
   if (!caseValues.caseNumber) {
     caseValues.caseNumber = fallbackNumber('بيسكامب', row.project_id);
     plan.warnings.push('رقم القضية مولَّد — يحتاج تصحيحاً');
@@ -813,6 +839,11 @@ export async function buildPlan(env, connection) {
   ).all();
 
   const vocab = await readVocabulary(env);
+  /* والأعضاءُ مرّةً للدورة: بهم يُطابَق «المحامي المسؤول». */
+  const { results: members } = await env.DB.prepare(
+    `SELECT user_id, display_name FROM members WHERE is_active = 1 AND display_name IS NOT NULL`,
+  ).all();
+  vocab.members = (members ?? []).map((row) => ({ id: row.user_id, name: row.display_name }));
   /* سياقُ الاستدلال يُبنى مرّةً للدورة كلِّها: السقفُ سقفُ الدورة لا
      سقفُ المشروع الواحد، وإلا استدلّ حسابٌ فيه ثلاثمئة مشروعٍ ثلاثمئة مرّة. */
   const ai = { enabled: await aiEnabled(env), budget: newBudget() };
@@ -984,8 +1015,8 @@ async function applyPlan(env, plan, actorId, ai) {
     const values = plan.case.values;
     await env.DB.prepare(
       `INSERT INTO cases (id, case_number, case_type, client_id, client_name, summary, status,
-                          outcome, notes, opposing_parties, basecamp_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                          outcome, notes, opposing_parties, lawyer_id, basecamp_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         caseId,
@@ -998,6 +1029,7 @@ async function applyPlan(env, plan, actorId, ai) {
         values.outcome ?? null,
         values.notes ?? '',
         values.opposingParties ?? '[]',
+        values.lawyerId ?? null,
         plan.appUrl,
         /* ═══ القضيةُ أُنشئت يومَ أُنشئ مشروعُها ═══
            كانت تُختم بلحظة الاستيراد، فتظهر قضيةٌ من ٢٠٢١ منشأةً اليوم —

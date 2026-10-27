@@ -173,6 +173,27 @@ export async function listMembers(env, user) {
   return json({ ok: true, data });
 }
 
+/**
+ * دليلُ الأعضاء — الاسمُ والدورُ وحدهما، للمفعَّلين.
+ *
+ * `listMembers` لمن يملك `users.read` وحده، وفيها البريدُ والصلاحيات. ومنسدلةُ
+ * «المحامي المسؤول» يحتاجها كلُّ من يحرّر قضية — والمحامي لا يملك قراءةَ
+ * المستخدمين. فهذا ما يلزم الاختيارَ لا أكثر: لا بريدَ ولا صلاحيات.
+ */
+export async function listDirectory(env, user) {
+  const allowed = user.permissions?.cases?.read || user.permissions?.prospects?.read;
+  if (!allowed) return fail('forbidden', 403);
+
+  const { results } = await env.DB.prepare(
+    `SELECT user_id, display_name, role FROM members WHERE is_active = 1 ORDER BY display_name`,
+  ).all();
+
+  return json({
+    ok: true,
+    data: (results ?? []).map((row) => ({ id: row.user_id, name: row.display_name ?? '', role: row.role })),
+  });
+}
+
 export async function updateMember(request, env, user, id) {
   if (!user.permissions?.users?.update) return fail('forbidden', 403);
 
@@ -355,7 +376,7 @@ const WINDOW = {
    وحدها — لا مبلغ. فالمبلغُ لا يُحسب لها أصلاً، لا يُحسب ثم يُقصّ: حقلٌ
    يُضاف هنا بعد اليوم لا يتسرّب إليها لأنّ أحداً نسي قصَّه هناك. */
 export async function readStats(env, { publicBoard = false } = {}) {
-  const [clients, prospects, cases, newClients, newProspects, newCases, proBono, closed, outstanding] = await env.DB.batch([
+  const [clients, prospects, cases, newClients, newProspects, newCases, proBono, closed, outstanding, byLawyer] = await env.DB.batch([
     env.DB.prepare(
       `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
     ),
@@ -393,8 +414,13 @@ export async function readStats(env, { publicBoard = false } = {}) {
 
     /* والتطوّعيةُ تُعدّ من بنية الأتعاب نفسها — ولا عمودَ لها يُحفظ فيفترق
        عنها. والتالفُ من JSON يُطرح بـ`json_valid` ولا يُسقط اللوحة. */
+    /* والتطوّعيةُ: عددُها، وقيمتُها التقديرية في السنة الجارية — بـ`created_at`
+       يومَ فُتحت. */
     env.DB.prepare(
-      `SELECT COUNT(*) n FROM cases
+      `SELECT COUNT(*) n,
+              COALESCE(SUM(CASE WHEN created_at >= strftime('%s', date('now', 'start of year'))
+                                THEN pro_bono_value ELSE 0 END), 0) value
+         FROM cases
         WHERE archived_at IS NULL AND ${FEE_TYPE} = 'pro_bono'`,
     ),
 
@@ -422,6 +448,16 @@ export async function readStats(env, { publicBoard = false } = {}) {
          FROM cases
         WHERE archived_at IS NULL AND json_valid(payment_status) = 1
           AND ${FEE_TYPE} <> 'pro_bono'`,
+    ),
+
+    /* ═══ حِملُ المحامين ═══
+       القضايا المفتوحة لكلّ محامٍ مسؤول، باسمه. و«بلا محامٍ» صفٌّ بذاته —
+       قضيةٌ لا يحملها أحدٌ أولى بالنظر من غيرها. */
+    env.DB.prepare(
+      `SELECT c.lawyer_id id, m.display_name name, COUNT(*) n
+         FROM cases c LEFT JOIN members m ON m.user_id = c.lawyer_id
+        WHERE c.archived_at IS NULL AND c.status <> 'completed'
+        GROUP BY c.lawyer_id ORDER BY n DESC`,
     ),
   ]);
 
@@ -463,7 +499,16 @@ export async function readStats(env, { publicBoard = false } = {}) {
       prospectsByStatus,
       casesByStatus,
       proBonoCases: Number(proBono.results?.[0]?.n ?? 0),
-      ...(publicBoard ? {} : { outstandingAmount: Number(outstanding.results?.[0]?.n ?? 0) }),
+      /* والمبالغُ وأسماءُ الأعضاء لا تبلغ شاشات العرض — تلك أعدادٌ ونسبٌ وحدها. */
+      ...(publicBoard ? {} : {
+        outstandingAmount: Number(outstanding.results?.[0]?.n ?? 0),
+        proBonoValue: Number(proBono.results?.[0]?.value ?? 0) / 100,
+        casesByLawyer: (byLawyer.results ?? []).map((row) => ({
+          lawyerId: row.id ?? null,
+          name: row.id ? row.name ?? '' : '',
+          open: Number(row.n ?? 0),
+        })),
+      }),
       conversionRate:
         totalClients + totalProspects > 0
           ? Math.round((totalClients / (totalClients + totalProspects)) * 100)

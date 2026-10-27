@@ -143,6 +143,12 @@ export interface Case {
   commissionStructure?: CommissionStructure;
   /** الأطرافُ الخصم — وبها يُفحص تعارضُ المصالح عند قبول موكّلٍ جديد. */
   opposingParties?: OpposingParty[];
+  /** المحامي المسؤول — معرّفُ عضو — وفريقُه. */
+  lawyerId?: string | null;
+  team?: string[];
+  /** قيمةُ العمل التطوّعي التقديرية (ريالات) وساعاتُه. */
+  proBonoValue?: number | null;
+  proBonoHours?: number | null;
 
   /* ═══ حقولٌ ثلاثةٌ حُذفت ═══
      كانت `commissionPayments` و`totalCommissionPaid` و`remainingCommission`
@@ -341,7 +347,7 @@ export interface BasecampStatus {
  */
 export interface BasecampReview {
   id: string;
-  kind: 'project_kind' | 'case_type' | 'unresolved_value' | 'similar_client' | 'generated_number';
+  kind: 'project_kind' | 'case_type' | 'unresolved_value' | 'similar_client' | 'generated_number' | 'unmatched_lawyer';
   kindLabel: string;
   projectId: string;
   projectName: string;
@@ -648,6 +654,10 @@ export interface DashboardStats {
   proBonoCases: number;
   /** ما لم يُحصَّل بعدُ من أتعاب القضايا الحاضرة — ريالات. */
   outstandingAmount: number;
+  /** القيمةُ التقديرية للعمل التطوّعي في السنة الجارية — ريالات. */
+  proBonoValue?: number;
+  /** القضايا المفتوحة لكلّ محامٍ مسؤول. و`lawyerId: null` هي «بلا محامٍ». */
+  casesByLawyer?: { lawyerId: string | null; name: string; open: number }[];
   growth?: {
     clients: Growth;
     prospects: Growth;
@@ -785,6 +795,13 @@ export interface Marketer {
   profilePicture?: string; // `marketers.profile_picture`
   createdDate: Date;
   updatedDate: Date;
+}
+
+/** عضوٌ في دليل الأعضاء — `GET /api/members/directory`: الاسمُ والدورُ وحدهما. */
+export interface MemberEntry {
+  id: string;
+  name: string;
+  role: string;
 }
 
 /** طرفٌ خصمٌ في قضية. ورقمُ الهوية أو السجلّ اختياريّ، وبه يُقطع التعارض. */

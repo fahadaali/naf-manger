@@ -64,6 +64,7 @@ import {
 import {
   convertProspect,
   exportAll,
+  listDirectory,
   listMembers,
   readMarketerStats,
   readSettings,
@@ -203,6 +204,7 @@ export default {
       }
       if (name === 'members') {
         if (!id && request.method === 'GET') return listMembers(env, user);
+        if (id === 'directory' && request.method === 'GET') return listDirectory(env, user);
         if (id && (request.method === 'PATCH' || request.method === 'PUT')) {
           return updateMember(request, env, user, id);
         }
