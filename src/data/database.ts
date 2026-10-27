@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
+import { InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -308,6 +308,20 @@ export class LocalDatabase {
      الاتّجاه واحد: يُقرأ منه ولا يُكتب فيه. ولا `listOr` في شيءٍ منها —
      شاشةُ الربط تعرض سببَ السقوط، و«لم يُسجَّل التطبيق» غيرُ «لم يُربط
      الحساب» غيرُ «بُدِّل المفتاح». والصمتُ يخلط الثلاثة. */
+  /* ═══ جرسُ الإشعارات ═══
+     سقوطُ القراءة لا يُسقط الترويسة: يُردّ فارغاً. */
+  async getNotifications(): Promise<{ unread: number; items: InAppNotification[] }> {
+    try {
+      return await api.read<{ unread: number; items: InAppNotification[] }>('/notifications');
+    } catch {
+      return { unread: 0, items: [] };
+    }
+  }
+
+  async markNotificationsRead(ids?: string[]): Promise<void> {
+    await api.post('/notifications/read', ids ? { ids } : {}).catch(() => {});
+  }
+
   /* ═══ البريد ═══ */
   async getMailStatus(): Promise<MailStatus> {
     return await api.read<MailStatus>('/mail/status');

@@ -38,7 +38,7 @@ import { scheduledWafeqSync } from './lib/wafeq/sync.js';
 import { readConflicts } from './lib/conflicts.js';
 import { importCases } from './lib/case-import.js';
 import { readMailStatus, sendTestMail } from './lib/mail.js';
-import { scheduledNotifications } from './lib/notify.js';
+import { listNotifications, markNotificationsRead, scheduledNotifications } from './lib/notify.js';
 import {
   decideWafeqPayment,
   listWafeqPayments,
@@ -245,6 +245,11 @@ export default {
          والفحصُ في `basecamp/handlers.js` لا هنا. و`callback` تحويلُ متصفّح
          لا نداءُ `fetch` — لكنه بعد الحارس كغيره، لأنّ من يعود من صفحة
          الإذن يحمل جلسته. */
+      /* جرسُ الإشعارات — بنودُ العضو نفسِه وحده. */
+      if (name === 'notifications' && !id && request.method === 'GET') return listNotifications(env, user);
+      if (name === 'notifications' && id === 'read' && request.method === 'POST') {
+        return markNotificationsRead(request, env, user);
+      }
       /* البريد — عبر Resend. الحالةُ والتجربةُ للمسؤول وحده. */
       if (name === 'mail' && id === 'status' && request.method === 'GET') return readMailStatus(env, user);
       if (name === 'mail' && id === 'test' && request.method === 'POST') return sendTestMail(request, env, user);

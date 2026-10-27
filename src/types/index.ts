@@ -262,6 +262,17 @@ export interface DisplayToken {
  * الأولى يعالجها من يملك أسرارَ المنصة، والثانية ضغطةُ زرٍّ في الشاشة —
  * وخلطُهما يرسل صاحبَ المكتب يبحث في المكان الخطأ.
  */
+/** بندٌ في جرس الإشعارات — `GET /api/notifications`. و`link` اسمُ الشاشة. */
+export interface InAppNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
 /** حالةُ البريد — `GET /api/mail/status`. والمفتاحُ لا يُردّ، وجودُه وحده. */
 export interface MailStatus {
   configured: boolean;
