@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CircleCheck, Plus, Search, TriangleAlert } from 'lucide-react';
+import { CircleCheck, LayoutGrid, Plus, Search, SquareKanban, TriangleAlert } from 'lucide-react';
 import { BulkAction, Prospect } from '../../types';
 import ProspectCard from './ProspectCard';
+import ProspectsBoard from './ProspectsBoard';
 import ProspectModal from './ProspectModal';
 import ZoomMeetingModal from '../Meetings/ZoomMeetingModal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,7 +19,22 @@ import { Card } from '@/registry/naf/ui/card';
 import { Alert } from '@/registry/naf/ui/alert';
 import { messageTone } from '../../lib/status-message';
 
+/* ═══ العرض ═══
+   لوحةٌ بالحالات أو بطاقات — والاختيارُ يُحفظ في المتصفّح وحده. والقراءةُ
+   في `try`: تخزينٌ محجوب (نافذةٌ خاصة) لا يُسقط الشاشة. */
+const VIEW_KEY = 'naf:prospects:view';
+type View = 'board' | 'cards';
+
+function readView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'board';
+  } catch {
+    return 'board';
+  }
+}
+
 export default function ProspectsView() {
+  const [view, setView] = useState<View>(readView);
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [showProspectModal, setShowProspectModal] = useState(false);
@@ -167,6 +183,26 @@ export default function ProspectsView() {
     }
   };
 
+  const changeView = (next: View) => {
+    setView(next);
+    selection.clear();
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* تخزينٌ محجوب */ }
+  };
+
+  /* ═══ السحبُ بين الأعمدة ═══
+     يُعرض فوراً ثم يُحفظ، ويُرجَع إن سقط الحفظ. */
+  const handleMove = async (prospect: Prospect, status: string) => {
+    const previous = prospect.prospectStatus;
+    setProspects((list) => list.map((p) => (p.id === prospect.id ? { ...p, prospectStatus: status } : p)));
+    try {
+      await db.moveProspectStatus(prospect.id, status);
+    } catch (error) {
+      console.error('تعذّر نقل الحالة:', error);
+      setProspects((list) => list.map((p) => (p.id === prospect.id ? { ...p, prospectStatus: previous } : p)));
+      setNotice('تعذّر نقل الحالة. أعد المحاولة.');
+    }
+  };
+
   const handleCloseModal = () => {
     setShowProspectModal(false);
     setSelectedProspect(null);
@@ -216,12 +252,31 @@ export default function ProspectsView() {
           <h1 className="text-2xl font-bold text-foreground">إدارة العملاء المحتملين</h1>
           <p className="text-muted-foreground">إدارة العملاء المحتملين وتحويلهم إلى عملاء فعليين</p>
         </div>
-        {hasPermission('prospects', 'create') && (
-          <Button onClick={handleCreateProspect}>
-            <Plus className="h-5 w-5" />
-            إضافة عميل محتمل
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* بشكل `Common/ViewToggle` — وذاك للبطاقات والصفوف، وهذا للّوحة والبطاقات. */}
+          <div className="inline-flex rounded-xl border border-border overflow-hidden" role="group" aria-label="طريقة العرض">
+            {([['board', 'لوحة', SquareKanban], ['cards', 'بطاقات', LayoutGrid]] as const).map(([mode, label, ModeIcon]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => changeView(mode)}
+                aria-pressed={view === mode}
+                className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                  view === mode ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <ModeIcon className="h-4 w-4" aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
+          {hasPermission('prospects', 'create') && (
+            <Button onClick={handleCreateProspect}>
+              <Plus className="h-5 w-5" />
+              إضافة عميل محتمل
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -314,7 +369,21 @@ export default function ProspectsView() {
         </Card>
       </div>
 
+      {/* ═══ اللوحة ═══
+          الحاضرون وحدهم: المؤرشفُ خارج لوحة بيسكامب، فلا عمودَ له هنا. ومرشّحُ
+          الحالة يضيّق الأعمدة إلى عمودٍ واحد. */}
+      {view === 'board' && archiveView === 'active' && (
+        <ProspectsBoard
+          prospects={filteredProspects}
+          statuses={filterStatus === 'all' ? statuses : [filterStatus]}
+          canMove={hasPermission('prospects', 'update')}
+          onOpen={handleViewDetails}
+          onMove={handleMove}
+        />
+      )}
+
       {/* Prospects Grid */}
+      {(view === 'cards' || archiveView === 'archived') && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredProspects.map((prospect) => (
           <ProspectCard
@@ -331,6 +400,7 @@ export default function ProspectsView() {
           />
         ))}
       </div>
+      )}
 
       {filteredProspects.length === 0 && (
         <div className="text-center py-12">

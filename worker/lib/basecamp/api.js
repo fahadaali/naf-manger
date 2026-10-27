@@ -64,15 +64,18 @@ export class BasecampError extends Error {
  * و٤٠١ لا يُعاد: رمزٌ منتهٍ لا يصلحه انتظار، وعلاجُه التجديد في الطبقة
  * التي تملك الرمز لا هنا.
  */
-async function callOnce(url, token, attempt) {
+async function callOnce(url, token, attempt, { method = 'GET', body } = {}) {
   await pace();
 
   const response = await fetch(url, {
+    method,
     headers: {
       authorization: `Bearer ${token}`,
       'user-agent': USER_AGENT,
       accept: 'application/json',
+      ...(body !== undefined ? { 'content-type': 'application/json; charset=utf-8' } : {}),
     },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 
   if (response.status === 401) throw new BasecampError('unauthorized', 401);
@@ -98,14 +101,27 @@ async function callOnce(url, token, attempt) {
 }
 
 /** نداءٌ يردّ الردّ بعد استيفاء الإعادات. */
-export async function call(accountId, token, path) {
+export async function call(accountId, token, path, options) {
   const url = path.startsWith('http') ? path : `${API_ROOT}/${accountId}${path}`;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const response = await callOnce(url, token, attempt);
+    const response = await callOnce(url, token, attempt, options);
     if (response) return response;
   }
   throw new BasecampError('rate_limited', 429);
+}
+
+/* ═══ الكتابة ═══
+   لوحةُ العملاء المحتملين وحدها تكتب (`prospects/`) — ربطُ المشاريع يقرأ
+   ولا يكتب كما كان. و٤٢٩ و٥xx تُعاد هنا كالقراءة: بيسكامب لا تُنشئ شيئاً
+   حين تردّ بهما، فالإعادةُ لا تُكرّر بطاقة.
+
+   وبعضُ الكتابة (النقلُ والحذف) تردّ ٢٠٤ بلا جسم، فيُردّ `null`. */
+export async function sendJson(accountId, token, path, { method = 'POST', body } = {}) {
+  const response = await call(accountId, token, path, { method, body: body ?? {} });
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 /** نداءٌ يردّ JSON. */

@@ -83,7 +83,10 @@ export const RESOURCES = {
       followUpDate: ['follow_up_date', 'date'],
       assignedTo: ['assigned_to'],
       archivedAt: ['archived_at', 'epoch'],
+      /* رابطُ البطاقة في لوحة بيسكامب — تكتبه المزامنة وحدها. */
+      basecampUrl: ['bc_app_url'],
     },
+    readOnly: ['basecampUrl'],
     required: ['full_name'],
     defaults: { phone: '', email: '', notes: '', attachments: '[]', contacts: '[]' },
   },

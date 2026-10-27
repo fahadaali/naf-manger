@@ -21,6 +21,7 @@ import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
 import { ConflictsPanel, FieldMapPanel, PreviewPanel } from './BasecampPanels';
 import BasecampReviews from './BasecampReviews';
 import BasecampReset from './BasecampReset';
+import BasecampProspects from './BasecampProspects';
 
 /* ═══ ربط بيسكامب ═══
  *
@@ -461,6 +462,7 @@ export default function BasecampSync() {
               المراجعة الدورية، فيسبق ما يُضبط مرّةً ثم يُنسى. */}
           <BasecampReviews onChanged={() => load(true)} />
           <ConflictsPanel onResolved={() => load(true)} />
+          <BasecampProspects />
           <PreviewPanel
             syncEnabled={status.syncEnabled === true}
             lastSyncAt={status.lastSyncAt ?? null}

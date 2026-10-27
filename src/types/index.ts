@@ -89,6 +89,41 @@ export interface Prospect {
   expectedValue?: number; // Expected contract value
   followUpDate?: Date;
   assignedTo?: string; // User ID
+  basecampUrl?: string | null; // رابطُ البطاقة في لوحة بيسكامب — للقراءة
+}
+
+/** تعليقٌ على عميلٍ محتمل — يُنسخ في الطرفين مع بطاقته في بيسكامب. */
+export interface ProspectComment {
+  id: string;
+  prospectId: string;
+  body: string;
+  authorName: string;
+  authorUserId: string | null;
+  source: 'platform' | 'basecamp';
+  synced: boolean;
+  createdAt: number; // ثوانٍ
+}
+
+/** حالةُ لوحة العملاء المحتملين في بيسكامب. */
+export interface ProspectBoardStatus {
+  configured: boolean;
+  projectId?: string;
+  projectName?: string;
+  columns?: number;
+  webhook?: boolean;
+  webhookUrl?: string | null;
+  lastSyncAt?: number | null;
+  lastSyncError?: string | null;
+  prospects?: number;
+  linked?: number;
+}
+
+export interface ProspectBoardSyncResult {
+  cards: number;
+  created: number;
+  pushed: number;
+  conflicts: number;
+  errors: number;
 }
 
 export interface Case {

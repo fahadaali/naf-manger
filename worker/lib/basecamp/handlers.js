@@ -23,6 +23,7 @@ import {
   writeFieldMap,
 } from './sync.js';
 import { closeReview, countOpen, listOpen, mergeClients } from './reviews.js';
+import { pushProspect } from './prospects/sync.js';
 import { rememberPhrase, readLexicon } from '../ai/extract.js';
 import { aiEnabled, newBudget, setAiEnabled } from '../ai/summarize.js';
 import { modelAvailable, modelInfo } from '../ai/model.js';
@@ -684,10 +685,11 @@ export async function listConflicts(env, user) {
   if (!isAdmin(user)) return fail('forbidden', 403);
 
   const { results } = await env.DB.prepare(
-    `SELECT c.*, p.name AS project_name, k.case_number
+    `SELECT c.*, p.name AS project_name, k.case_number, r.full_name AS prospect_name
      FROM basecamp_conflicts c
      LEFT JOIN basecamp_projects p ON p.project_id = c.project_id
      LEFT JOIN cases k ON k.id = c.case_id
+     LEFT JOIN prospects r ON r.id = c.prospect_id
      WHERE c.resolved_at IS NULL
      ORDER BY c.detected_at DESC`,
   ).all();
@@ -697,7 +699,9 @@ export async function listConflicts(env, user) {
     data: (results ?? []).map((row) => ({
       id: row.id,
       projectId: row.project_id,
-      projectName: row.project_name ?? '',
+      /* وصفُّ العميل المحتمل يُسمّى باسمه — مشروعُه لوحةٌ لا ملفّ. */
+      projectName: row.prospect_id ? `عميل محتمل: ${row.prospect_name ?? ''}` : row.project_name ?? '',
+      prospectId: row.prospect_id ?? null,
       caseId: row.case_id ?? null,
       caseNumber: row.case_number ?? null,
       field: row.field,
@@ -752,6 +756,16 @@ export async function resolveConflict(request, env, user, conflictId) {
   if (!row) return fail('not_found', 404);
 
   const now = nowSeconds();
+
+  /* ═══ حقلُ عميلٍ محتمل ═══
+     صورتُه في صفّ المحتمل نفسِه لا في `basecamp_projects`. والحسمُ يكتب القيمةَ
+     المختارة في الطرف الذي خالفها: «خذ من بيسكامب» في المنصة، و«أبقِ ما في
+     المنصة» في البطاقة — عبر الدمج التالي. */
+  if (row.prospect_id) {
+    await resolveProspectConflict(env, row, choice, now);
+    return Response.json({ ok: true, data: { id: conflictId, resolution: choice } });
+  }
+
   const isClientField = row.field.startsWith('client.');
   const field = isClientField ? row.field.slice('client.'.length) : row.field;
 
@@ -801,6 +815,48 @@ export async function resolveConflict(request, env, user, conflictId) {
 
   return Response.json({ ok: true, data: { id: conflictId, resolution: choice } });
 }
+
+async function resolveProspectConflict(env, row, choice, now) {
+  const field = row.field.slice('prospect.'.length);
+  const prospect = await env.DB.prepare(`SELECT * FROM prospects WHERE id = ?`).bind(row.prospect_id).first();
+
+  if (prospect && PROSPECT_COLUMN[field]) {
+    if (choice === 'basecamp') {
+      const value = field === 'expectedValue'
+        ? (row.basecamp_value ? Number(row.basecamp_value) : null)
+        : row.basecamp_value;
+      await env.DB.prepare(`UPDATE prospects SET ${PROSPECT_COLUMN[field]} = ?, updated_at = ? WHERE id = ?`)
+        .bind(value, now, row.prospect_id)
+        .run()
+        .catch(() => {});
+    }
+
+    /* الصورةُ تأخذ قيمةَ بيسكامب في الحالتين: فإن بقيت المنصةُ على قيمتها
+       رآها الدمجُ التالي «تبدّلت في المنصة وحدها» فكتبها في البطاقة. و«تجاهل»
+       مثلُها — لا يُسأل عن الحقل ثانيةً ما لم يتبدّل. */
+    let snapshot = {};
+    try { snapshot = JSON.parse(prospect.bc_synced_values ?? '{}') ?? {}; } catch { snapshot = {}; }
+    snapshot[field] = row.basecamp_value ?? '';
+    await env.DB.prepare(`UPDATE prospects SET bc_synced_values = ? WHERE id = ?`)
+      .bind(JSON.stringify(snapshot), row.prospect_id)
+      .run();
+  }
+
+  await env.DB.prepare(`UPDATE basecamp_conflicts SET resolved_at = ?, resolution = ? WHERE id = ?`)
+    .bind(now, choice, row.id)
+    .run();
+
+  if (choice === 'platform' && prospect) {
+    await pushProspect(env, row.prospect_id);
+  }
+}
+
+const PROSPECT_COLUMN = {
+  fullName: 'full_name', prospectStatus: 'prospect_status', phone: 'phone', email: 'email',
+  clientType: 'client_type', idType: 'id_type', idNumber: 'id_number',
+  commercialRegister: 'commercial_register', source: 'source', expectedValue: 'expected_value',
+  followUpDate: 'follow_up_date', notes: 'notes',
+};
 
 /** الخطّة كما تُعرض — بلا ما لا تحتاجه الشاشة. */
 function shapePlan(plan) {

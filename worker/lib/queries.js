@@ -106,6 +106,11 @@ function same(one, other) {
   return JSON.stringify(one) === JSON.stringify(other);
 }
 
+/** المفرداتُ كما تراها الشاشات — لمن يحتاجها على الخادم (لوحةُ بيسكامب). */
+export async function loadSettings(env) {
+  return { ...DEFAULT_SETTINGS, ...(await storedSettings(env)) };
+}
+
 export async function readSettings(env, user) {
   const merged = { ...DEFAULT_SETTINGS, ...(await storedSettings(env)) };
   const mayReadAll = Boolean(user?.permissions?.settings?.read);
