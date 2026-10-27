@@ -69,7 +69,7 @@ export default function DisplayBoard({ token }: { token: string }) {
     { label: 'العملاء المحتملين', value: stats.totalProspects, tone: 'text-chart-2' },
     { label: 'القضايا', value: stats.totalCases, tone: 'text-chart-3' },
     { label: 'القضايا المنظورة', value: stats.pendingCases, tone: 'text-chart-4' },
-    { label: 'معدّل الربح', value: `${formatNumber(stats.winRate)}%`, tone: 'text-chart-5' },
+    { label: 'نسبة كسب القضايا', value: `${formatNumber(stats.winRate)}%`, tone: 'text-chart-5' },
     { label: 'معدّل التحويل', value: `${formatNumber(stats.conversionRate)}%`, tone: 'text-primary' }
   ];
 

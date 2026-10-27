@@ -804,6 +804,11 @@ export interface DashboardStats {
   outstandingAmount: number;
   /** القيمةُ التقديرية للعمل التطوّعي في السنة الجارية — ريالات. */
   proBonoValue?: number;
+  /**
+   * نتائجُ القضايا — ونسبةُ الكسب `winRate` = الرابحة ÷ المحسومة (ما له نتيجة).
+   * و`undecided` قضايا منظورة انتهت ولم تُسجَّل نتيجتُها.
+   */
+  outcomes?: { won: number; lost: number; settled: number; decided: number; undecided: number };
   /** الجاري بنوعه: قضايا منظورة، وأعمالٌ قانونية مستمرّة. */
   ongoingByKind?: { litigation?: number; legalWork?: number };
   /** المحصَّل هذا العام: دفعاتُ القضايا، والإيرادُ العامّ بلا قضية — ريالات. */
