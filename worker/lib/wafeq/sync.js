@@ -17,8 +17,8 @@
 // يُنقل إلى السجلّ — وافق مصدرُها، والدفترُ يتبعه.
 
 import {
-  contactFields, invoiceContact, invoiceText, listAll, normalizePayment, projectName, readContact, readInvoice,
-  readProject, WafeqError,
+  contactFields, invoiceContact, invoiceText, listAll, normalizePayment, projectName, projectOf, readContact,
+  readInvoice, readProject, WafeqError,
 } from './api.js';
 import { recomputeCollected } from '../payments.js';
 import { toLatinDigits } from '../digits.js';
@@ -85,7 +85,7 @@ const distinctive = (caseNumber) => {
 
 /** يجهّز سياقَ الدورة: القضايا مرّةً، والعملاء مرّةً. */
 async function loadContext(env) {
-  const [{ results: cases }, { results: clients }] = await Promise.all([
+  const [{ results: cases }, { results: clients }, { results: projects }, { results: links }] = await Promise.all([
     env.DB.prepare(
       `SELECT id, case_number, court_case_number, case_type, summary, client_id, client_name, status,
               payment_status, fee_structure, updated_at
@@ -94,10 +94,17 @@ async function loadContext(env) {
     env.DB.prepare(
       `SELECT id, full_name, id_number, commercial_register FROM clients WHERE archived_at IS NULL`,
     ).all(),
+    /* اسمُ مشروع بيسكامب لكلّ قضية — وبه يُطابَق مشروعُ وافق. */
+    env.DB.prepare(`SELECT case_id, name FROM basecamp_projects WHERE case_id IS NOT NULL`).all(),
+    env.DB.prepare(`SELECT project_id, case_id, source FROM wafeq_project_links`).all(),
   ]);
+  const projectNames = new Map((projects ?? []).map((row) => [row.case_id, row.name]));
+  const kept = (cases ?? []).filter((row) => !isProBono(row))
+    .map((row) => ({ ...row, project_name: projectNames.get(row.id) ?? '' }));
   return {
-    cases: (cases ?? []).filter((row) => !isProBono(row)),
+    cases: kept,
     clients: clients ?? [],
+    projectLinks: new Map((links ?? []).map((row) => [String(row.project_id), row])),
   };
 }
 
@@ -115,6 +122,34 @@ function findClient(context, payment) {
     ?? null;
 }
 
+/* ═══ اسمُ المشروع ═══
+   يُوحَّد ثمّ يُقطَّع كلماتٍ، وتُطرح الألفاظُ التي تتكرّر في أسماء المشاريع
+   كلِّها فلا تفرّق بينها («قضية»، «مشروع»، «أتعاب»)، وتُقصّ «ال» من أوّل الكلمة. */
+const NOISE = new Set(['قضيه', 'قضايا', 'مشروع', 'مشاريع', 'اتعاب', 'ملف', 'عميل', 'موكل', 'و', 'في', 'من', 'مع', 'ضد', 'بين', 'لدي', 'عن']);
+
+export function projectTokens(name) {
+  return [...new Set(normalizeArabic(toLatinDigits(name ?? ''))
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .split(' ')
+    .map((word) => (word.length > 4 && word.startsWith('ال') ? word.slice(2) : word))
+    .filter((word) => word.length > 1 && !NOISE.has(word)))];
+}
+
+/** تشابهُ اسمين: ١ للتطابق بعد التوحيد، واشتراكُ الكلمات (Jaccard) فيما سواه، و٠٫٨ لاحتواء أحدهما الآخر. */
+export function projectSimilarity(one, other) {
+  const a = projectTokens(one);
+  const b = projectTokens(other);
+  if (!a.length || !b.length) return 0;
+  const shared = a.filter((word) => b.includes(word)).length;
+  if (shared === a.length && shared === b.length) return 1;
+  const jaccard = shared / new Set([...a, ...b]).size;
+  const contained = shared === Math.min(a.length, b.length) && shared >= 2 ? 0.8 : 0;
+  return Math.max(jaccard, contained);
+}
+
+const SIMILAR = 0.6;
+const CLEAR_LEAD = 0.2;
+
 /**
  * قرارُ دفعةٍ واحدة — بلا كتابة.
  *
@@ -123,6 +158,19 @@ function findClient(context, payment) {
 export async function decide(env, context, payment, { ai, previousFingerprint } = {}) {
   const haystack = compact([payment.reference, payment.description, payment.invoiceText, payment.projectName].join(' '));
   const client = findClient(context, payment);
+
+  // ٠) مشروعُ وافق مربوطٌ من قبل — بتطابق الاسم أو بتأكيد إنسان
+  const remembered = payment.projectId ? context.projectLinks?.get(String(payment.projectId)) : null;
+  const rememberedCase = remembered && context.cases.find((row) => row.id === remembered.case_id);
+  if (rememberedCase) {
+    return {
+      status: 'linked',
+      caseId: rememberedCase.id,
+      clientId: rememberedCase.client_id,
+      matchBy: 'wafeq_project',
+      reason: `مشروعُ وافق «${payment.projectName || payment.projectId}» مربوطٌ بهذه القضية`,
+    };
+  }
 
   // ١) رقمُ المشروع أو رقمُ القضية لدى الجهة حرفاً
   /* والمحاسبُ يكتب أيَّهما: رقمَ المشروع عندنا، أو رقمَ المحكمة الذي يعرفه
@@ -140,11 +188,46 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
     };
   }
 
-  // ٢) المرشّحون: قضايا الموكّل، أو ما ذُكر رقمُه، أو أحدثُ القضايا المفتوحة
+  // ٢) اسمُ مشروع وافق مقابل اسم مشروع بيسكامب
+  /* والدافعُ لا يُعتمد عليه — شركةٌ تابعة أو قريب. واسمُ المشروع هو ما يكتبه
+     المحاسبُ على الفاتورة، وهو في الغالب اسمُ مشروع بيسكامب أو قريبٌ منه. */
+  let byProject = [];
+  if (payment.projectName) {
+    const scored = context.cases
+      .map((row) => ({ row, score: projectSimilarity(payment.projectName, row.project_name) }))
+      .filter((entry) => entry.score >= SIMILAR)
+      .sort((one, other) => other.score - one.score);
+    const [best, second] = scored;
+    const exact = scored.filter((entry) => entry.score === 1);
+    if (exact.length === 1) {
+      return {
+        status: 'linked',
+        caseId: best.row.id,
+        clientId: best.row.client_id,
+        matchBy: 'project_name',
+        reason: `اسمُ المشروع في وافق «${payment.projectName}» هو مشروعُ بيسكامب «${best.row.project_name}»`,
+        learnProject: Boolean(payment.projectId),
+      };
+    }
+    if (best && !exact.length && (!second || best.score - second.score >= CLEAR_LEAD)) {
+      return {
+        status: 'suggested',
+        suggestedCaseId: best.row.id,
+        clientId: best.row.client_id,
+        matchBy: 'project_name',
+        reason: `اسمُ المشروع في وافق «${payment.projectName}» يشبه مشروعَ بيسكامب «${best.row.project_name}»`,
+      };
+    }
+    /* أكثرُ من مرشّحٍ متقارب: يُسأل الطرازُ بينها وحدها. */
+    byProject = scored.map((entry) => entry.row).slice(0, MAX_CANDIDATES);
+  }
+
+  // ٣) المرشّحون: ما شابه اسمُه، أو قضايا الموكّل، أو ما ذُكر رقمُه، أو أحدثُ القضايا المفتوحة
   /* وكان الأخيرُ «ما بقي عليه شيء» — وأكثرُ القضايا بلا أتعابٍ مكتوبة، فتفرغ
      القائمةُ ولا يُسأل الطرازُ أصلاً، بصمت. والمفتوحةُ كلُّها مرشّحةٌ الآن،
      ومع كلٍّ اسمُ موكّلها: فيطابق الطرازُ اسمَ الدافع به. */
-  let candidates = client ? context.cases.filter((row) => row.client_id === client.id) : [];
+  let candidates = byProject;
+  if (!candidates.length && client) candidates = context.cases.filter((row) => row.client_id === client.id);
   if (!candidates.length && named.length) candidates = named;
   if (!candidates.length) {
     candidates = context.cases
@@ -154,7 +237,7 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
   }
 
   const open = candidates.filter((row) => remainingOf(row) > 0);
-  if (client && candidates.length === 1) {
+  if (client && candidates.length === 1 && !byProject.length) {
     return {
       status: 'suggested',
       suggestedCaseId: candidates[0].id,
@@ -164,13 +247,14 @@ export async function decide(env, context, payment, { ai, previousFingerprint } 
     };
   }
 
-  // ٣) الطراز — مرّةً لكلّ نصٍّ ومرشّحين
+  // ٤) الطراز — مرّةً لكلّ نصٍّ ومرشّحين
   const shaped = candidates.map((row) => ({
     id: row.id,
     caseNumber: row.case_number,
     caseType: row.case_type,
     summary: row.summary,
     clientName: row.client_name ?? '',
+    projectName: row.project_name ?? '',
     remaining: remainingOf(row),
   }));
   const asked = await fingerprint({
@@ -338,7 +422,7 @@ async function invoiceTextOf(env, payment, cache, stats) {
     if (!cache.has(invoice.id)) {
       /* وسقوطُ القراءة يُعدّ ويُقال — كان يُبتلع فتبدو الدفعةُ بلا وصفٍ أصلاً. */
       cache.set(invoice.id, await readInvoice(env, invoice.id)
-        .then((read) => ({ text: invoiceText(read), contact: invoiceContact(read) }))
+        .then((read) => ({ text: invoiceText(read), contact: invoiceContact(read), project: projectOf(read) }))
         .catch((error) => {
           if (stats) stats.invoiceErrors++;
           console.error('Wafeq: تعذّرت قراءة فاتورة —', error?.code ?? error?.message ?? error);
@@ -348,6 +432,11 @@ async function invoiceTextOf(env, payment, cache, stats) {
     const read = cache.get(invoice.id);
     parts.push(read.text);
     if (!payment.invoiceContact && (read.contact?.name || read.contact?.id)) payment.invoiceContact = read.contact;
+    /* ومشروعُ الفاتورة حين لا تحمل الدفعةُ مشروعاً. */
+    if (!payment.projectId && read.project?.id) {
+      payment.projectId = read.project.id;
+      payment.projectName ||= read.project.name;
+    }
   }
   return [...new Set(parts.filter(Boolean))].join(' | ').slice(0, 2000);
 }
@@ -477,6 +566,9 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
           .bind(linked.paymentId, payment.externalId)
           .run();
       }
+      if (verdict.learnProject) {
+        await rememberProject(env, context, { payment, caseId: final.caseId, source: 'exact' });
+      }
     }
   }
 
@@ -512,6 +604,51 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
   return { summary, items };
 }
 
+/* ═══ مشروعُ وافق يُتذكَّر ═══
+   يُحفظ ربطُه بقضيته، ويُحدَّث سياقُ الدورة فتُربط دفعاتُه التالية فيها نفسِها. */
+export async function rememberProject(env, context, { payment, caseId, source, actorId }) {
+  if (!payment?.projectId || !caseId) return;
+  await env.DB.prepare(
+    `INSERT INTO wafeq_project_links (project_id, project_name, case_id, source, decided_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(project_id) DO UPDATE SET project_name = COALESCE(excluded.project_name, wafeq_project_links.project_name),
+       case_id = excluded.case_id, source = excluded.source, decided_by = excluded.decided_by,
+       created_at = excluded.created_at`,
+  )
+    .bind(String(payment.projectId), payment.projectName || null, caseId, source, actorId ?? null, nowSeconds())
+    .run();
+  context?.projectLinks?.set(String(payment.projectId), { project_id: String(payment.projectId), case_id: caseId, source });
+}
+
+/**
+ * تأكيدُ إنسانٍ لدفعةٍ لها مشروعٌ في وافق: يُحفظ ربطُ المشروع بالقضية،
+ * وتُربط الدفعاتُ المعلّقة من المشروع نفسِه في الحال.
+ *
+ * @returns {Promise<number>} كم دفعةً معلّقةً رُبطت معها.
+ */
+export async function applyProjectLink(env, { projectId, projectName, caseId, actorId, source = 'confirmed' }) {
+  if (!projectId || !caseId) return 0;
+  await rememberProject(env, null, { payment: { projectId, projectName }, caseId, source, actorId });
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM wafeq_payments WHERE project_id = ? AND status IN ('suggested', 'unmatched')`,
+  ).bind(String(projectId)).all();
+  let linked = 0;
+  for (const row of results ?? []) {
+    const made = await linkPayment(env, row, caseId, actorId);
+    if (made.error) continue;
+    await env.DB.prepare(
+      `UPDATE wafeq_payments SET status = 'linked', case_id = ?, client_id = ?, payment_id = ?, match_by = 'wafeq_project',
+              reason = ?, decided_by = ?, updated_at = ?
+        WHERE external_id = ?`,
+    )
+      .bind(caseId, made.clientId, made.paymentId, `مشروعُ وافق «${projectName || projectId}» مربوطٌ بهذه القضية`,
+        actorId ?? null, nowSeconds(), row.external_id)
+      .run();
+    linked++;
+  }
+  return linked;
+}
+
 /**
  * «اربط بالذكاء الاصطناعي الآن» — على الدفعات المخزّنة «بلا قضية».
  *
@@ -523,7 +660,8 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
  */
 export async function rematchWafeq(env, { actorId, actorName } = {}) {
   const { results } = await env.DB.prepare(
-    `SELECT * FROM wafeq_payments WHERE status = 'unmatched' ORDER BY payment_date DESC, updated_at DESC LIMIT 1000`,
+    `SELECT * FROM wafeq_payments WHERE status IN ('unmatched', 'suggested')
+      ORDER BY payment_date DESC, updated_at DESC LIMIT 1000`,
   ).all();
   const context = await loadContext(env);
   const ai = { enabled: await aiEnabled(env), budget: newBudget(WAFEQ_AI_BUDGET) };
@@ -556,8 +694,15 @@ export async function rematchWafeq(env, { actorId, actorName } = {}) {
     }
     await resolveContact(env, payment, contacts);
     await resolveProject(env, payment, projects);
-    const verdict = await decide(env, context, payment, { ai, previousFingerprint: row.ai_fingerprint });
-    countSkip(summary, verdict);
+    /* والمقترحةُ لا تُمسّ إلا بربطٍ أوثق — مشروعٌ مربوط أو رقمٌ أو اسمٌ مطابق.
+       فلا يُسأل الطرازُ عنها ثانيةً، ولا يُطمس اقتراحُها. */
+    const pending = row.status === 'suggested';
+    const verdict = await decide(env, context, payment, {
+      ai: pending ? { enabled: false } : ai,
+      previousFingerprint: row.ai_fingerprint,
+    });
+    if (pending && verdict.status !== 'linked') continue;
+    if (!pending) countSkip(summary, verdict);
     summary[verdict.status]++;
 
     const learned = (payment.contactName && payment.contactName !== (row.contact_name ?? ''))
@@ -568,13 +713,13 @@ export async function rematchWafeq(env, { actorId, actorName } = {}) {
     await env.DB.prepare(
       `UPDATE wafeq_payments SET status = ?, case_id = ?, suggested_case_id = ?, client_id = ?, match_by = ?,
               reason = ?, ai_fingerprint = COALESCE(?, ai_fingerprint), contact_name = ?, contact_number = ?,
-              contact_id = ?, invoice_text = ?, project_name = ?, updated_at = ?
+              contact_id = ?, invoice_text = ?, project_id = ?, project_name = ?, updated_at = ?
         WHERE external_id = ?`,
     )
       .bind(verdict.status, verdict.caseId ?? null, verdict.suggestedCaseId ?? null, verdict.clientId ?? null,
         verdict.matchBy ?? null, verdict.reason ?? null, verdict.aiFingerprint ?? null,
         payment.contactName || null, payment.contactNumber || null, payment.contactId || null,
-        payment.invoiceText || null, payment.projectName || null, now, row.external_id)
+        payment.invoiceText || null, payment.projectId || null, payment.projectName || null, now, row.external_id)
       .run();
 
     if (verdict.status === 'linked') {
@@ -583,6 +728,9 @@ export async function rematchWafeq(env, { actorId, actorName } = {}) {
         await env.DB.prepare(`UPDATE wafeq_payments SET payment_id = ? WHERE external_id = ?`)
           .bind(linked.paymentId, row.external_id)
           .run();
+      }
+      if (verdict.learnProject) {
+        await rememberProject(env, context, { payment, caseId: verdict.caseId, source: 'exact' });
       }
     }
   }

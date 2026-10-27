@@ -342,8 +342,21 @@ export interface WafeqPayment {
   suggestedCaseNumber?: string | null;
   clientId?: string | null;
   clientName?: string | null;
-  matchBy?: 'case_number' | 'client' | 'ai' | 'manual' | null;
+  matchBy?: 'case_number' | 'client' | 'ai' | 'manual' | 'project_name' | 'wafeq_project' | null;
   reason: string;
+}
+
+/** مشروعُ وافق مربوطٌ بقضية — تُربط دفعاتُه آلياً. */
+export interface WafeqProjectLink {
+  projectId: string;
+  projectName: string;
+  caseId: string;
+  caseNumber: string;
+  clientName: string;
+  basecampName: string;
+  source: 'exact' | 'confirmed' | 'manual';
+  payments: number;
+  createdAt: number;
 }
 
 /** حصيلةُ دورة مزامنة — أو معاينتِها. */

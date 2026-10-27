@@ -4,7 +4,8 @@ import { CircleCheck, Landmark, RefreshCw, Sparkles, TriangleAlert } from 'lucid
 import { db } from '../../data/database';
 import { ApiError } from '../../data/api';
 import {
-  Case, WafeqAiSummary, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary,
+  Case, WafeqAiSummary, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqProjectLink, WafeqRematch, WafeqStatus,
+  WafeqSummary,
 } from '../../types';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
@@ -41,6 +42,8 @@ const explain = (error: unknown, fallback: string) =>
 
 const MATCH_LABEL: Record<string, string> = {
   case_number: 'برقم القضية',
+  project_name: 'باسم المشروع',
+  wafeq_project: 'بمشروع وافق المعتمد',
   client: 'بالموكّل',
   ai: 'اقتراحٌ آليّ',
   manual: 'يدويّاً',
@@ -61,6 +64,66 @@ function AiLine({ ai }: { ai: WafeqAiSummary }) {
   );
 }
 
+const LINK_SOURCE: Record<WafeqProjectLink['source'], string> = {
+  exact: 'تطابقُ الاسم',
+  confirmed: 'أكّدتَه',
+  manual: 'ربطٌ يدويّ',
+};
+
+/* ═══ مشاريعُ وافق المربوطة ═══
+   كلُّ مشروعٍ هنا تُربط دفعاتُه بقضيته آلياً. يُبنى من تطابق الاسم ومن
+   تأكيدك، ويُفكّ من هنا فتعود دفعاتُه التالية إلى الاقتراح. */
+function ProjectLinks({ version, onChanged }: { version: number; onChanged: () => void }) {
+  const [links, setLinks] = useState<WafeqProjectLink[]>([]);
+  const [busy, setBusy] = useState('');
+
+  useEffect(() => {
+    db.getWafeqProjectLinks().then(setLinks).catch(() => setLinks([]));
+  }, [version]);
+
+  if (!links.length) return null;
+
+  const unlink = async (projectId: string) => {
+    setBusy(projectId);
+    try {
+      await db.deleteWafeqProjectLink(projectId);
+      setLinks((current) => current.filter((link) => link.projectId !== projectId));
+      onChanged();
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <h4 className="font-semibold text-foreground">مشاريعُ وافق المربوطة <bdi>({formatNumber(links.length)})</bdi></h4>
+        <p className="text-sm text-muted-foreground">دفعاتُ هذه المشاريع تُربط بقضاياها آلياً. فكُّ الربط لا يمسّ ما رُبط من قبل.</p>
+      </div>
+      <ul className="divide-y divide-border rounded border">
+        {links.map((link) => (
+          <li key={link.projectId} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+            <div className="min-w-0">
+              <p className="text-foreground">
+                <bdi>{link.projectName || link.projectId}</bdi>
+                <span className="text-muted-foreground"> ← </span>
+                <bdi className="font-medium">{link.caseNumber}</bdi>
+                {link.basecampName && <span className="text-muted-foreground"> · <bdi>{link.basecampName}</bdi></span>}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {LINK_SOURCE[link.source] ?? link.source} · {formatNumber(link.payments)} دفعةً مربوطة
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" disabled={busy === link.projectId} onClick={() => unlink(link.projectId)}>
+              فكّ
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 const TABS: { id: WafeqPaymentStatus; label: string }[] = [
   { id: 'suggested', label: 'مقترَحة' },
   { id: 'unmatched', label: 'بلا قضية' },
@@ -73,6 +136,8 @@ export default function WafeqSync() {
   const [probe, setProbe] = useState<WafeqProbe | null>(null);
   const [summary, setSummary] = useState<{ title: string; data: WafeqSummary } | null>(null);
   const [rematch, setRematch] = useState<WafeqRematch | null>(null);
+  /* يتبدّل بعد كلّ ما قد يُنشئ ربطَ مشروع — فيُعاد قراءةُ لوحه. */
+  const [linksVersion, setLinksVersion] = useState(0);
   const [tab, setTab] = useState<WafeqPaymentStatus>('suggested');
   const [payments, setPayments] = useState<WafeqPayment[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
@@ -120,6 +185,7 @@ export default function WafeqSync() {
 
   const refresh = async () => {
     await Promise.all([loadStatus(), loadPayments()]);
+    setLinksVersion((version) => version + 1);
   };
 
   const decide = (payment: WafeqPayment, action: 'link' | 'ignore' | 'unlink', caseId?: string) =>
@@ -321,6 +387,8 @@ export default function WafeqSync() {
               </div>
             )}
           </Card>
+
+          <ProjectLinks version={linksVersion} onChanged={() => loadStatus()} />
 
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2" role="tablist">

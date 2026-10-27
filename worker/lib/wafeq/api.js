@@ -169,11 +169,35 @@ function invoicesOf(raw) {
   });
 }
 
-/* نصُّ بندٍ واحد: وصفُه، وإلا اسمُه، وإلا اسمُ الصنف الذي يحمله. */
+/* قيمةٌ نصّية أو عددية وحدها — كائنٌ لا يُطبع «[object Object]». */
+const scalar = (value) => (typeof value === 'string' || typeof value === 'number' ? text(value) : '');
+
+/**
+ * الحقولُ المخصّصة «العنوان: القيمة» — وشكلُها عند وافق لم يظهر في الاختبار
+ * (فارغةٌ في العيّنة)، فتُقرأ مصفوفةً أو كائناً، وعنوانُها وقيمتُها بصورهما
+ * المحتملة. وقد يضع المكتبُ فيها رقمَ القضية.
+ */
+function customText(fields) {
+  if (!fields || typeof fields !== 'object') return [];
+  const entries = Array.isArray(fields) ? fields : Object.entries(fields).map(([name, value]) => ({ name, value }));
+  return entries.map((entry) => {
+    if (!entry || typeof entry !== 'object') return scalar(entry);
+    const field = entry.field && typeof entry.field === 'object' ? entry.field : {};
+    const label = scalar(first(entry.name, entry.label, entry.key, field.name, field.label, scalar(entry.field) || undefined));
+    const raw = entry.value;
+    const value = raw && typeof raw === 'object' ? scalar(first(raw.name, raw.label, raw.value)) : scalar(raw);
+    return value ? (label ? `${label}: ${value}` : value) : '';
+  }).filter(Boolean);
+}
+
+/* نصُّ بندٍ واحد: وصفُه، وإلا اسمُه، وإلا اسمُ الصنف الذي يحمله — وحقولُه المخصّصة. */
 const lineText = (line) => {
   if (!line || typeof line !== 'object') return '';
   const item = line.item && typeof line.item === 'object' ? line.item : {};
-  return text(first(line.description, line.item_description, line.name, line.title, item.description, item.name));
+  return [
+    text(first(line.description, line.item_description, line.name, line.title, item.description, item.name)),
+    ...customText(line.custom_fields),
+  ].filter(Boolean).join(' — ');
 };
 
 /**
@@ -188,7 +212,8 @@ export function invoiceText(invoice) {
   const lines = first(invoice.line_items, invoice.items, invoice.lines, invoice.invoice_line_items);
   return [
     invoice.invoice_number, invoice.number, invoice.reference, invoice.notes, invoice.description,
-    invoice.terms, invoice.memo, invoice.subject, invoice.title,
+    invoice.terms, invoice.memo, invoice.subject, invoice.title, invoice.purchase_order,
+    ...customText(invoice.custom_fields),
     ...(Array.isArray(lines) ? lines.map(lineText) : []),
   ].map(text).filter(Boolean).join(' | ');
 }
@@ -202,7 +227,7 @@ export function invoiceContact(invoice) {
 }
 
 /** المشروعُ عند وافق: معرّفاً أو كائناً. وقد يكون اسمُه اسمَ القضية. */
-function projectOf(raw) {
+export function projectOf(raw) {
   const project = raw.project;
   if (project && typeof project === 'object') {
     return { id: text(project.id), name: text(first(project.name, project.title)) };

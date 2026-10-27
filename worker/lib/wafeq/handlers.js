@@ -5,7 +5,7 @@
 // ماليّة قضية، وشاشتُه شاشتُها.
 
 import { configured, firstPage, WafeqError } from './api.js';
-import { linkPayment, rematchWafeq, runWafeqSync, unlinkPayment } from './sync.js';
+import { applyProjectLink, linkPayment, rematchWafeq, runWafeqSync, unlinkPayment } from './sync.js';
 import { aiEnabled } from '../ai/summarize.js';
 import { modelAvailable, modelInfo } from '../ai/model.js';
 
@@ -130,6 +130,41 @@ export async function rematchWafeqPayments(env, user) {
   }
 }
 
+/** مشاريعُ وافق المربوطة بقضايا — ومعها رقمُ القضية واسمُ مشروعها في بيسكامب. */
+export async function listWafeqProjectLinks(env, user) {
+  if (!mayDecide(user)) return fail('forbidden', 403);
+  const { results } = await env.DB.prepare(
+    `SELECT l.*, c.case_number, c.client_name, p.name AS basecamp_name,
+            (SELECT COUNT(*) FROM wafeq_payments w WHERE w.project_id = l.project_id AND w.status = 'linked') AS payments
+       FROM wafeq_project_links l
+       JOIN cases c ON c.id = l.case_id
+       LEFT JOIN basecamp_projects p ON p.case_id = l.case_id
+      ORDER BY l.created_at DESC`,
+  ).all();
+  return ok((results ?? []).map((row) => ({
+    projectId: row.project_id,
+    projectName: row.project_name ?? '',
+    caseId: row.case_id,
+    caseNumber: row.case_number,
+    clientName: row.client_name ?? '',
+    basecampName: row.basecamp_name ?? '',
+    source: row.source,
+    payments: row.payments ?? 0,
+    createdAt: row.created_at,
+  })));
+}
+
+/**
+ * فكُّ ربط مشروعٍ بقضيته — لا تُمسّ الدفعاتُ المربوطة به من قبل (تُفكّ كلٌّ
+ * من شاشتها إن لزم)، وإنما تتوقّف الدفعاتُ التالية عن الربط الآليّ.
+ */
+export async function deleteWafeqProjectLink(env, user, projectId) {
+  if (!mayDecide(user)) return fail('forbidden', 403);
+  await env.DB.prepare(`DELETE FROM wafeq_project_links WHERE project_id = ?`).bind(projectId).run();
+  await logActivity(env, user, 'فُكّ ربطُ مشروعٍ من وافق بقضية');
+  return ok({ projectId });
+}
+
 /** الآلية — ولا تُفتح إلا بعد مزامنةٍ يدويةٍ ناجحة. */
 export async function setWafeqAutoSync(request, env, user) {
   if (!isAdmin(user)) return fail('forbidden', 403);
@@ -235,8 +270,20 @@ export async function decideWafeqPayment(request, env, user, externalId) {
     )
       .bind(caseId, linked.clientId, linked.paymentId, caseId, user.id, now, externalId)
       .run();
-    await logActivity(env, user, `رُبطت دفعةٌ من وافق بقضية`);
-    return ok({ status: 'linked', caseId });
+    /* ولها مشروعٌ في وافق: يُتذكَّر ربطُه بالقضية، وتُربط دفعاتُه المعلّقة معها. */
+    const alsoLinked = row.project_id
+      ? await applyProjectLink(env, {
+        projectId: row.project_id,
+        projectName: row.project_name,
+        caseId,
+        actorId: user.id,
+        source: caseId === row.suggested_case_id ? 'confirmed' : 'manual',
+      })
+      : 0;
+    await logActivity(env, user, alsoLinked
+      ? `رُبطت دفعةٌ من وافق بقضية، ومعها ${alsoLinked} من مشروعها`
+      : 'رُبطت دفعةٌ من وافق بقضية');
+    return ok({ status: 'linked', caseId, alsoLinked });
   }
 
   if (verb === 'ignore' || verb === 'unlink') {

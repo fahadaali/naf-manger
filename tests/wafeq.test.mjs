@@ -357,5 +357,91 @@ check('الاختبارُ يعرض حقولَ الفاتورة والجهة — 
   shapes.invoice?.nested?.line_items?.includes('description') && shapes.contact?.fields?.includes('name') &&
     !JSON.stringify(shapes).includes('سرّي'), shapes);
 
+// ═══════════════════════════════════════════════════════════
+group('مشروعُ وافق — اسمُه اسمُ مشروع بيسكامب');
+
+const { projectSimilarity } = await import('../worker/lib/wafeq/sync.js');
+check('التطابقُ بعد التوحيد وطرح «قضية»',
+  projectSimilarity('النخبة للمقاولات - عمالية', 'قضية النخبة للمقاولات – عمالية') === 1);
+check('والقريبُ دون التامّ', (() => {
+  const score = projectSimilarity('النخبة للمقاولات', 'النخبة للمقاولات - عمالية');
+  return score >= 0.6 && score < 1;
+})());
+check('والبعيدُ لا يشبه', projectSimilarity('الريان القابضة', 'النخبة للمقاولات') < 0.6);
+
+const withProjects = () => {
+  const made = setup();
+  made.db.prepare(`UPDATE cases SET payment_status = NULL`).run();
+  const project = made.db.prepare(
+    `INSERT INTO basecamp_projects (project_id, name, app_url, status, kind, case_id, created_at, updated_at)
+     VALUES (?, ?, 'x', 'active', 'client', ?, 1, 1)`,
+  );
+  project.run('bc-1', 'قضية النخبة للمقاولات – عمالية', 'k-afaq-2');
+  project.run('bc-2', 'سعد العتيبي - إيجار شقة العليا', 'k-saad-1');
+  project.run('bc-3', 'سعد العتيبي - حضانة', 'k-saad-2');
+  return made;
+};
+let projectReads = 0;
+const projectNamesById = { 'wp-1': 'النخبة للمقاولات - عمالية', 'wp-2': 'إيجار شقة العليا سعد', 'wp-3': 'سعد العتيبي' };
+const wafeqFetch = async (url) => {
+  const path = new URL(url).pathname;
+  const json = (body) => ({ ok: true, status: 200, json: async () => body });
+  const project = path.match(/^\/v1\/projects\/([^/]+)\//);
+  if (project) { projectReads++; return json({ id: project[1], name: projectNamesById[project[1]] }); }
+  if (path.startsWith('/v1/invoices/')) return json({ id: 'inv-p', project: 'wp-1', line_items: [{ description: 'أتعاب' }] });
+  if (path.startsWith('/v1/contacts/')) return json({ id: 'ct-x', name: 'شركة الريان القابضة' });
+  return json({ count: payments.length, next: null, results: payments });
+};
+
+({ db, env } = withProjects());
+asked = [];
+env.AI = { run: async (model, input) => { asked.push(JSON.parse(input.messages[1].content)); return { response: '{"case":"لا-أعرف"}' }; } };
+globalThis.fetch = wafeqFetch;
+payments = [
+  { id: 'w1', date: '2026-10-01', amount: 1000, contact: 'ct-x', project: 'wp-1' },
+  { id: 'w2', date: '2026-10-02', amount: 700, contact: 'ct-x', project: 'wp-2' },
+  { id: 'w3', date: '2026-10-03', amount: 300, contact: 'ct-x', project: 'wp-3' },
+  { id: 'w4', date: '2026-10-04', amount: 900, contact: 'ct-x', invoice_payments: [{ amount: 900, invoice: 'inv-p' }] },
+];
+await runWafeqSync(env, { actorId: 'u1' });
+check('اسمٌ متطابق ودافعٌ غريب → يُربط آلياً',
+  row('w1').status === 'linked' && row('w1').case_id === 'k-afaq-2' && row('w1').match_by === 'project_name', row('w1'));
+check('ويُتذكَّر المشروع',
+  db.prepare(`SELECT case_id, source FROM wafeq_project_links WHERE project_id = 'wp-1'`).get()?.source === 'exact');
+check('واسمٌ قريب → اقتراحٌ لا ربط',
+  row('w2').status === 'suggested' && row('w2').suggested_case_id === 'k-saad-1' && row('w2').match_by === 'project_name', row('w2'));
+check('ومشروعان متقاربان → يُسأل الطرازُ بينهما وحدهما',
+  row('w3').status === 'unmatched' && asked.some((payload) =>
+    payload.القضايا.length === 2 && payload.القضايا.every((item) => item.مشروع_بيسكامب.startsWith('سعد'))),
+  asked.map((payload) => payload.القضايا.map((item) => item.مشروع_بيسكامب)));
+check('ومشروعُ الفاتورة حين لا تحمله الدفعة',
+  row('w4').project_id === 'wp-1' && row('w4').status === 'linked' && row('w4').match_by === 'wafeq_project', row('w4'));
+
+// ── التأكيدُ يُعلّم المنصة مشروعَه ──
+db.prepare(
+  `INSERT INTO wafeq_payments (external_id, payment_date, amount, status, project_id, project_name, created_at, updated_at)
+   VALUES ('w5', '2026-10-05', 40000, 'unmatched', 'wp-2', 'إيجار شقة العليا سعد', 1, 1)`,
+).run();
+res = await handlers.decideWafeqPayment(request({ action: 'link' }), env, { id: 'u1', role: 'admin' }, 'w2');
+check('تأكيدُ الاقتراح يحفظ ربطَ المشروع ويربط المعلّقَ منه',
+  (await bodyOf(res)).data.alsoLinked === 1 && row('w5').status === 'linked' && row('w5').case_id === 'k-saad-1' &&
+    db.prepare(`SELECT source FROM wafeq_project_links WHERE project_id = 'wp-2'`).get()?.source === 'confirmed',
+  row('w5'));
+
+payments = [{ id: 'w6', date: '2026-10-06', amount: 200, contact: 'ct-x', project: 'wp-2' }];
+await runWafeqSync(env, { actorId: 'u1' });
+check('ودفعتُه التالية تُربط آلياً', row('w6').status === 'linked' && row('w6').match_by === 'wafeq_project', row('w6'));
+
+res = await handlers.listWafeqProjectLinks(env, { id: 'u1', role: 'admin' });
+const projectLinks = (await bodyOf(res)).data;
+check('ولوحُ المشاريع المربوطة يعرضها بأسماء بيسكامب',
+  projectLinks.length === 2 && projectLinks.some((link) => link.basecampName === 'سعد العتيبي - إيجار شقة العليا'), projectLinks);
+await handlers.deleteWafeqProjectLink(env, { id: 'u1', role: 'admin' }, 'wp-2');
+check('والفكُّ يعمل', !db.prepare(`SELECT 1 FROM wafeq_project_links WHERE project_id = 'wp-2'`).get());
+
+db.prepare(`DELETE FROM client_payments WHERE case_id = 'k-afaq-2'`).run();
+db.prepare(`DELETE FROM cases WHERE id = 'k-afaq-2'`).run();
+check('وحذفُ القضية يُزيل ربطَ مشروعها', !db.prepare(`SELECT 1 FROM wafeq_project_links WHERE project_id = 'wp-1'`).get());
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

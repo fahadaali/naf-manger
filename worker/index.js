@@ -43,7 +43,9 @@ import { readMailStatus, sendTestMail } from './lib/mail.js';
 import { listNotifications, markNotificationsRead, scheduledNotifications } from './lib/notify.js';
 import {
   decideWafeqPayment,
+  deleteWafeqProjectLink,
   listWafeqPayments,
+  listWafeqProjectLinks,
   previewWafeq,
   readWafeqStatus,
   rematchWafeqPayments,
@@ -268,6 +270,10 @@ export default {
         if (id === 'preview' && request.method === 'POST') return previewWafeq(env, user);
         if (id === 'sync' && request.method === 'POST') return syncWafeq(env, user);
         if (id === 'rematch' && request.method === 'POST') return rematchWafeqPayments(env, user);
+        if (id === 'project-links' && !verb && request.method === 'GET') return listWafeqProjectLinks(env, user);
+        if (id === 'project-links' && verb && request.method === 'DELETE') {
+          return deleteWafeqProjectLink(env, user, decodeURIComponent(verb));
+        }
         if (id === 'auto-sync' && request.method === 'PUT') return setWafeqAutoSync(request, env, user);
         if (id === 'payments' && !verb && request.method === 'GET') return listWafeqPayments(env, user, url);
         /* القرارُ في الجسم: `{ action: link | ignore | unlink, caseId? }`. */
