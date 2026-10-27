@@ -92,7 +92,7 @@ export default function CasesView() {
   /* البحثُ برقم المشروع وبرقم القضية لدى الجهة معاً: الموكّلُ يتّصل برقم المحكمة. */
   const matchesText = (case_: Case) => {
     const needle = searchTerm.toLowerCase();
-    return [case_.caseNumber, case_.courtCaseNumber ?? '', case_.clientName, case_.summary]
+    return [case_.caseNumber, case_.courtCaseNumber ?? '', case_.title ?? '', case_.clientName, case_.summary]
       .some((value) => value.toLowerCase().includes(needle));
   };
 
@@ -381,6 +381,7 @@ export default function CasesView() {
                 {case_.lawyerId && (
                   <p className="text-xs text-muted-foreground">المحامي: {lawyerName(case_.lawyerId) || '—'}</p>
                 )}
+                {case_.title && <p className="text-sm font-semibold text-foreground">{case_.title}</p>}
                 {case_.summary && (
                   <p className="text-sm text-muted-foreground line-clamp-3">{case_.summary}</p>
                 )}
@@ -455,7 +456,7 @@ export default function CasesView() {
                   العميل
                 </TableHead>
                 <TableHead className="sm:px-6 tracking-wider hidden md:table-cell">
-                  الموضوع
+                  العنوان والموضوع
                 </TableHead>
                 <TableHead className="sm:px-6 tracking-wider">
                   الحالة
@@ -502,7 +503,8 @@ export default function CasesView() {
                     )}
                   </TableCell>
                   <TableCell className="sm:px-6 hidden md:table-cell">
-                    <div className="text-xs sm:text-sm text-foreground line-clamp-2">{case_.summary}</div>
+                    {case_.title && <div className="text-xs sm:text-sm font-semibold text-foreground line-clamp-1">{case_.title}</div>}
+                    <div className={`text-xs sm:text-sm line-clamp-2 ${case_.title ? 'text-muted-foreground' : 'text-foreground'}`}>{case_.summary}</div>
                   </TableCell>
                   <TableCell className="sm:px-6">
                     {(() => {
@@ -608,7 +610,7 @@ export default function CasesView() {
                       العميل
                     </TableHead>
                     <TableHead className="tracking-wider">
-                      الموضوع
+                      العنوان والموضوع
                     </TableHead>
                     <TableHead className="tracking-wider">
                       النتيجة
@@ -652,7 +654,8 @@ export default function CasesView() {
                         <div className="text-sm text-foreground">{case_.clientName}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-foreground line-clamp-2">{case_.summary}</div>
+                        {case_.title && <div className="text-sm font-semibold text-foreground line-clamp-1">{case_.title}</div>}
+                        <div className={`text-sm line-clamp-2 ${case_.title ? 'text-muted-foreground' : 'text-foreground'}`}>{case_.summary}</div>
                       </TableCell>
                       <TableCell>
                         {case_.outcome && (() => {

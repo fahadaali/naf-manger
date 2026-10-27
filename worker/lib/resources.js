@@ -117,6 +117,11 @@ export const RESOURCES = {
       /* الجهةُ المختصة ورقمُ القضية لديها — تفصيلٌ لا مفتاح، و`caseNumber` رقمُ المشروع. */
       authority: ['authority'],
       courtCaseNumber: ['court_case_number'],
+      /* عنوانُ القضية والموضوعُ المصاغ — `migrations/0027`. والآليّان للقراءة. */
+      title: ['title'],
+      aiTitle: ['ai_title'],
+      aiSummaryText: ['ai_summary_text'],
+      summaryRaw: ['summary_raw'],
       team: ['team', 'json'],
       /* قيمةُ التطوّعي التقديرية وساعاتُه — `migrations/0021`. */
       proBonoValue: ['pro_bono_value', 'money'],
@@ -126,7 +131,7 @@ export const RESOURCES = {
       /* الشاشات تقرأ `createdDate` و`updatedDate` لا `createdAt`. والاسمان
          مكشوفان معاً أدناه، فلا يُمسّ مكوّن منها. */
     },
-    readOnly: ['aiSummary', 'aiSummaryAt'],
+    readOnly: ['aiSummary', 'aiSummaryAt', 'aiTitle', 'aiSummaryText', 'summaryRaw'],
     required: ['case_number', 'case_type', 'client_id'],
     defaults: { summary: '', notes: '', client_name: '', attachments: '[]', opposing_parties: '[]', team: '[]' },
   },

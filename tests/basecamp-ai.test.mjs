@@ -118,6 +118,10 @@ const stubAI = {
       calls.type++;
       return { response: typeAnswer };
     }
+    if (system.includes('محرّرٌ في مكتب')) {
+      calls.phrase = (calls.phrase ?? 0) + 1;
+      return { response: '{"title":"مطالبةٌ عمّالية","topic":"مطالبةٌ بمستحقّات نهاية الخدمة.","outcome":null}' };
+    }
     if (system.includes('قائمةَ قضايا')) {
       calls.client++;
       return { response: 'له قضيتان تجاريتان، إحداهما مكتملة.' };
@@ -701,16 +705,75 @@ await resolveReview({ json: async () => ({ resolution: 'set', value: 'موضوع
   { id: 'u1', role: 'admin', permissions: {} }, topicReview.id);
 check('والتعديلُ من المراجعة يُكتب', topicCase().summary === 'موضوعٌ صحّحه المحامي', topicCase().summary);
 
-// ── وموضوعٌ قائمٌ لا يُمسّ ──
+// ═══════════════════════════════════════════════════════════
+group('صياغةُ الموضوع والعنوان');
+
 ({ db, env } = setup());
-topicCalls = 0;
+let phrased = 0;
+let phrasePayload = null;
 env.AI = { async run(model, input) {
-  if (input.messages[0].content.includes('موضوعَ القضية')) topicCalls++;
+  if (input.messages[0].content.includes('محرّرٌ في مكتب')) {
+    phrased++;
+    phrasePayload = JSON.parse(input.messages[1].content);
+    return { response: `{"title":"مطالبةٌ عمّالية بمستحقّات","topic":"مطالبةٌ عمّالية بمستحقّات نهاية الخدمة (${phrased}).","outcome":null}` };
+  }
   return { response: '{}' };
 } };
 docContent = FULL_NAME_DOC;
 await runSync(env, connection, actor);
-check('وما له موضوعٌ لا يُقترح له', topicCalls === 0);
+const phrasedCase = () => db.prepare(`SELECT * FROM cases`).get();
+check('الموضوعُ الخامُ يُصاغ والأصلُ يُحفظ',
+  phrasedCase().summary.startsWith('مطالبةٌ عمّالية بمستحقّات') &&
+    phrasedCase().summary_raw === 'مطالبةٌ بمستحقّات نهاية الخدمة' &&
+    phrasePayload?.الموضوع_كما_ورد === 'مطالبةٌ بمستحقّات نهاية الخدمة', phrasedCase());
+check('ويُكتب العنوان', phrasedCase().title === 'مطالبةٌ عمّالية بمستحقّات' && phrasedCase().ai_title === phrasedCase().title);
+check('ولا يُفتح سؤالٌ لموضوعٍ له أصل', !db.prepare(`SELECT 1 FROM basecamp_reviews WHERE kind = 'ai_topic'`).get());
+
+await runSync(env, connection, actor);
+check('ومزامنةٌ ثانيةٌ لا تسأل ولا تُرجع الخام', phrased === 1 && phrasedCase().summary.includes('(1)'),
+  { phrased, summary: phrasedCase().summary });
+
+docContent = FULL_NAME_DOC.replace('مطالبةٌ بمستحقّات نهاية الخدمة', 'مطالبةٌ بأجورٍ متأخّرة');
+await runSync(env, connection, actor);
+check('وتبدّلُ الموضوع في بيسكامب يُعاد صياغتُه',
+  phrased === 2 && phrasedCase().summary_raw === 'مطالبةٌ بأجورٍ متأخّرة' && phrasedCase().summary.includes('(2)'),
+  { phrased, row: phrasedCase() });
+
+db.prepare(`UPDATE cases SET summary = 'موضوعٌ كتبه المحامي', title = 'عنوانٌ كتبه المحامي'`).run();
+docContent = FULL_NAME_DOC.replace('مطالبةٌ بمستحقّات نهاية الخدمة', 'مطالبةٌ بتعويض');
+await runSync(env, connection, actor);
+check('وما عدّله إنسانٌ لا يُمسّ',
+  phrased === 2 && phrasedCase().summary === 'موضوعٌ كتبه المحامي' && phrasedCase().title === 'عنوانٌ كتبه المحامي',
+  { phrased, row: phrasedCase() });
+
+// ── الزرّان ──
+const { phraseCasesNow, phraseOneCase } = await import('../worker/lib/basecamp/handlers.js');
+({ db, env } = setup());
+env.AI = { async run(model, input) {
+  return { response: input.messages[0].content.includes('محرّرٌ في مكتب')
+    ? '{"title":"عنوان","topic":"موضوعٌ مصاغ.","outcome":null}' : '{}' };
+} };
+db.prepare(`INSERT INTO system_settings (key, value, updated_at) VALUES ('ai_import', '{"enabled":false}', 1)`).run();
+docContent = FULL_NAME_DOC;
+await runSync(env, connection, actor);
+db.prepare(`DELETE FROM system_settings WHERE key = 'ai_import'`).run();
+let res = await phraseCasesNow(env, { id: 'u1', role: 'admin' });
+const readBody = async (response) => (typeof response.json === 'function' ? await response.json() : response.body);
+let body = await readBody(res);
+check('«صُغ القضايا الآن» يصوغ ما لم يُصغ ويقول ما بقي',
+  body.data.phrased === 1 && body.data.remaining === 0 && db.prepare(`SELECT summary FROM cases`).get().summary === 'موضوعٌ مصاغ.',
+  body);
+res = await phraseCasesNow(env, { id: 'u2', role: 'lawyer' });
+check('وهو للمسؤول وحده', res.status === 403);
+
+db.prepare(`UPDATE cases SET summary = 'موضوعٌ كتبه المحامي'`).run();
+const caseId = db.prepare(`SELECT id FROM cases`).get().id;
+res = await phraseOneCase(env, { id: 'u3', role: 'lawyer', permissions: { cases: { update: true } } }, caseId);
+body = await readBody(res);
+check('وزرُّ القضية يصوغ ولو كتبه إنسان — صاحبُها طلبه',
+  body.ok && db.prepare(`SELECT summary, summary_raw FROM cases`).get().summary_raw === 'موضوعٌ كتبه المحامي', body);
+res = await phraseOneCase(env, { id: 'u4', role: 'staff', permissions: { cases: { read: true } } }, caseId);
+check('ولا يصوغ من لا يعدّل القضايا', res.status === 403);
 
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

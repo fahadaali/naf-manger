@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Download, ReceiptText } from 'lucide-react';
-import { Case, Client, ClientPayment } from '../../types';
+import { Case, Client, ClientPayment, GeneralPayment } from '../../types';
 import { db } from '../../data/database';
 import { downloadXlsx } from '../../lib/xlsx';
 import { Money } from '@/registry/naf/currency/money';
@@ -27,10 +27,13 @@ const isoDay = (value: Date) => {
  */
 export default function ClientStatement({ client, cases }: ClientStatementProps) {
   const [payments, setPayments] = useState<ClientPayment[]>([]);
+  /* إيرادٌ عامّ بلا قضية — عملياتٌ سريعة سُجّلت من وافق. يُحسب في المحصَّل. */
+  const [general, setGeneral] = useState<GeneralPayment[]>([]);
 
   useEffect(() => {
     let alive = true;
     db.getClientPayments({ clientId: client.id }).then((rows) => { if (alive) setPayments(rows); });
+    db.getClientGeneralPayments(client.id).then((rows) => { if (alive) setGeneral(rows); }).catch(() => {});
     return () => { alive = false; };
   }, [client.id]);
 
@@ -49,6 +52,7 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
     }),
     { total: 0, collected: 0, remaining: 0 },
   );
+  const generalTotal = general.reduce((sum, payment) => sum + payment.amount, 0);
 
   const caseNumberOf = (caseId: string) =>
     cases.find((case_) => case_.id === caseId)?.caseNumber ?? '';
@@ -68,10 +72,14 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
               'المتبقّي': row.remaining,
               'ملاحظة': row.proBono ? 'تطوّعية' : '',
             })),
+            ...(generalTotal > 0 ? [{
+              'رقم المشروع': 'إيرادٌ عام بلا قضية',
+              'المحصَّل': generalTotal,
+            }] : []),
             {
               'رقم المشروع': 'المجموع',
               'الأتعاب': totals.total,
-              'المحصَّل': totals.collected,
+              'المحصَّل': totals.collected + generalTotal,
               'المتبقّي': totals.remaining,
             },
           ],
@@ -86,14 +94,21 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
             'الطريقة': payment.method ?? '',
             'المرجع': payment.reference ?? '',
             'ملاحظات': payment.notes ?? '',
-          })),
+          })).concat(general.map((payment) => ({
+            'التاريخ': payment.paymentDate ?? '',
+            'رقم المشروع': 'بلا قضية',
+            'المبلغ': payment.amount,
+            'الطريقة': 'وافق',
+            'المرجع': payment.reference,
+            'ملاحظات': payment.description,
+          }))),
         },
       ],
       `كشف حساب - ${client.fullName}.xlsx`,
     );
   };
 
-  if (!cases.length) return null;
+  if (!cases.length && !general.length) return null;
 
   return (
     <div className="bg-success-soft rounded-lg p-4 space-y-4">
@@ -114,8 +129,11 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
           <p className="text-sm text-muted-foreground">الأتعاب</p>
         </div>
         <div>
-          <p className="text-lg font-bold text-success"><Money value={totals.collected} /></p>
+          <p className="text-lg font-bold text-success"><Money value={totals.collected + generalTotal} /></p>
           <p className="text-sm text-muted-foreground">المحصَّل</p>
+          {generalTotal > 0 && (
+            <p className="text-xs text-muted-foreground">منه بلا قضية <Money value={generalTotal} /></p>
+          )}
         </div>
         <div>
           <p className="text-lg font-bold text-destructive"><Money value={totals.remaining} /></p>
@@ -151,6 +169,21 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
                 <bdi>{formatDate(payment.paymentDate)}</bdi> — <Money value={payment.amount} />
                 {' '}على <bdi>{caseNumberOf(payment.caseId)}</bdi>
                 {payment.method && ` · ${payment.method}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {general.length > 0 && (
+        <div>
+          <h4 className="font-medium text-foreground mb-2">دفعاتٌ بلا قضية</h4>
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            {general.map((payment) => (
+              <li key={payment.externalId}>
+                {payment.paymentDate && <><bdi>{formatDate(payment.paymentDate)}</bdi> — </>}
+                <Money value={payment.amount} />
+                {payment.description && <> · <bdi>{payment.description}</bdi></>}
               </li>
             ))}
           </ul>

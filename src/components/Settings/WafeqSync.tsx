@@ -4,7 +4,7 @@ import { CircleCheck, Landmark, RefreshCw, Sparkles, TriangleAlert } from 'lucid
 import { db } from '../../data/database';
 import { ApiError } from '../../data/api';
 import {
-  Case, WafeqAiSummary, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqProjectLink, WafeqRematch, WafeqStatus,
+  Case, Client, WafeqAiSummary, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqProjectLink, WafeqRematch, WafeqStatus,
   WafeqSummary,
 } from '../../types';
 import { Button } from '@/registry/naf/ui/button';
@@ -128,6 +128,7 @@ const TABS: { id: WafeqPaymentStatus; label: string }[] = [
   { id: 'suggested', label: 'مقترَحة' },
   { id: 'unmatched', label: 'بلا قضية' },
   { id: 'linked', label: 'مربوطة' },
+  { id: 'general', label: 'إيراد عام' },
   { id: 'ignored', label: 'متجاهَلة' },
 ];
 
@@ -141,6 +142,9 @@ export default function WafeqSync() {
   const [tab, setTab] = useState<WafeqPaymentStatus>('suggested');
   const [payments, setPayments] = useState<WafeqPayment[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  /* موكّلُ الإيراد العامّ لكلّ دفعة — والافتراضُ من عرفته المطابقة. */
+  const [payer, setPayer] = useState<Record<string, string>>({});
   const [choice, setChoice] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -164,6 +168,7 @@ export default function WafeqSync() {
   useEffect(() => {
     loadStatus();
     db.getCases().then((rows) => setCases(rows.filter((row) => !row.archivedAt && row.feeStructure?.type !== 'pro_bono')));
+    db.getClients().then((rows) => setClients(rows.filter((row) => !row.archivedAt))).catch(() => setClients([]));
   }, []);
 
   useEffect(() => {
@@ -188,9 +193,9 @@ export default function WafeqSync() {
     setLinksVersion((version) => version + 1);
   };
 
-  const decide = (payment: WafeqPayment, action: 'link' | 'ignore' | 'unlink', caseId?: string) =>
+  const decide = (payment: WafeqPayment, action: 'link' | 'ignore' | 'unlink' | 'general', targetId?: string) =>
     run(payment.externalId, async () => {
-      await db.decideWafeqPayment(payment.externalId, action, caseId);
+      await db.decideWafeqPayment(payment.externalId, action, targetId);
       await refresh();
     }, 'تعذّر حفظ القرار');
 
@@ -403,6 +408,9 @@ export default function WafeqSync() {
                 >
                   {entry.label}
                   <Badge variant="outline">{formatNumber(status.counts?.[entry.id] ?? 0)}</Badge>
+                  {entry.id === 'general' && (status.generalTotal ?? 0) > 0 && (
+                    <span className="text-xs"><Money value={status.generalTotal ?? 0} /></span>
+                  )}
                 </Button>
               ))}
             </div>
@@ -445,6 +453,18 @@ export default function WafeqSync() {
                         </div>
                       )}
 
+                      {payment.status === 'general' && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                          <span>
+                            إيرادٌ عام بلا قضية
+                            {payment.clientName && <> — للموكّل <bdi className="font-medium">{payment.clientName}</bdi></>}
+                          </span>
+                          <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => decide(payment, 'unlink')}>
+                            فكّ
+                          </Button>
+                        </div>
+                      )}
+
                       {(pending || payment.status === 'ignored') && (
                         <div className="flex flex-wrap items-center gap-2">
                           <Select
@@ -471,6 +491,26 @@ export default function WafeqSync() {
                               تجاهل
                             </Button>
                           )}
+                          {/* عمليةٌ سريعة بلا قضية: تُحسب في المحصَّل وفي كشف حساب موكّلها. */}
+                          <Select
+                            value={payer[payment.externalId] ?? payment.clientId ?? ''}
+                            onChange={(event) => setPayer((prev) => ({ ...prev, [payment.externalId]: event.target.value }))}
+                            className="min-w-44"
+                            aria-label="موكّل الإيراد العام"
+                          >
+                            <option value="">بلا موكّل</option>
+                            {clients.map((client) => (
+                              <option key={client.id} value={client.id}>{client.fullName}</option>
+                            ))}
+                          </Select>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={busy !== null}
+                            onClick={() => decide(payment, 'general', payer[payment.externalId] ?? payment.clientId ?? undefined)}
+                          >
+                            إيراد عام بلا قضية
+                          </Button>
                         </div>
                       )}
                     </li>

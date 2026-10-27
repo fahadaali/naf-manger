@@ -29,7 +29,7 @@ const LABELS = {
     expectedValue: 'القيمة المتوقعة', source: 'المصدر', joinDate: 'تاريخ الإضافة', followUpDate: 'موعد المتابعة',
   },
   cases: {
-    caseNumber: 'رقم المشروع', authority: 'الجهة المختصة', courtCaseNumber: 'رقم القضية لدى الجهة', caseType: 'نوع القضية', status: 'الحالة', outcome: 'النتيجة',
+    caseNumber: 'رقم المشروع', title: 'عنوان القضية', authority: 'الجهة المختصة', courtCaseNumber: 'رقم القضية لدى الجهة', caseType: 'نوع القضية', status: 'الحالة', outcome: 'النتيجة',
     clientName: 'اسم العميل', marketerName: 'المسوّق', lawyerName: 'المحامي المسؤول',
     proBonoValue: 'قيمة التطوّعي التقديرية', proBonoHours: 'ساعات التطوّعي', feeType: 'نوع الأتعاب',
     createdDate: 'تاريخ الإنشاء', updatedDate: 'تاريخ التحديث',

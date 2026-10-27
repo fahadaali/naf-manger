@@ -17,7 +17,7 @@ const nowSeconds = () => Math.floor(Date.now() / 1000);
 const isAdmin = (user) => user.role === 'admin';
 const mayDecide = (user) => isAdmin(user) || Boolean(user.permissions?.cases?.update);
 
-const STATUSES = ['linked', 'suggested', 'unmatched', 'ignored'];
+const STATUSES = ['linked', 'suggested', 'unmatched', 'ignored', 'general'];
 
 async function logActivity(env, user, description) {
   await env.DB.prepare(
@@ -37,10 +37,11 @@ export async function readWafeqStatus(env, user) {
   if (!mayDecide(user)) return fail('forbidden', 403);
   if (!configured(env)) return ok({ state: 'not_configured' });
 
-  const [row, counts, ai] = await Promise.all([
+  const [row, counts, ai, general] = await Promise.all([
     env.DB.prepare(`SELECT * FROM wafeq_connection WHERE id = 1`).first(),
     env.DB.prepare(`SELECT status, COUNT(*) n FROM wafeq_payments GROUP BY status`).all(),
     aiEnabled(env),
+    env.DB.prepare(`SELECT COALESCE(SUM(amount), 0) total FROM wafeq_payments WHERE status = 'general'`).first(),
   ]);
   const byStatus = Object.fromEntries(STATUSES.map((status) => [status, 0]));
   for (const entry of counts.results ?? []) byStatus[entry.status] = entry.n;
@@ -52,6 +53,7 @@ export async function readWafeqStatus(env, user) {
     lastSyncError: row?.last_sync_error ?? null,
     newestPaymentDate: row?.cursor_date ?? null,
     counts: byStatus,
+    generalTotal: Number(general?.total ?? 0) / 100,
     /* الطرازُ مربوطٌ (`[ai]`) ومشغَّلٌ (مفتاحُ «التلخيص الآليّ» نفسُه). */
     ai: { available: modelAvailable(env), enabled: ai, model: modelInfo(env, 'fast')?.model ?? null },
   });
@@ -128,6 +130,26 @@ export async function rematchWafeqPayments(env, user) {
   } catch (error) {
     return failure(error, 'rematch_failed');
   }
+}
+
+/**
+ * إيرادُ موكّلٍ بلا قضية — `GET /api/clients/:id/general-payments`.
+ * والتصريحُ قراءةُ القضايا — كدفعات القضايا في كشف الحساب.
+ */
+export async function listClientGeneralPayments(env, user, clientId) {
+  if (!user.permissions?.cases?.read) return fail('forbidden', 403);
+  const { results } = await env.DB.prepare(
+    `SELECT external_id, payment_date, amount, reference, invoice_text, project_name
+       FROM wafeq_payments WHERE status = 'general' AND client_id = ?
+      ORDER BY payment_date DESC`,
+  ).bind(clientId).all();
+  return ok((results ?? []).map((row) => ({
+    externalId: row.external_id,
+    paymentDate: row.payment_date,
+    amount: Number(row.amount ?? 0) / 100,
+    reference: row.reference ?? '',
+    description: [row.project_name, row.invoice_text].filter(Boolean).join(' — ').slice(0, 200),
+  })));
 }
 
 /** مشاريعُ وافق المربوطة بقضايا — ومعها رقمُ القضية واسمُ مشروعها في بيسكامب. */
@@ -284,6 +306,30 @@ export async function decideWafeqPayment(request, env, user, externalId) {
       ? `رُبطت دفعةٌ من وافق بقضية، ومعها ${alsoLinked} من مشروعها`
       : 'رُبطت دفعةٌ من وافق بقضية');
     return ok({ status: 'linked', caseId, alsoLinked });
+  }
+
+  /* ═══ إيرادٌ عام ═══
+     عمليةٌ سريعة لا قضيةَ لها، وتُحسب في الماليّة: في «المحصَّل» وفي كشف
+     حساب الموكّل إن عُرف. ولا تنزل إلى `client_payments` — ذاك سجلُّ قضايا. */
+  if (verb === 'general') {
+    /* والموكّلُ كما اختير في الشاشة — و«بلا موكّل» اختيارٌ يُحترم. */
+    const clientId = 'clientId' in body
+      ? (typeof body.clientId === 'string' && body.clientId ? body.clientId : null)
+      : row.client_id;
+    if (clientId) {
+      const client = await env.DB.prepare(`SELECT id FROM clients WHERE id = ?`).bind(clientId).first();
+      if (!client) return fail('invalid_reference', 409);
+    }
+    await unlinkPayment(env, row);
+    await env.DB.prepare(
+      `UPDATE wafeq_payments SET status = 'general', case_id = NULL, payment_id = NULL, client_id = ?,
+              match_by = 'manual', decided_by = ?, updated_at = ?
+        WHERE external_id = ?`,
+    )
+      .bind(clientId ?? null, user.id, now, externalId)
+      .run();
+    await logActivity(env, user, 'سُجّلت دفعةٌ من وافق إيراداً عامّاً بلا قضية');
+    return ok({ status: 'general', clientId: clientId ?? null });
   }
 
   if (verb === 'ignore' || verb === 'unlink') {

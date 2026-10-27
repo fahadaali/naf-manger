@@ -26,6 +26,8 @@ import {
   resolveConflict,
   resolveReview,
   setAiImport,
+  phraseCasesNow,
+  phraseOneCase,
   setConflictPolicy,
   setAutoSync,
   startConnect,
@@ -44,6 +46,7 @@ import { listNotifications, markNotificationsRead, scheduledNotifications } from
 import {
   decideWafeqPayment,
   deleteWafeqProjectLink,
+  listClientGeneralPayments,
   listWafeqPayments,
   listWafeqProjectLinks,
   previewWafeq,
@@ -308,6 +311,7 @@ export default {
         if (id === 'sync' && request.method === 'POST') return sync(env, user, { source: 'يدوي' });
         /* إعادةُ الاستيراد من الصفر — معاينةٌ بالأعداد، ثم تنفيذٌ بعبارة تأكيد. */
         if (id === 'reset' && request.method === 'POST') return resetBasecampImport(request, env, user);
+        if (id === 'phrase' && request.method === 'POST') return phraseCasesNow(env, user);
         if (id === 'auto-sync' && request.method === 'PUT') return setAutoSync(request, env, user);
         if (id === 'ai' && request.method === 'PUT') return setAiImport(request, env, user);
         if (id === 'conflicts' && !verb && request.method === 'GET') return listConflicts(env, user);
@@ -328,6 +332,14 @@ export default {
         return exportAll(env, user);
       }
       /* استيرادُ القضايا من ملف — معاينةٌ ثم تنفيذ، والتفصيل في `lib/case-import.js`. */
+      /* إيرادُ موكّلٍ بلا قضية من وافق — لكشف حسابه. */
+      /* صياغةُ عنوان القضية وموضوعها — بطلب صاحبها. */
+      if (name === 'cases' && id && verb === 'phrase' && request.method === 'POST') {
+        return phraseOneCase(env, user, decodeURIComponent(id));
+      }
+      if (name === 'clients' && id && verb === 'general-payments' && request.method === 'GET') {
+        return listClientGeneralPayments(env, user, decodeURIComponent(id));
+      }
       if (name === 'cases' && id === 'import' && !verb && request.method === 'POST') {
         return importCases(request, env, user);
       }

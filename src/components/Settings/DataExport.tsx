@@ -168,6 +168,7 @@ export default function DataExport() {
         
         if (selectedFields.cases.basicInfo) {
           row['رقم المشروع'] = case_.caseNumber;
+          row['عنوان القضية'] = case_.title ?? '';
           row['الجهة المختصة'] = case_.authority ?? '';
           row['رقم القضية لدى الجهة'] = case_.courtCaseNumber ?? '';
           row['نوع القضية'] = case_.caseType;

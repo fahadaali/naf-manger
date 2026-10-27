@@ -15,6 +15,7 @@ import {
 import { DEFAULT_FIELD_MAP, TARGETS, parseDocument } from './parse.js';
 import {
   buildPlan,
+  phraseStoredCase,
   readConflictPolicy,
   readFieldMap,
   runSync,
@@ -23,7 +24,7 @@ import {
 } from './sync.js';
 import { closeReview, countOpen, listOpen, mergeClients } from './reviews.js';
 import { rememberPhrase, readLexicon } from '../ai/extract.js';
-import { aiEnabled, setAiEnabled } from '../ai/summarize.js';
+import { aiEnabled, newBudget, setAiEnabled } from '../ai/summarize.js';
 import { modelAvailable, modelInfo } from '../ai/model.js';
 import { suggestMapping } from '../ai/extract.js';
 import {
@@ -879,3 +880,67 @@ async function logActivity(env, user, description) {
       console.error('تعذّر تسجيل النشاط:', logError?.message ?? logError);
     });
 }
+
+/* ═══ الصياغة ═══ */
+
+/** سقفُ «صُغ القضايا الآن» في الضغطة الواحدة — ويُضغط ثانيةً حتى لا يبقى شيء. */
+export const PHRASE_NOW_BUDGET = 30;
+
+/**
+ * «صُغ القضايا الآن» — `POST /api/basecamp/phrase`، للمسؤول.
+ *
+ * يمرّ على القضايا المستوردة، والمنتهيةُ أوّلاً. وما صيغ ولم يتبدّل مصدرُه
+ * يُتخطّى بلا سؤال (البصمة)، وما مسّه إنسانٌ لا يُمسّ.
+ */
+export async function phraseCasesNow(env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+  if (!modelAvailable(env)) return fail('not_connected', 503);
+  if (!(await aiEnabled(env))) return fail('ai_disabled', 409);
+
+  const connection = await activeConnection(env).catch(() => null);
+  const usable = connection && !connection.error ? connection : null;
+  const { results } = await env.DB.prepare(
+    `SELECT c.id FROM cases c JOIN basecamp_projects p ON p.case_id = c.id
+      WHERE c.archived_at IS NULL
+      ORDER BY CASE WHEN c.status = 'completed' THEN 0 ELSE 1 END, c.updated_at DESC`,
+  ).all();
+
+  const budget = newBudget(PHRASE_NOW_BUDGET);
+  const tally = { phrased: 0, failed: 0, human: 0, remaining: 0 };
+  for (const row of results ?? []) {
+    const outcome = await phraseStoredCase(env, { caseId: row.id, connection: usable, budget });
+    if (outcome.phrased) tally.phrased++;
+    else if (outcome.failed) tally.failed++;
+    else if (outcome.skipped === 'human') tally.human++;
+    else if (outcome.skipped === 'budget') tally.remaining++;
+  }
+  if (tally.phrased) await logActivity(env, user, `صيغ موضوعُ ${tally.phrased} قضيةً وعنوانُها`);
+  return Response.json({ ok: true, data: tally });
+}
+
+/**
+ * «صُغ بالذكاء الاصطناعي» في نافذة القضية — `POST /api/cases/:id/phrase`.
+ * لمن يعدّل القضايا، وعلى أيّ قضية — ولو كتبها إنسان: صاحبُها طلبه، والأصلُ يُحفظ.
+ */
+export async function phraseOneCase(env, user, caseId) {
+  if (!isAdmin(user) && !user.permissions?.cases?.update) return fail('forbidden', 403);
+  if (!modelAvailable(env)) return fail('not_connected', 503);
+
+  const connection = await activeConnection(env).catch(() => null);
+  const outcome = await phraseStoredCase(env, {
+    caseId,
+    connection: connection && !connection.error ? connection : null,
+    force: true,
+  });
+  if (outcome.skipped === 'missing') return fail('not_found', 404);
+  if (!outcome.phrased) return fail('inference_failed', 502);
+
+  const row = await env.DB.prepare(
+    `SELECT title, summary, summary_raw, outcome FROM cases WHERE id = ?`,
+  ).bind(caseId).first();
+  return Response.json({
+    ok: true,
+    data: { title: row.title, summary: row.summary, summaryRaw: row.summary_raw, outcome: row.outcome },
+  });
+}
+

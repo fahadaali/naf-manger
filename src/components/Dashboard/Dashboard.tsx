@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Award, FileText, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
+import { Award, Banknote, FileText, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
 import { Money } from '@/registry/naf/currency/money';
 import { Card } from '@/registry/naf/ui/card';
 import StatsCard from './StatsCard';
@@ -146,6 +146,22 @@ export default function Dashboard() {
           icon={HandHeart}
           color="bg-chart-1"
         />
+        {/* المحصَّلُ هذا العام: القضايا والإيرادُ العامّ بلا قضية — كلٌّ بمفرده. */}
+        {stats.collectedThisYear && (
+          <StatsCard
+            title="المحصَّل هذا العام"
+            value={<>
+              <Money value={stats.collectedThisYear.cases + stats.collectedThisYear.general} />
+              {stats.collectedThisYear.general > 0 && (
+                <span className="block text-xs font-normal text-muted-foreground">
+                  منها إيرادٌ عام بلا قضية: <Money value={stats.collectedThisYear.general} />
+                </span>
+              )}
+            </>}
+            icon={Banknote}
+            color="bg-chart-3"
+          />
+        )}
         {/* ما لم يُحصَّل من أتعاب القضايا الحاضرة — مجموعُ «المتبقّي». */}
         <StatsCard
           title="مستحقّات غير محصّلة"
