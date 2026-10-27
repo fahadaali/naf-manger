@@ -768,11 +768,13 @@ export interface CustomReport {
   createdBy: string;
   createdDate: Date;
   lastModified: Date;
+  /** الإرسالُ الدوريّ بالبريد — `migrations/0022`. والمستلمون معرّفاتُ أعضاء،
+      أو بريدٌ خارجيّ يكتبه المسؤول وحده. */
   schedule?: {
     enabled: boolean;
     frequency: 'daily' | 'weekly' | 'monthly';
     recipients: string[];
-    nextRun?: Date;
+    lastSentAt?: string | null;
   };
 }
 
