@@ -337,7 +337,7 @@ group('التعليقات من المنصة');
 const added = await handlers.addProspectComment(
   { json: async () => ({ body: 'اتّصلتُ به وطلب موعداً' }) }, env, admin, 'p1', null);
 check('يُحفظ', added.status === 201);
-await sync.pushComment(env, added.body.data.id);
+await sync.pushComment(env, 'prospects', added.body.data.id);
 const p1Card = Number(db.prepare(`SELECT bc_card_id FROM prospects WHERE id='p1'`).get().bc_card_id);
 const sent = fake.comments.get(p1Card) ?? [];
 check('ويصل البطاقة', sent.some((c) => c.content.includes('اتّصلتُ به')), sent);
@@ -376,8 +376,12 @@ group('التحويل إلى عميل');
 const converted = await handlers.convertWithCard(env, admin, 'p1', null);
 check('يُحوَّل', converted.status === 201, converted.body);
 const client = db.prepare(`SELECT * FROM clients WHERE full_name = 'سعد الحربي'`).get();
-check('ويحفظ العميلُ رقمَ البطاقة', client?.bc_card_id === String(p1Card));
-await sync.pushConversion(env, { cardId: String(p1Card), clientName: 'سعد الحربي' });
+/* بلا لوحة عملاءٍ مضبوطة: بطاقةُ المحتمل لا تصير بطاقةَ العميل — تُعلَّم فلا تُعاد. */
+check('ولا يحمل العميلُ رقمَ بطاقة المحتمل', !client?.bc_card_id);
+check('وبطاقةُ المحتمل تُعلَّم', Boolean(db.prepare(`SELECT 1 FROM basecamp_prospect_tombstones WHERE card_id = ?`).get(String(p1Card))));
+check('وتعليقاتُه تنتقل إلى العميل',
+  db.prepare(`SELECT COUNT(*) n FROM client_comments WHERE client_id = ?`).get(client.id).n === 1);
+await sync.pushConversion(env, { prospectCardId: String(p1Card), clientId: client.id, clientName: 'سعد الحربي' });
 check('والبطاقةُ إلى عمود التحويل',
   String(fake.cards.get(p1Card).parent.id) === (await board.readBoard(env)).columnMap.__converted);
 

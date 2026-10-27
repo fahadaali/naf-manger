@@ -38,15 +38,19 @@ import {
 import { scheduledSync } from './lib/basecamp/cron.js';
 import { scheduledProspectSync } from './lib/basecamp/prospects/sync.js';
 import {
-  addProspectComment,
-  afterProspectWrite,
-  beforeProspectDelete,
+  addComment,
+  afterRecordWrite,
+  beforeRecordDelete,
+  configureBoards,
   configureProspectBoard,
   convertWithCard,
-  listProspectComments,
+  listComments,
   moveProspect,
+  readBoardsStatus,
+  readCardTables,
   readProspectBoard,
   receiveWebhook,
+  syncBoards,
   syncProspectBoard,
 } from './lib/basecamp/prospects/handlers.js';
 import { scheduledWafeqSync } from './lib/wafeq/sync.js';
@@ -312,7 +316,12 @@ export default {
         }
       }
       if (name === 'basecamp') {
-        /* لوحةُ العملاء المحتملين — الاتّجاهُ فيها اثنان، بخلاف ما تحتها. */
+        /* لوحاتُ العملاء (المحتملون والفعليون) — الاتّجاهُ فيها اثنان، بخلاف ما تحتها. */
+        if (id === 'boards' && !verb && request.method === 'GET') return readBoardsStatus(env, user, url);
+        if (id === 'boards' && verb === 'tables' && request.method === 'GET') return readCardTables(env, user, url);
+        if (id === 'boards' && verb === 'setup' && request.method === 'POST') return configureBoards(request, env, user, url);
+        if (id === 'boards' && verb === 'sync' && request.method === 'POST') return syncBoards(request, env, user);
+        /* والمساراتُ الأولى للمحتملين وحدهم — تبقى ولا تنكسر. */
         if (id === 'prospects' && !verb && request.method === 'GET') return readProspectBoard(env, user, url);
         if (id === 'prospects' && verb === 'setup' && request.method === 'POST') {
           return configureProspectBoard(request, env, user, url);
@@ -390,20 +399,22 @@ export default {
       if (name === 'prospects' && id && verb === 'convert' && request.method === 'POST') {
         return convertWithCard(env, user, id, ctx);
       }
-      if (name === 'prospects' && id && verb === 'comments') {
-        if (request.method === 'GET') return listProspectComments(env, user, id);
-        if (request.method === 'POST') return addProspectComment(request, env, user, id, ctx);
-      }
       if (name === 'prospects' && id && verb === 'status' && request.method === 'PATCH') {
         return moveProspect(request, env, user, id, ctx);
       }
-      /* وحذفُه يُعلّم بطاقتَه، فلا تُعيده المزامنةُ من بيسكامب. */
-      if (name === 'prospects' && !verb && (request.method === 'DELETE' || id === 'bulk')) {
-        await beforeProspectDelete(request, env, id);
+      /* ═══ المحتملون والعملاء — ولكلٍّ بطاقةٌ في لوحته ببيسكامب ═══ */
+      if ((name === 'prospects' || name === 'clients') && id && verb === 'comments') {
+        if (request.method === 'GET') return listComments(env, user, name, id);
+        if (request.method === 'POST') return addComment(request, env, user, name, id, ctx);
       }
-      /* وإنشاءُ عميلٍ محتملٍ أو تعديلُه يصل بطاقتَه في بيسكامب بعد الردّ. */
-      if (name === 'prospects' && !verb && id !== 'bulk' && ['POST', 'PATCH', 'PUT'].includes(request.method)) {
-        return afterProspectWrite(await handleResource(request, env, user, name, id), env, ctx);
+      /* وحذفُ الصفّ يُعلّم بطاقتَه، فلا تُعيده المزامنةُ من بيسكامب. */
+      if ((name === 'prospects' || name === 'clients') && !verb && (request.method === 'DELETE' || id === 'bulk')) {
+        await beforeRecordDelete(name, request, env, id);
+      }
+      /* وإنشاؤه أو تعديلُه يصل بطاقتَه بعد الردّ. */
+      if ((name === 'prospects' || name === 'clients') && !verb && id !== 'bulk'
+        && ['POST', 'PATCH', 'PUT'].includes(request.method)) {
+        return afterRecordWrite(name, await handleResource(request, env, user, name, id), env, ctx);
       }
       if (name === 'marketers' && id && verb === 'stats' && request.method === 'GET') {
         return readMarketerStats(env, user, id);

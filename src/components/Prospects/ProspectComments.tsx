@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, MessageSquare, Send } from 'lucide-react';
-import { ProspectComment } from '../../types';
+import { BoardKind, ProspectComment } from '../../types';
 import { db } from '../../data/database';
 import { formatDateTime } from '@/registry/naf/lib/format';
 import { Textarea } from '@/registry/naf/ui/textarea';
@@ -13,7 +13,16 @@ import { Badge } from '@/registry/naf/ui/badge';
  * وما يُكتب هنا يصل بطاقةَ العميل في بيسكامب، وما يُكتب تحت البطاقة هناك
  * يظهر هنا، وشارةُ كلِّ تعليقٍ تقول من أين جاء.
  */
-export default function ProspectComments({ prospectId, canComment }: { prospectId: string; canComment: boolean }) {
+/* والمكوّنُ واحدٌ للمحتمل والعميل: `kind` يقول أيَّ جدولٍ وأيَّ لوحة. */
+export default function ProspectComments({
+  prospectId,
+  canComment,
+  kind = 'prospects',
+}: {
+  prospectId: string;
+  canComment: boolean;
+  kind?: BoardKind;
+}) {
   const [comments, setComments] = useState<ProspectComment[]>([]);
   const [basecampUrl, setBasecampUrl] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -22,7 +31,7 @@ export default function ProspectComments({ prospectId, canComment }: { prospectI
 
   useEffect(() => {
     let alive = true;
-    db.getProspectComments(prospectId)
+    db.getComments(kind, prospectId)
       .then((data) => {
         if (!alive) return;
         setComments(data.comments);
@@ -30,7 +39,7 @@ export default function ProspectComments({ prospectId, canComment }: { prospectI
       })
       .catch(() => alive && setError('تعذّر تحميل التعليقات.'));
     return () => { alive = false; };
-  }, [prospectId]);
+  }, [kind, prospectId]);
 
   const submit = async () => {
     const body = draft.trim();
@@ -38,7 +47,7 @@ export default function ProspectComments({ prospectId, canComment }: { prospectI
     setBusy(true);
     setError('');
     try {
-      const added = await db.addProspectComment(prospectId, body);
+      const added = await db.addComment(kind, prospectId, body);
       setComments((list) => [...list, added]);
       setDraft('');
     } catch {

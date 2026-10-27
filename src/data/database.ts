@@ -10,7 +10,8 @@ import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
 import { BasecampReview } from '../types';
-import { ProspectBoardStatus, ProspectBoardSyncResult, ProspectComment } from '../types';
+import { ProspectBoardSyncResult, ProspectComment } from '../types';
+import { BasecampBoardSetup, BasecampBoardStatus, BasecampCardTables, BoardKind } from '../types';
 import { BulkAction, BulkOutcome } from '../types';
 import { api, ApiError, toDate, toOptionalDate } from './api';
 
@@ -136,27 +137,42 @@ export class LocalDatabase {
     await api.patch(`/prospects/${encodeURIComponent(prospectId)}/status`, { status });
   }
 
+  /* التعليقاتُ للنوعين: المحتملُ والعميل — وكلٌّ يصل بطاقتَه في لوحته. */
+  async getComments(kind: BoardKind, id: string): Promise<{ comments: ProspectComment[]; basecampUrl: string | null }> {
+    return api.read(`/${kind}/${encodeURIComponent(id)}/comments`);
+  }
+
+  async addComment(kind: BoardKind, id: string, body: string): Promise<ProspectComment> {
+    return api.post(`/${kind}/${encodeURIComponent(id)}/comments`, { body });
+  }
+
   async getProspectComments(prospectId: string): Promise<{ comments: ProspectComment[]; basecampUrl: string | null }> {
-    return api.read(`/prospects/${encodeURIComponent(prospectId)}/comments`);
+    return this.getComments('prospects', prospectId);
   }
 
   async addProspectComment(prospectId: string, body: string): Promise<ProspectComment> {
-    return api.post(`/prospects/${encodeURIComponent(prospectId)}/comments`, { body });
+    return this.addComment('prospects', prospectId, body);
   }
 
-  async getProspectBoard(): Promise<ProspectBoardStatus> {
-    return api.read('/basecamp/prospects');
+  /* ═══ لوحتا بيسكامب ═══ */
+  async getBasecampBoards(): Promise<Record<BoardKind, BasecampBoardStatus>> {
+    return api.read('/basecamp/boards');
   }
 
-  async setupProspectBoard(projectId: string): Promise<{
-    projectName: string; columnsCreated: string[]; columnsRenamed: string[]; webhook: boolean; webhookError: string | null;
-  }> {
-    return api.post('/basecamp/prospects/setup', { projectId });
+  async getBasecampCardTables(projectId: string): Promise<BasecampCardTables> {
+    return api.read(`/basecamp/boards/tables?projectId=${encodeURIComponent(projectId)}`);
   }
 
-  async syncProspectBoard(): Promise<ProspectBoardSyncResult> {
-    return api.post('/basecamp/prospects/sync');
+  async setupBasecampBoards(choice: {
+    projectId: string; prospectsTableId?: string | null; clientsTableId?: string | null;
+  }): Promise<Partial<Record<BoardKind, BasecampBoardSetup>>> {
+    return api.post('/basecamp/boards/setup', choice);
   }
+
+  async syncBasecampBoards(): Promise<Partial<Record<BoardKind, ProspectBoardSyncResult>>> {
+    return api.post('/basecamp/boards/sync', {});
+  }
+
 
   // ── القضايا ──
   async getCases(): Promise<Case[]> {

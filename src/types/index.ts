@@ -48,6 +48,8 @@ export interface Client {
   aiSummaryAt?: string | null;
   /** لحظةُ الأرشفة نصّاً ISO — وغيابُها يعني «حاضر». */
   archivedAt?: string | null;
+  /** رابطُ البطاقة في لوحة «العملاء الفعليون» ببيسكامب — للقراءة. */
+  basecampUrl?: string | null;
   attachments: Attachment[];
   /* الحقل قائمٌ في المخطَّط (`clients.profile_picture`) وفي خريطة الأعمدة
      في `resources.js`، وتقرؤه الشاشات وتكتبه — وكان ساقطاً من النوع وحده،
@@ -104,18 +106,43 @@ export interface ProspectComment {
   createdAt: number; // ثوانٍ
 }
 
-/** حالةُ لوحة العملاء المحتملين في بيسكامب. */
-export interface ProspectBoardStatus {
+/** نوعا اللوحتين في بيسكامب. */
+export type BoardKind = 'prospects' | 'clients';
+
+/** حالةُ لوحةٍ واحدة — `records` صفوفُ نوعها الحاضرة، و`linked` المربوطُ منها ببطاقة. */
+export interface BasecampBoardStatus {
+  kind: BoardKind;
+  title: string;
   configured: boolean;
   projectId?: string;
   projectName?: string;
+  cardTableId?: string;
+  cardTableName?: string;
   columns?: number;
   webhook?: boolean;
   webhookUrl?: string | null;
   lastSyncAt?: number | null;
   lastSyncError?: string | null;
-  prospects?: number;
+  records?: number;
   linked?: number;
+}
+
+/** لوحاتُ مشروعٍ في بيسكامب، ومعها اقتراحُ لوحةٍ لكلِّ نوع. */
+export interface BasecampCardTables {
+  projectId: string;
+  projectName: string;
+  tables: { id: string; title: string }[];
+  suggested: Record<BoardKind, string | null>;
+}
+
+export interface BasecampBoardSetup {
+  kind: BoardKind;
+  projectName: string;
+  cardTableName: string;
+  columnsCreated: string[];
+  columnsRenamed: string[];
+  webhook: boolean;
+  webhookError: string | null;
 }
 
 export interface ProspectBoardSyncResult {
