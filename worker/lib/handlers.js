@@ -12,7 +12,7 @@ import { KINDS, isValidKey, newKey, serveHeaders } from './files.js';
 const fail = (error, status) => Response.json({ ok: false, error }, { status });
 
 /** تفضيلات الإشعارات الافتراضية — `NULL` في العمود يعني هذه لا «لا شيء». */
-const DEFAULT_NOTIFICATION_PREFS = {
+export const DEFAULT_NOTIFICATION_PREFS = {
   newClients: true,
   newCases: true,
   caseUpdates: true,

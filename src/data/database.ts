@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CustomReport, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
+import { ConflictCheck, CustomReport, MailStatus, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -297,6 +297,33 @@ export class LocalDatabase {
      الاتّجاه واحد: يُقرأ منه ولا يُكتب فيه. ولا `listOr` في شيءٍ منها —
      شاشةُ الربط تعرض سببَ السقوط، و«لم يُسجَّل التطبيق» غيرُ «لم يُربط
      الحساب» غيرُ «بُدِّل المفتاح». والصمتُ يخلط الثلاثة. */
+  /* ═══ البريد ═══ */
+  async getMailStatus(): Promise<MailStatus> {
+    return await api.read<MailStatus>('/mail/status');
+  }
+
+  async sendTestMail(to: string): Promise<void> {
+    await api.post('/mail/test', { to });
+  }
+
+  /* ═══ تعارضُ المصالح ═══
+     تنبيهٌ لا منع: سقوطُه لا يوقف الحفظ، فيُردّ فارغاً ويُسجَّل. */
+  async checkConflicts(query: {
+    name?: string;
+    idNumber?: string;
+    excludeClient?: string;
+    excludeCase?: string;
+  }): Promise<ConflictCheck> {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) if (value) params.set(key, value);
+    try {
+      return await api.read<ConflictCheck>(`/conflicts?${params.toString()}`);
+    } catch (error) {
+      console.error('تعذّر فحص التعارض:', error);
+      return { asOpponent: [], asClient: [] };
+    }
+  }
+
   /* ═══ وافق ═══
      قراءةٌ لا كتابة. ولا `listOr`: الشاشةُ تعرض سببَ السقوط — «لم يُضبط
      المفتاح» غيرُ «رُفض المفتاح». */

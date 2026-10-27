@@ -9,6 +9,7 @@ import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import AttachmentList from '../Common/AttachmentList';
 import ContactNumbers from '../Common/ContactNumbers';
+import ConflictWarning from '../Common/ConflictWarning';
 import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
@@ -313,6 +314,11 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
               {errors.idNumber && (
                 <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>
               )}
+            </div>
+
+            {/* تعارضُ المصالح: أخصمٌ هذا في قضيةٍ لموكّلٍ عندنا؟ تنبيهٌ لا منع. */}
+            <div className="md:col-span-2">
+              <ConflictWarning name={formData.fullName} idNumber={formData.idNumber} ask="asOpponent" />
             </div>
 
             <div>

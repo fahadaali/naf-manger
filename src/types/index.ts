@@ -141,6 +141,8 @@ export interface Case {
   feeStructure?: FeeStructure;
   paymentStatus?: PaymentStatus;
   commissionStructure?: CommissionStructure;
+  /** الأطرافُ الخصم — وبها يُفحص تعارضُ المصالح عند قبول موكّلٍ جديد. */
+  opposingParties?: OpposingParty[];
 
   /* ═══ حقولٌ ثلاثةٌ حُذفت ═══
      كانت `commissionPayments` و`totalCommissionPaid` و`remainingCommission`
@@ -225,6 +227,8 @@ export interface Meeting {
   subjectId?: string | null;
   invitees: string[];
   createdAt: number;
+  /** أُرسلت الدعوةُ بالبريد عند الإنشاء؟ يُردّ مرّةً ولا يُحفظ. */
+  invitationSent?: boolean;
 }
 
 /**
@@ -252,6 +256,13 @@ export interface DisplayToken {
  * الأولى يعالجها من يملك أسرارَ المنصة، والثانية ضغطةُ زرٍّ في الشاشة —
  * وخلطُهما يرسل صاحبَ المكتب يبحث في المكان الخطأ.
  */
+/** حالةُ البريد — `GET /api/mail/status`. والمفتاحُ لا يُردّ، وجودُه وحده. */
+export interface MailStatus {
+  configured: boolean;
+  from: string | null;
+  hasKey: boolean;
+}
+
 /** حالةُ الربط بوافق — `GET /api/wafeq/status`. */
 export interface WafeqStatus {
   state: 'not_configured' | 'configured';
@@ -774,6 +785,33 @@ export interface Marketer {
   profilePicture?: string; // `marketers.profile_picture`
   createdDate: Date;
   updatedDate: Date;
+}
+
+/** طرفٌ خصمٌ في قضية. ورقمُ الهوية أو السجلّ اختياريّ، وبه يُقطع التعارض. */
+export interface OpposingParty {
+  name: string;
+  idNumber?: string;
+}
+
+/**
+ * نتيجةُ فحص تعارض المصالح — `GET /api/conflicts`.
+ *
+ * `asOpponent`: قضايا هذا الاسمُ خصمٌ فيها. `asClient`: موكّلون بهذا الاسم.
+ * و`matchBy` يقول بمَ طوبق: الهويةُ قاطعة، والاسمُ يُراجَع.
+ */
+export interface ConflictMatch {
+  caseId?: string;
+  caseNumber?: string;
+  clientId?: string;
+  clientName: string;
+  party?: string;
+  matchBy: 'idNumber' | 'name';
+  archived?: boolean;
+}
+
+export interface ConflictCheck {
+  asOpponent: ConflictMatch[];
+  asClient: ConflictMatch[];
 }
 
 export interface FeeStructure {

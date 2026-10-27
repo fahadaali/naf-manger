@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, HandHeart, Sparkles } from 'lucide-react';
-import { Attachment, Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
+import { Attachment, Case, Client, Marketer, FeeStructure, OpposingParty, PaymentStatus, CommissionStructure } from '../../types';
 import AttachmentList from '../Common/AttachmentList';
 import CasePayments from './CasePayments';
+import OpposingParties from './OpposingParties';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel, collectionStatusLabel, feeTypeLabel } from '../../lib/labels';
@@ -67,6 +68,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
 
   // قائمةٌ لا نصّ، فخارج `formData` الذي يقبل النصّ وحده.
   const [attachments, setAttachments] = useState<Attachment[]>(existingCase?.attachments ?? []);
+  /* قائمةٌ لا نصّ، فخارج `formData` كالمرفقات. */
+  const [opposingParties, setOpposingParties] = useState<OpposingParty[]>(existingCase?.opposingParties ?? []);
 
   /* المنسدلات من «تكوين النظام» لا من نصوصٍ في التصيير. والقيمةُ المحفوظة
      تُمرَّر فتبقى ظاهرةً حتى لو حُذفت من التكوين بعد حفظها. */
@@ -178,7 +181,11 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
       feeStructure,
       paymentStatus,
       commissionStructure,
-      attachments
+      attachments,
+      /* طرفٌ بلا اسمٍ يُطرح: سطرٌ أُضيف ولم يُملأ ليس خصماً. */
+      opposingParties: opposingParties
+        .map((party) => ({ name: party.name.trim(), ...(party.idNumber?.trim() ? { idNumber: party.idNumber.trim() } : {}) }))
+        .filter((party) => party.name)
     };
 
     onSave?.(caseData);
@@ -254,6 +261,20 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <h3 className="text-lg font-semibold text-foreground mb-3">موضوع المشروع</h3>
               <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
             </div>
+
+            {(existingCase.opposingParties ?? []).length > 0 && (
+              <div className="bg-muted rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-foreground mb-3">الأطراف الخصم</h3>
+                <ul className="space-y-1 text-foreground">
+                  {(existingCase.opposingParties ?? []).map((party, index) => (
+                    <li key={index}>
+                      {party.name}
+                      {party.idNumber && <span className="text-muted-foreground"> · <bdi>{party.idNumber}</bdi></span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {existingCase.notes && (
               <div className="bg-muted rounded-lg p-4">
@@ -668,6 +689,14 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               rows={3}
               placeholder="حاشيةٌ على القضية — غيرُ الموضوع..."
             />
+          </div>
+
+          {/* ═══ الأطرافُ الخصم ═══
+              وبها يُفحص تعارضُ المصالح: كلُّ طرفٍ يُسأل عنه أموكّلٌ هو عندنا،
+              وكلُّ موكّلٍ جديد يُسأل عنه أخصمٌ هو في قضيةٍ عندنا. */}
+          <div>
+            <p className="block text-sm font-medium text-foreground mb-2">الأطراف الخصم</p>
+            <OpposingParties value={opposingParties} onChange={setOpposingParties} clientId={formData.clientId || undefined} />
           </div>
 
           <div>

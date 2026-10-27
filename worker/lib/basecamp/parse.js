@@ -31,6 +31,7 @@ export const TARGETS = {
   'case.status': { label: 'حالة المشروع', entity: 'case' },
   'case.outcome': { label: 'نتيجة المشروع', entity: 'case' },
   'case.notes': { label: 'ملاحظات المشروع', entity: 'case' },
+  'case.opposingParties': { label: 'الطرف الخصم', entity: 'case' },
 };
 
 /**
@@ -88,6 +89,16 @@ export const DEFAULT_FIELD_MAP = {
   'ملاحظات المشروع': 'case.notes',
   'ملاحظات القضية': 'case.notes',
   'ملاحظات إضافية': 'case.notes',
+  /* ═══ الخصم ═══
+     ولا «المدعى عليه» ولا «المدعي» بقصد: المكتبُ يترافع عن هذا مرّةً وعن
+     ذاك أخرى، فالعنوانُ قد يسمّي موكّلَنا نفسَه — ويُفحص التعارضُ عليه فيُردّ
+     موكّلٌ لأنه موكّلُنا. وما يقول «الخصم» صراحةً لا يحتمل ذلك. ومن كتب
+     «المدعى عليه» بمعنى الخصم في ملفّاته يربطه من الشاشة. */
+  'الخصم': 'case.opposingParties',
+  'الخصوم': 'case.opposingParties',
+  'الطرف الخصم': 'case.opposingParties',
+  'الطرف الآخر': 'case.opposingParties',
+  'اسم الخصم': 'case.opposingParties',
 };
 
 /** مفرداتٌ افتراضية — والمعتمَدُ ما في «تكوين النظام». */
@@ -356,6 +367,15 @@ export function coerceTarget(target, rawValue, vocab = {}) {
   /* والملاحظاتُ تُترك كما كُتبت: لا مفرداتِ توحيدٍ لها، وقصُّها تشويه. */
   if (field === 'notes') return { entity, values: { notes: value } };
 
+  /* ═══ الخصمُ قائمة ═══
+     «شركة الريّان، ومؤسسة الأفق - 7001234567» سطرٌ فيه طرفان، ولكلٍّ اسمٌ
+     وربما رقم. فيُقسَم على الفواصل والأسطر، ويُقرأ رقمُ كلٍّ منه ويُقصّ من
+     اسمه — كما يُقرأ مسؤولُ التواصل. */
+  if (target === 'case.opposingParties') {
+    const parties = readParties(value, idTypes);
+    return parties.length ? { entity, values: { opposingParties: parties } } : null;
+  }
+
   const translated = translate(target, value);
   /* وحقلٌ مغلقٌ لم يُفهَم لفظُه: لا يُكتب، ويُردّ بلفظه ليُسأل عنه. */
   if (translated === null) return { entity, values: {}, unresolved: { target, value } };
@@ -410,6 +430,12 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
     const coerced = coerceTarget(target, line.value, { contactRelations: relations, idTypes });
     if (!coerced) continue;
     if (coerced.unresolved) unresolved.push(coerced.unresolved);
+    /* والخصومُ تُجمع من عناوينها كلِّها — «الخصم» و«الطرف الآخر» — لا يمحو
+       آخرُها أوّلَها. */
+    if (coerced.values.opposingParties) {
+      kase.opposingParties = [...(kase.opposingParties ?? []), ...coerced.values.opposingParties];
+      continue;
+    }
     Object.assign(coerced.entity === 'client' ? client : kase, coerced.values);
   }
 
@@ -493,6 +519,32 @@ function readRepresentative(value, relations, idTypes) {
     idNumber: identity?.number ?? '',
     contact: phone?.number ?? '',
   };
+}
+
+/**
+ * «شركة الريّان، ومؤسسة الأفق - 7001234567» إلى طرفين.
+ *
+ * والفاصلُ فاصلةٌ عربية أو لاتينية أو منقوطة أو سطر — لا «و»: «عبدالله
+ * ومحمد أبناء فلان» طرفان، و«شركة الصفا والمروة» طرفٌ واحد، والحرفُ لا
+ * يفرّق بينهما. وما خلا من اسمٍ بعد قصّ رقمه يُطرح.
+ */
+function readParties(value, idTypes) {
+  const parties = [];
+  for (const chunk of String(value).split(/[،,؛;\n]+/)) {
+    const identity = extractIdentities(chunk, idTypes)[0];
+    /* ولا تُنزع «و» من أوّل الاسم: «ومؤسسة الأفق» و«وليد» لا يفترقان
+       بحرفهما، ونزعُها يجعل «وليد» «ليد». فتبقى، ويراها من يقرأ. */
+    const name = chunk
+      .replace(/(?:\+|00)?\d[\d\s\-().]{5,24}\d/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^[-–—•*:]+\s*/, '')
+      .replace(/\s*[-–—:()]+$/, '')
+      .trim();
+    if (!name) continue;
+    parties.push(identity ? { name, idNumber: identity.number } : { name });
+  }
+  return parties;
 }
 
 /* ما جاء من الخريطة قد يكون «+966 50 …» — فيُوحَّد ليُقارَن بما مُسح. */

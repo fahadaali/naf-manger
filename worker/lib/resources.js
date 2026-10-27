@@ -109,6 +109,8 @@ export const RESOURCES = {
       feeStructure: ['fee_structure', 'json'],
       paymentStatus: ['payment_status', 'json'],
       commissionStructure: ['commission_structure', 'json'],
+      /* الأطرافُ الخصم — `[{ name, idNumber? }]` — وبها يُفحص تعارضُ المصالح. */
+      opposingParties: ['opposing_parties', 'json'],
       attachments: ['attachments', 'json'],
       archivedAt: ['archived_at', 'epoch'],
       /* الشاشات تقرأ `createdDate` و`updatedDate` لا `createdAt`. والاسمان
@@ -116,7 +118,7 @@ export const RESOURCES = {
     },
     readOnly: ['aiSummary', 'aiSummaryAt'],
     required: ['case_number', 'case_type', 'client_id'],
-    defaults: { summary: '', notes: '', client_name: '', attachments: '[]' },
+    defaults: { summary: '', notes: '', client_name: '', attachments: '[]', opposing_parties: '[]' },
   },
 
   marketers: {

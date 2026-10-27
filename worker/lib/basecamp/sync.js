@@ -69,7 +69,7 @@ export const CLIENT_FIELDS = [
   'fullName', 'idNumber', 'idType', 'phone', 'contacts', 'email', 'clientType',
   'commercialRegister', 'legalRepresentative', 'notes',
 ];
-export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome', 'notes'];
+export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome', 'notes', 'opposingParties'];
 
 /* و`contacts` خارج الدمج: مصفوفةٌ تُضمّ ضمّاً — أرقامٌ تُزاد ولا يُحذف
    منها رقم — فلا معنى لمقارنةِ «قبلُ وبعدُ» فيها ولا لتعارضٍ عليها. */
@@ -85,7 +85,7 @@ const CLIENT_COLUMN = {
 };
 const CASE_COLUMN = {
   caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
-  status: 'status', outcome: 'outcome', notes: 'notes',
+  status: 'status', outcome: 'outcome', notes: 'notes', opposingParties: 'opposing_parties',
 };
 
 /**
@@ -96,7 +96,7 @@ const CASE_COLUMN = {
  * العمود لا يقبل الفراغ. ولو عُدَّت قيمةً منطوقة لَما نزل «شركة» من
  * «بيانات المشروع» على عميلٍ قائم أبداً — وهو أوّلُ ما يُنتظر من هذا العمل.
  */
-const COLUMN_DEFAULT = { client_type: 'individual' };
+const COLUMN_DEFAULT = { client_type: 'individual', opposing_parties: '[]' };
 const isBlank = (column, value) =>
   value === null || value === undefined || String(value) === '' ||
   String(value) === COLUMN_DEFAULT[column];
@@ -642,6 +642,11 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
 
   // ── القضية ──
   const caseValues = { ...parsed.case };
+  /* الخصومُ قائمةٌ وعمودُها نصُّ JSON — فتُسلسَل هنا عند حدّ القاعدة، كمسؤول
+     التواصل، فيُقارَن نصٌّ بنصٍّ في الدمج الثلاثي. */
+  if (Array.isArray(caseValues.opposingParties)) {
+    caseValues.opposingParties = JSON.stringify(caseValues.opposingParties);
+  }
   if (!caseValues.caseNumber) {
     caseValues.caseNumber = fallbackNumber('بيسكامب', row.project_id);
     plan.warnings.push('رقم القضية مولَّد — يحتاج تصحيحاً');
@@ -979,8 +984,8 @@ async function applyPlan(env, plan, actorId, ai) {
     const values = plan.case.values;
     await env.DB.prepare(
       `INSERT INTO cases (id, case_number, case_type, client_id, client_name, summary, status,
-                          outcome, notes, basecamp_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                          outcome, notes, opposing_parties, basecamp_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         caseId,
@@ -992,6 +997,7 @@ async function applyPlan(env, plan, actorId, ai) {
         values.status ?? 'pending',
         values.outcome ?? null,
         values.notes ?? '',
+        values.opposingParties ?? '[]',
         plan.appUrl,
         /* ═══ القضيةُ أُنشئت يومَ أُنشئ مشروعُها ═══
            كانت تُختم بلحظة الاستيراد، فتظهر قضيةٌ من ٢٠٢١ منشأةً اليوم —
