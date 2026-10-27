@@ -8,6 +8,8 @@ import AttachmentList from '../Common/AttachmentList';
 import ContactNumbers from '../Common/ContactNumbers';
 import ConflictWarning from '../Common/ConflictWarning';
 import ClientStatement from './ClientStatement';
+import ProspectComments from '../Prospects/ProspectComments';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
 import { useSettingList } from '../../lib/use-settings';
@@ -26,6 +28,7 @@ interface ClientModalProps {
 }
 
 export default function ClientModal({ client, onClose, onSave, isEditing = false }: ClientModalProps) {
+  const { hasPermission } = useAuth();
   const [formData, setFormData] = useState({
     fullName: client?.fullName || '',
     idNumber: client?.idNumber || '',
@@ -339,6 +342,9 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 <p className="text-muted-foreground text-center py-8">لم تُربَط أي قضية بهذا العميل بعد. أضف أول قضية.</p>
               )}
             </div>
+
+            {/* تعليقاتُه — ومعها رابطُ بطاقته في لوحة «العملاء الفعليون». */}
+            <ProspectComments kind="clients" prospectId={client.id} canComment={hasPermission('clients', 'update')} />
           </div>
         </DialogContent>
       </Dialog>

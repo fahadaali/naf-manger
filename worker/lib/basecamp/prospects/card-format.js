@@ -149,6 +149,8 @@ export function canonical(row) {
   return {
     fullName: text(pick('fullName', 'full_name')),
     prospectStatus: text(pick('prospectStatus', 'prospect_status')),
+    /* وحالةُ العميل الفعليّ — `clients.status`. والمحتملُ بلا هذا العمود فتأتي فارغة. */
+    status: text(row?.status),
     phone: text(pick('phone', 'phone')),
     email: text(pick('email', 'email')).toLowerCase(),
     clientType: text(pick('clientType', 'client_type')),
@@ -182,8 +184,9 @@ function display(field, value) {
  * والحقلُ الفارغ يُكتب بعنوانه وبلا قيمة: من يفتح البطاقة يرى ما ينقص فيملؤه،
  * وما يملؤه يُقرأ بالقاعدة لا بالطراز.
  */
-export function renderCard(values) {
-  const lines = CARD_FIELDS.map(([field, label]) => {
+export function renderCard(values, fields = CARD_FIELDS, fallbackTitle = 'عميل محتمل') {
+  /* وحقولُ النوع تُمرَّر: بطاقةُ العميل الفعليّ بلا مصدرٍ ولا قيمةٍ ولا متابعة. */
+  const lines = fields.map(([field, label]) => {
     const shown = display(field, values[field]);
     return `<div><strong>${label}:</strong> ${escapeHtml(shown)}</div>`;
   });
@@ -193,7 +196,7 @@ export function renderCard(values) {
   for (const line of notes) lines.push(`<div>${escapeHtml(line)}</div>`);
 
   return {
-    title: values.fullName || 'عميل محتمل',
+    title: values.fullName || fallbackTitle,
     content: lines.join(''),
     due_on: values.followUpDate || null,
   };

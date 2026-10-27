@@ -50,8 +50,10 @@ export const RESOURCES = {
       legalRepresentative: ['legal_representative', 'json'],
       attachments: ['attachments', 'json'],
       archivedAt: ['archived_at', 'epoch'],
+      /* رابطُ البطاقة في لوحة «العملاء الفعليون» — تكتبه المزامنة وحدها. */
+      basecampUrl: ['bc_app_url'],
     },
-    readOnly: ['aiSummary', 'aiSummaryAt'],
+    readOnly: ['aiSummary', 'aiSummaryAt', 'basecampUrl'],
     /* ═══ رقمُ الهوية لم يعد لازماً ═══
        ملفٌّ قديم بلا رقم، وموكّلٌ يُفتح ملفُّه قبل أن يُرسل هويته. وكان
        الاستيراد يولّد رقماً ليمرّ القيدَ — ورقمُ هويةٍ مخترَعٌ في ملفّ

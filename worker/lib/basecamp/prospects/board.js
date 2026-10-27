@@ -1,7 +1,13 @@
-// لوحةُ العملاء المحتملين في بيسكامب — إعدادُها وقراءتُها.
+// لوحاتُ العملاء في بيسكامب — إعدادُها وقراءتُها.
 //
-// المشروعُ يُعطى بمعرّفه من الشاشة، ولا يُكتب في الشيفرة. وفي «عدّة» المشروع
-// (`dock`) أداةُ لوحة البطاقات (`kanban_board`)، وأعمدتُها `lists`.
+// مشروعٌ واحد («إدارة العملاء») فيه لوحتا بطاقات: العملاء المحتملون والعملاء
+// الفعليون. والمشروعُ يُعطى بمعرّفه من الشاشة، ولا يُكتب في الشيفرة. وفي «عدّة»
+// المشروع (`dock`) أدواتُ اللوحات (`kanban_board`)، ولكلٍّ أعمدتُها `lists`.
+//
+// ═══ اللوحةُ تُختار بمعرّفها ═══
+//
+// كان الإعدادُ يأخذ أوّلَ لوحةٍ في المشروع — ومع لوحتين قد يربط المحتملين
+// بلوحة العملاء. فصارت كلُّ لوحةٍ تُختار بمعرّفها، ويُقترح الاختيارُ من الاسم.
 //
 // ═══ العمودُ يُطابَق بالاسم ثم يُحفظ بمعرّفه ═══
 //
@@ -12,23 +18,12 @@
 import { BasecampError, getJson, sendJson } from '../api.js';
 import { normalizeArabic } from '../discover.js';
 import { loadSettings } from '../../queries.js';
+import { CONVERTED, CONVERTED_TITLE, ENTITIES, KINDS, LEGACY_STATUSES, entity } from './entities.js';
 
-/** مفتاحُ العمود الأخير في الخريطة — ليس حالةً في المنصة. */
-export const CONVERTED = '__converted';
-export const CONVERTED_TITLE = 'تحوّل إلى عميل';
+export { CONVERTED, CONVERTED_TITLE, LEGACY_STATUSES };
 
 /* مفتاحُ الأعمدة القديمة في الخريطة: `{ معرّفُ العمود: الحالةُ الجديدة }`. */
 const LEGACY = '__legacy';
-
-/* ═══ الأسماءُ القديمة (`migrations/0030`) ═══
-   عمودٌ باسمٍ قديم يُعاد تسميتُه إلى الجديد إن لم يكن للجديد عمود — فتبقى
-   بطاقاتُه مكانها. وإن كان للجديد عمودٌ قائم بقي القديمُ كما هو (لا يُحذف عمودٌ
-   في بيسكامب)، وقُرئت بطاقاتُه بالحالة الجديدة فتُنقل منه إلى عمودها. */
-export const LEGACY_STATUSES = {
-  'مهتم': 'تم التواصل',
-  'غير مناسب': 'اعتذرنا عنه',
-  'تم الرفض': 'رفض العميل',
-};
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -36,14 +31,13 @@ const parse = (raw, fallback) => {
   try { return JSON.parse(raw ?? '') ?? fallback; } catch { return fallback; }
 };
 
-/** اللوحةُ المضبوطة، أو `null` قبل الإعداد. */
-export async function readBoard(env) {
-  const row = await env.DB.prepare(`SELECT * FROM basecamp_prospect_board WHERE id = 1`).first();
-  if (!row) return null;
+function shapeBoard(row) {
   return {
+    kind: row.kind,
     projectId: String(row.project_id),
     projectName: row.project_name ?? '',
     cardTableId: String(row.card_table_id),
+    cardTableName: row.card_table_name ?? '',
     columnMap: parse(row.column_map, {}),
     webhookId: row.webhook_id ?? null,
     webhookSecret: row.webhook_secret,
@@ -53,11 +47,27 @@ export async function readBoard(env) {
   };
 }
 
-/** حالاتُ العميل المحتمل كما في «تكوين النظام». */
-export async function prospectStatuses(env) {
-  const settings = await loadSettings(env);
-  return Array.isArray(settings.prospectStatuses) ? settings.prospectStatuses.filter(Boolean) : [];
+/** لوحةُ نوعٍ مضبوطة، أو `null` قبل إعدادها. */
+export async function readBoard(env, kind = 'prospects') {
+  const row = await env.DB.prepare(`SELECT * FROM basecamp_boards WHERE kind = ?`).bind(kind).first();
+  return row ? shapeBoard(row) : null;
 }
+
+/** اللوحاتُ المضبوطة كلُّها. */
+export async function readBoards(env) {
+  const { results } = await env.DB.prepare(`SELECT * FROM basecamp_boards`).all();
+  return (results ?? []).map(shapeBoard);
+}
+
+/** حالاتُ النوع كما في «تكوين النظام». */
+export async function statusesOf(env, kind) {
+  const settings = await loadSettings(env);
+  const list = settings[entity(kind).statusesKey];
+  return Array.isArray(list) ? list.filter(Boolean) : [];
+}
+
+/** حالاتُ العميل المحتمل — للمنادين القدامى. */
+export const prospectStatuses = (env) => statusesOf(env, 'prospects');
 
 /** حالةٌ ← عمود. */
 export const columnForStatus = (board, status) => board.columnMap[status] ?? null;
@@ -76,19 +86,17 @@ export function statusForColumn(board, columnId) {
 }
 
 /** يُقيَّد الخطأ في صفّ اللوحة — الجدولة والـWebhook لا مستمعَ لخطئهما. */
-export async function recordError(env, error) {
+export async function recordError(env, kind, error) {
   const reason = error ? String(error?.code ?? error?.message ?? error).slice(0, 300) : null;
-  await env.DB.prepare(`UPDATE basecamp_prospect_board SET last_sync_error = ? WHERE id = 1`)
-    .bind(reason)
+  await env.DB.prepare(`UPDATE basecamp_boards SET last_sync_error = ? WHERE kind = ?`)
+    .bind(reason, kind)
     .run()
     .catch(() => {});
 }
 
-export async function markSynced(env) {
-  await env.DB.prepare(
-    `UPDATE basecamp_prospect_board SET last_sync_at = ?, last_sync_error = NULL WHERE id = 1`,
-  )
-    .bind(nowSeconds())
+export async function markSynced(env, kind) {
+  await env.DB.prepare(`UPDATE basecamp_boards SET last_sync_at = ?, last_sync_error = NULL WHERE kind = ?`)
+    .bind(nowSeconds(), kind)
     .run();
 }
 
@@ -100,47 +108,103 @@ function newSecret() {
 
 export const webhookUrl = (origin, secret) => `${origin}/api/basecamp/prospects/webhook/${secret}`;
 
-/**
- * يُعدّ اللوحة: يجد لوحةَ البطاقات، ويطابق الأعمدة أو يُنشئها، ويسجّل الـWebhook.
- *
- * ويُعاد تشغيلُه بأمان: العمودُ الموجود لا يُنشأ ثانيةً، والـWebhook المسجَّل
- * لا يُسجَّل مرّتين، والسرُّ يبقى كما هو.
- */
-export async function setupBoard(env, connection, { projectId, origin, userId }) {
-  const { accountId, token } = connection;
-  const id = String(projectId ?? '').replace(/\D/g, '');
-  if (!id) return { error: 'invalid_project' };
+const projectIdOf = (raw) => {
+  const text = String(raw ?? '');
+  return (text.match(/projects\/(\d+)/)?.[1] ?? text).replace(/\D/g, '');
+};
 
-  let project;
+async function readProject(connection, id) {
   try {
-    project = await getJson(accountId, token, `/projects/${id}.json`);
+    return { project: await getJson(connection.accountId, connection.token, `/projects/${id}.json`) };
   } catch (error) {
     if (error instanceof BasecampError && error.code === 'not_found') return { error: 'project_not_found' };
     throw error;
   }
+}
 
-  const tool = (project.dock ?? []).find((item) => item.name === 'kanban_board' && item.enabled !== false);
-  if (!tool) return { error: 'no_card_table' };
+const cardTablesOf = (project) => (project.dock ?? [])
+  .filter((item) => item.name === 'kanban_board' && item.enabled !== false)
+  .map((item) => ({ id: String(item.id), title: item.title ?? '' }));
+
+/**
+ * لوحاتُ المشروع، ومعها اقتراحٌ لكلِّ نوعٍ من الاسم.
+ *
+ * والاقتراحُ لا يُفرض: الشاشةُ تعرضه مختاراً، ويُغيَّر بيد. ولا يُقترح لنوعين
+ * لوحةٌ واحدة.
+ */
+export async function listCardTables(env, connection, projectId) {
+  const id = projectIdOf(projectId);
+  if (!id) return { error: 'invalid_project' };
+  const read = await readProject(connection, id);
+  if (read.error) return read;
+
+  const tables = cardTablesOf(read.project);
+  const suggested = {};
+  const taken = new Set();
+  for (const kind of KINDS) {
+    const current = await readBoard(env, kind);
+    const kept = current?.projectId === id ? tables.find((t) => t.id === current.cardTableId) : null;
+    const named = tables.find((t) => !taken.has(t.id) && ENTITIES[kind].titleHint.test(normalizeArabic(t.title)));
+    const choice = kept ?? named ?? null;
+    suggested[kind] = choice?.id ?? null;
+    if (choice) taken.add(choice.id);
+  }
+
+  return { data: { projectId: id, projectName: read.project.name ?? '', tables, suggested } };
+}
+
+/**
+ * يُعدّ لوحةَ نوعٍ: يطابق أعمدتَها بالحالات أو يُنشئها، ويسجّل الـWebhook.
+ *
+ * ويُعاد تشغيلُه بأمان: العمودُ الموجود لا يُنشأ ثانيةً، والـWebhook المسجَّل
+ * على المشروع — لهذا النوع أو للآخر — لا يُسجَّل مرّتين، والسرُّ يبقى كما هو.
+ */
+export async function setupBoard(env, connection, { kind = 'prospects', projectId, cardTableId, origin, userId }) {
+  const spec = entity(kind);
+  const { accountId, token } = connection;
+  const id = projectIdOf(projectId);
+  if (!id) return { error: 'invalid_project' };
+
+  const read = await readProject(connection, id);
+  if (read.error) return read;
+  const { project } = read;
+
+  const tables = cardTablesOf(project);
+  if (!tables.length) return { error: 'no_card_table' };
+  /* بلا معرّفٍ صريح: لوحةٌ واحدةٌ في المشروع تُؤخذ، ولوحتان يُختار منهما بالاسم.
+     ولا يُخمَّن بينهما بغير ذلك. */
+  const tool = cardTableId
+    ? tables.find((t) => t.id === String(cardTableId))
+    : tables.length === 1 ? tables[0] : tables.find((t) => spec.titleHint.test(normalizeArabic(t.title)));
+  if (!tool) return { error: cardTableId ? 'card_table_not_found' : 'choose_card_table' };
+
+  /* ولوحتان لنوعين لا تكونان واحدة: كلُّ بطاقةٍ فيها كانت ستُقرأ مرّتين. */
+  for (const other of KINDS.filter((k) => k !== kind)) {
+    const board = await readBoard(env, other);
+    if (board?.projectId === id && board.cardTableId === tool.id) return { error: 'same_card_table' };
+  }
 
   const table = await getJson(accountId, token, `/buckets/${id}/card_tables/${tool.id}.json`);
   const lists = table.lists ?? [];
 
-  const statuses = await prospectStatuses(env);
-  const previous = await readBoard(env);
+  const statuses = await statusesOf(env, kind);
+  const previous = await readBoard(env, kind);
+  const samePlace = previous?.projectId === id && previous?.cardTableId === tool.id;
   const columnMap = {};
   const created = [];
   const renamed = [];
 
-  for (const [key, title] of [...statuses.map((s) => [s, s]), [CONVERTED, CONVERTED_TITLE]]) {
+  for (const [key, title] of [...statuses.map((s) => [s, spec.columnTitle(s)]), ...spec.extraColumns]) {
     /* الخريطةُ السابقة أوّلاً: عمودٌ أُعيدت تسميتُه في بيسكامب يبقى عمودَ حالته. */
-    const kept = previous?.projectId === id ? previous.columnMap[key] : null;
+    const kept = samePlace ? previous.columnMap[key] : null;
     const byId = kept ? lists.find((list) => String(list.id) === String(kept)) : null;
-    const byName = lists.find((list) => normalizeArabic(list.title) === normalizeArabic(title));
+    const byName = lists.find((list) => normalizeArabic(list.title) === normalizeArabic(title))
+      ?? (title !== key ? lists.find((list) => normalizeArabic(list.title) === normalizeArabic(key)) : null);
     let column = byId ?? byName;
 
     /* عمودٌ باسمٍ قديم يصير عمودَ الحالة الجديدة بتسميته. */
     if (!column) {
-      const legacy = lists.find((list) => Object.entries(LEGACY_STATUSES).some(([old, next]) =>
+      const legacy = lists.find((list) => Object.entries(spec.legacyStatuses).some(([old, next]) =>
         next === key && normalizeArabic(list.title) === normalizeArabic(old)));
       if (legacy) {
         column = await sendJson(accountId, token, `/buckets/${id}/card_tables/columns/${legacy.id}.json`, {
@@ -166,19 +230,22 @@ export async function setupBoard(env, connection, { projectId, origin, userId })
   const legacyColumns = {};
   for (const list of lists) {
     if (mapped.has(String(list.id))) continue;
-    const match = Object.entries(LEGACY_STATUSES)
+    const match = Object.entries(spec.legacyStatuses)
       .find(([old, next]) => normalizeArabic(list.title) === normalizeArabic(old) && columnMap[next]);
     if (match) legacyColumns[String(list.id)] = match[1];
   }
   if (Object.keys(legacyColumns).length) columnMap[LEGACY] = legacyColumns;
 
-  const secret = previous?.webhookSecret ?? newSecret();
-  let webhookId = previous?.projectId === id ? previous.webhookId : null;
+  /* ═══ الـWebhook واحدٌ للمشروع ═══
+     يُبلغ عن كلِّ بطاقةٍ وتعليقٍ في المشروع — اللوحتان معاً — والتوجيهُ إلى
+     النوع في `handlers.js`. فإن سُجّل للنوع الآخر في المشروع نفسه أُخذ هو وسرُّه. */
+  const boards = await readBoards(env);
+  const sibling = boards.find((b) => b.kind !== kind && b.projectId === id && b.webhookId);
+  const secret = sibling?.webhookSecret ?? previous?.webhookSecret ?? boards[0]?.webhookSecret ?? newSecret();
+  let webhookId = sibling?.webhookId ?? (previous?.projectId === id ? previous.webhookId : null);
   let webhookError = null;
 
-  /* ═══ الـWebhook ═══
-     يُسجَّل على المشروع وحده، ولنوعين: البطاقة والتعليق. وتعذُّرُه لا يُسقط
-     الإعداد — المزامنةُ كلَّ ساعة تبقى، وسببُه يُقال في الشاشة. */
+  /* وتعذُّرُه لا يُسقط الإعداد — المزامنةُ كلَّ ساعة تبقى، وسببُه يُقال في الشاشة. */
   if (!webhookId) {
     try {
       const hook = await sendJson(accountId, token, `/buckets/${id}/webhooks.json`, {
@@ -191,25 +258,36 @@ export async function setupBoard(env, connection, { projectId, origin, userId })
   }
 
   await env.DB.prepare(
-    `INSERT INTO basecamp_prospect_board
-       (id, project_id, project_name, card_table_id, column_map, webhook_id, webhook_secret,
-        configured_by, configured_at)
-     VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET project_id    = excluded.project_id,
-                                   project_name  = excluded.project_name,
-                                   card_table_id = excluded.card_table_id,
-                                   column_map    = excluded.column_map,
-                                   webhook_id    = excluded.webhook_id,
-                                   webhook_secret = excluded.webhook_secret,
-                                   configured_by = excluded.configured_by,
-                                   configured_at = excluded.configured_at`,
+    `INSERT INTO basecamp_boards
+       (kind, project_id, project_name, card_table_id, card_table_name, column_map, webhook_id,
+        webhook_secret, configured_by, configured_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(kind) DO UPDATE SET project_id      = excluded.project_id,
+                                     project_name    = excluded.project_name,
+                                     card_table_id   = excluded.card_table_id,
+                                     card_table_name = excluded.card_table_name,
+                                     column_map      = excluded.column_map,
+                                     webhook_id      = excluded.webhook_id,
+                                     webhook_secret  = excluded.webhook_secret,
+                                     configured_by   = excluded.configured_by,
+                                     configured_at   = excluded.configured_at`,
   )
-    .bind(id, project.name ?? '', String(tool.id), JSON.stringify(columnMap), webhookId, secret, userId, nowSeconds())
+    .bind(kind, id, project.name ?? '', tool.id, tool.title, JSON.stringify(columnMap), webhookId, secret, userId, nowSeconds())
     .run();
+
+  /* والسرُّ واحدٌ في الصفوف كلِّها، فأيُّها يحرس المسار. */
+  await env.DB.prepare(`UPDATE basecamp_boards SET webhook_secret = ? WHERE project_id = ?`).bind(secret, id).run();
+  if (webhookId) {
+    await env.DB.prepare(`UPDATE basecamp_boards SET webhook_id = ? WHERE project_id = ? AND webhook_id IS NULL`)
+      .bind(webhookId, id)
+      .run();
+  }
 
   return {
     data: {
+      kind,
       projectName: project.name ?? '',
+      cardTableName: tool.title,
       columnsCreated: created,
       columnsRenamed: renamed,
       webhook: Boolean(webhookId),

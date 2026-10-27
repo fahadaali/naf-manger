@@ -1,4 +1,4 @@
-// العميلُ المحتمل وبطاقتُه — دمجٌ في الاتّجاهين.
+// العميلُ وبطاقتُه — دمجٌ في الاتّجاهين، للمحتملين وللفعليين.
 //
 // ═══ دالّةٌ واحدة لا اثنتان ═══
 //
@@ -6,6 +6,9 @@
 // وحدها: تقرأ الطرفين والصورةَ المحفوظة، وتكتب في كلِّ طرفٍ ما تبدّل في
 // الآخر. فحفظٌ في المنصة لا يدهس ما كُتب في البطاقة قبل أن يصل، ونداءُ
 // Webhook يعود بما كتبناه نحن فلا يجد ما يكتبه — والحلقةُ تنتهي من نفسها.
+//
+// والنوعُ (`entities.js`) معاملٌ في كل دالّة: جدولُه وعمودُ حالته وحقولُ وصفه
+// وجدولُ تعليقاته. والدمجُ والاستخراجُ واحدٌ للنوعين.
 //
 // ═══ والاختلافُ لا يُكتب ═══
 //
@@ -20,12 +23,14 @@ import {
   CONVERTED,
   columnForStatus,
   markSynced,
-  prospectStatuses,
   readBoard,
+  readBoards,
   recordError,
+  statusesOf,
   statusForColumn,
 } from './board.js';
-import { canonical, CARD_FIELDS, FIELD_LABELS, parseCard, renderCard, SYNCED_FIELDS } from './card-format.js';
+import { canonical, FIELD_LABELS, parseCard, renderCard } from './card-format.js';
+import { KINDS, entity, syncedFields } from './entities.js';
 import { extractProspect } from './extract.js';
 import { logActivity } from '../../activity.js';
 
@@ -40,24 +45,8 @@ const escapeHtml = (text) => String(text)
   .replace(/</g, '&lt;')
   .replace(/>/g, '&gt;');
 
-/** عمودُ كلِّ حقلٍ في `prospects`. */
-const COLUMN = {
-  fullName: 'full_name',
-  prospectStatus: 'prospect_status',
-  phone: 'phone',
-  email: 'email',
-  clientType: 'client_type',
-  idType: 'id_type',
-  idNumber: 'id_number',
-  commercialRegister: 'commercial_register',
-  source: 'source',
-  expectedValue: 'expected_value',
-  followUpDate: 'follow_up_date',
-  notes: 'notes',
-};
-
 /* أعمدةٌ لا تقبل الفراغ — قيمةٌ فارغةٌ من البطاقة لا تمحو اسماً ولا حالة. */
-const NEVER_EMPTY = new Set(['fullName', 'prospectStatus', 'clientType']);
+const NEVER_EMPTY = new Set(['fullName', 'prospectStatus', 'status', 'clientType']);
 /* وأعمدةٌ `NOT NULL DEFAULT ''` — الفراغُ فيها نصٌّ فارغ لا `NULL`. */
 const EMPTY_TEXT = new Set(['phone', 'email', 'notes']);
 
@@ -70,44 +59,51 @@ function columnValue(field, value) {
 
 /* ═══ قفلُ الإنشاء ═══
    المنصةُ تُنشئ البطاقة ثم تحفظ رقمَها. وبين الاثنين قد يصل Webhook
-   «أُنشئت بطاقة» — فلا يجد عميلاً يحمل الرقم، فيُنشئ عميلاً ثانياً. فيُعلَّم
+   «أُنشئت بطاقة» — فلا يجد صفّاً يحمل الرقم، فيُنشئ صفّاً ثانياً. فيُعلَّم
    الاسمُ قبل الإنشاء ويُترك الـWebhook له. */
-const creatingKey = (title) => `bcp:creating:${normalizeArabic(title)}`;
+const creatingKey = (kind, title) => `bcp:creating:${kind}:${normalizeArabic(title)}`;
+
+const cardPath = (board, cardId) => `/buckets/${board.projectId}/card_tables/cards/${cardId}.json`;
+const commentsPath = (board, cardId) => `/buckets/${board.projectId}/recordings/${cardId}/comments.json`;
 
 async function connectionOrNull(env) {
   const connection = await activeConnection(env);
   return connection.error ? null : connection;
 }
 
+async function readRow(env, spec, where, value) {
+  return env.DB.prepare(`SELECT * FROM ${spec.table} WHERE ${where} = ?`).bind(value).first();
+}
+
 /** قيمُ البطاقة موحَّدةً: الاسمُ من العنوان، والحالةُ من العمود، والباقي من الوصف. */
-function cardValues(board, card) {
+function cardValues(spec, board, card) {
   const parsed = parseCard(card.content ?? '');
   const values = { ...parsed.values };
   if (card.title?.trim()) values.fullName = card.title.trim();
 
   /* عمودٌ لا يقابل حالة (صندوقُ الوارد، أو التحويل) لا يقول شيئاً عن الحالة. */
   const status = statusForColumn(board, card.parent?.id);
-  if (status && status !== CONVERTED) values.prospectStatus = status;
+  if (status && status !== CONVERTED) values[spec.statusField] = status;
 
-  /* و`due_on` موعدُ المتابعة إن لم يُكتب في الوصف. */
-  if (!values.followUpDate && card.due_on) values.followUpDate = String(card.due_on).slice(0, 10);
+  /* و`due_on` موعدُ المتابعة إن لم يُكتب في الوصف — للمحتمل وحده. */
+  if (spec.columns.followUpDate && !values.followUpDate && card.due_on) {
+    values.followUpDate = String(card.due_on).slice(0, 10);
+  }
 
   return { values, structured: parsed.structured, text: parsed.text };
 }
 
-/** يفتح اختلافاً — مرّةً لكلّ (عميلٍ + حقلٍ + قيمتين). */
-async function openConflict(env, board, prospectId, field, platformValue, basecampValue) {
+/** يفتح اختلافاً — مرّةً لكلّ (صفٍّ + حقل)، ويُحدّث قيمتيه إن عاد. */
+async function openConflict(env, spec, board, rowId, field, platformValue, basecampValue) {
+  const name = `${spec.conflictPrefix}${field}`;
   const open = await env.DB.prepare(
-    `SELECT id FROM basecamp_conflicts
-     WHERE prospect_id = ? AND field = ? AND resolved_at IS NULL`,
+    `SELECT id FROM basecamp_conflicts WHERE ${spec.conflictKey} = ? AND field = ? AND resolved_at IS NULL`,
   )
-    .bind(prospectId, `prospect.${field}`)
+    .bind(rowId, name)
     .first();
 
   if (open) {
-    await env.DB.prepare(
-      `UPDATE basecamp_conflicts SET platform_value = ?, basecamp_value = ? WHERE id = ?`,
-    )
+    await env.DB.prepare(`UPDATE basecamp_conflicts SET platform_value = ?, basecamp_value = ? WHERE id = ?`)
       .bind(platformValue, basecampValue, open.id)
       .run();
     return;
@@ -115,10 +111,10 @@ async function openConflict(env, board, prospectId, field, platformValue, baseca
 
   await env.DB.prepare(
     `INSERT INTO basecamp_conflicts
-       (id, project_id, case_id, prospect_id, field, platform_value, basecamp_value, detected_at)
+       (id, project_id, case_id, ${spec.conflictKey}, field, platform_value, basecamp_value, detected_at)
      VALUES (?, ?, NULL, ?, ?, ?, ?, ?)`,
   )
-    .bind(crypto.randomUUID(), board.projectId, prospectId, `prospect.${field}`, platformValue, basecampValue, nowSeconds())
+    .bind(crypto.randomUUID(), board.projectId, rowId, name, platformValue, basecampValue, nowSeconds())
     .run();
 }
 
@@ -137,21 +133,23 @@ export function mergeField(platform, remote, base) {
 }
 
 /**
- * يدمج عميلاً محتملاً ببطاقته، ويكتب في كلِّ طرفٍ ما تبدّل في الآخر.
+ * يدمج صفّاً ببطاقته، ويكتب في كلِّ طرفٍ ما تبدّل في الآخر.
  *
  * `card` البطاقةُ كما قُرئت للتوّ. ويردّ ما وقع: `{ platform, basecamp, conflicts }`.
  */
-export async function reconcile(env, connection, board, prospect, card) {
-  const platform = canonical(prospect);
-  const { values: remote } = cardValues(board, card);
-  const base = parse(prospect.bc_synced_values, null);
+export async function reconcile(env, connection, board, row, card) {
+  const spec = entity(board.kind);
+  const fields = syncedFields(spec);
+  const platform = canonical(row);
+  const { values: remote } = cardValues(spec, board, card);
+  const base = parse(row.bc_synced_values, null);
 
   const snapshot = {};
   const platformWrites = {};
   const desired = {};
   let conflicts = 0;
 
-  for (const field of SYNCED_FIELDS) {
+  for (const field of fields) {
     const p = platform[field] ?? '';
     const r = remote[field];
 
@@ -170,7 +168,7 @@ export async function reconcile(env, connection, board, prospect, card) {
 
     if (merged.conflict) {
       conflicts++;
-      await openConflict(env, board, prospect.id, field, p, r ?? '');
+      await openConflict(env, spec, board, row.id, field, p, r ?? '');
       desired[field] = r ?? b;
       snapshot[field] = b;
       continue;
@@ -189,8 +187,8 @@ export async function reconcile(env, connection, board, prospect, card) {
   }
 
   /* ═══ الكتابةُ في المنصة ═══ */
-  const written = await writeProspect(env, prospect.id, platformWrites);
-  /* حقلٌ رفضته القاعدة (هويةٌ لعميلٍ آخر) لا يُحفظ في الصورة — فيُعاد السؤال. */
+  const written = await writeRow(env, spec, row.id, platformWrites);
+  /* حقلٌ رفضته القاعدة (هويةٌ لصفٍّ آخر) لا يُحفظ في الصورة — فيُعاد السؤال. */
   for (const field of written.rejected) {
     snapshot[field] = base?.[field] ?? '';
     desired[field] = platform[field] ?? '';
@@ -199,22 +197,22 @@ export async function reconcile(env, connection, board, prospect, card) {
   /* ═══ الكتابةُ في البطاقة ═══
      يُقارَن الوصفُ المطلوب بالوصف القائم بالقيم لا بالنصّ: بيسكامب تُعيد
      صياغةَ HTML بعد الحفظ، ومقارنةُ النصّ تجعل كلَّ دمجٍ يكتب. */
-  const remoteNow = cardValues(board, card);
+  const remoteNow = cardValues(spec, board, card);
   const cardDiffers = !remoteNow.structured
     || desired.fullName !== (remoteNow.values.fullName ?? '')
-    || [...CARD_FIELDS.map(([field]) => field), 'notes'].some((field) => (desired[field] ?? '') !== (remoteNow.values[field] ?? ''));
+    || [...spec.cardFields.map(([field]) => field), 'notes']
+      .some((field) => (desired[field] ?? '') !== (remoteNow.values[field] ?? ''));
 
   let basecampWrites = 0;
   if (cardDiffers) {
-    const rendered = renderCard(desired);
-    await sendJson(connection.accountId, connection.token, `/buckets/${board.projectId}/card_tables/cards/${card.id}.json`, {
+    await sendJson(connection.accountId, connection.token, cardPath(board, card.id), {
       method: 'PUT',
-      body: rendered,
+      body: renderCard(desired, spec.cardFields, spec.defaultName),
     });
     basecampWrites++;
   }
 
-  const targetColumn = columnForStatus(board, desired.prospectStatus);
+  const targetColumn = columnForStatus(board, desired[spec.statusField]);
   const currentStatus = statusForColumn(board, card.parent?.id);
   /* البطاقةُ في عمود التحويل لا تُعاد منه. */
   if (targetColumn && String(card.parent?.id) !== String(targetColumn) && currentStatus !== CONVERTED) {
@@ -225,7 +223,7 @@ export async function reconcile(env, connection, board, prospect, card) {
   }
 
   await env.DB.prepare(
-    `UPDATE prospects
+    `UPDATE ${spec.table}
      SET bc_card_id = ?, bc_column_id = ?, bc_app_url = ?, bc_synced_values = ?, bc_updated_at = ?
      WHERE id = ?`,
   )
@@ -235,30 +233,30 @@ export async function reconcile(env, connection, board, prospect, card) {
       card.app_url ?? null,
       JSON.stringify(snapshot),
       card.updated_at ?? null,
-      prospect.id,
+      row.id,
     )
     .run();
 
   return { platform: Object.keys(written.applied).length, basecamp: basecampWrites, conflicts };
 }
 
-/** يكتب حقولاً في صفّ العميل المحتمل — حقلاً حقلاً، فرفضُ واحدٍ لا يُسقط الباقي. */
-async function writeProspect(env, id, writes) {
+/** يكتب حقولاً في الصفّ — حقلاً حقلاً، فرفضُ واحدٍ لا يُسقط الباقي. */
+async function writeRow(env, spec, id, writes) {
   const applied = {};
   const rejected = [];
   const now = nowSeconds();
 
   for (const [field, value] of Object.entries(writes)) {
-    const column = COLUMN[field];
+    const column = spec.columns[field];
     if (!column) continue;
     try {
-      await env.DB.prepare(`UPDATE prospects SET ${column} = ?, updated_at = ? WHERE id = ?`)
+      await env.DB.prepare(`UPDATE ${spec.table} SET ${column} = ?, updated_at = ? WHERE id = ?`)
         .bind(columnValue(field, value), now, id)
         .run();
       applied[field] = value;
     } catch (error) {
-      /* `id_number` فريد — هويةٌ قُرئت من البطاقة لعميلٍ محتملٍ آخر لا تُكتب. */
-      console.warn('Basecamp/prospects: رُفض الحقل', field, '—', error?.message ?? error);
+      /* `id_number` فريد — هويةٌ قُرئت من البطاقة لصفٍّ آخر لا تُكتب. */
+      console.warn(`Basecamp/${spec.kind}: رُفض الحقل`, field, '—', error?.message ?? error);
       rejected.push(field);
     }
   }
@@ -266,8 +264,6 @@ async function writeProspect(env, id, writes) {
 }
 
 /* ═══ التعليقات ═══ */
-
-const commentsPath = (board, cardId) => `/buckets/${board.projectId}/recordings/${cardId}/comments.json`;
 
 function renderComment(comment) {
   const lines = String(comment.body).split('\n').map((line) => line.trim()).filter(Boolean);
@@ -281,13 +277,12 @@ function renderComment(comment) {
  * يزامن تعليقاتِ بطاقة: ما في بيسكامب ولم يُنسخ يُنسخ، وما كُتب في المنصة
  * ولم يُرسل يُرسل. ويردّ نصَّ التعليقات الجديدة من بيسكامب لمن يستخرج منها.
  */
-export async function syncComments(env, connection, board, prospectId, cardId) {
+export async function syncComments(env, connection, board, rowId, cardId) {
+  const spec = entity(board.kind);
   const { items } = await listAll(connection.accountId, connection.token, commentsPath(board, cardId));
 
-  const { results } = await env.DB.prepare(
-    `SELECT * FROM prospect_comments WHERE prospect_id = ?`,
-  )
-    .bind(prospectId)
+  const { results } = await env.DB.prepare(`SELECT * FROM ${spec.commentsTable} WHERE ${spec.commentKey} = ?`)
+    .bind(rowId)
     .all();
   const local = results ?? [];
   const byRemote = new Map(local.filter((c) => c.bc_comment_id).map((c) => [String(c.bc_comment_id), c]));
@@ -301,7 +296,7 @@ export async function syncComments(env, connection, board, prospectId, cardId) {
     if (known) {
       /* تعليقٌ عُدّل في بيسكامب — وما كتبته المنصة لا يُقرأ ثانيةً من هناك. */
       if (known.source === 'basecamp' && known.body !== body) {
-        await env.DB.prepare(`UPDATE prospect_comments SET body = ?, updated_at = ? WHERE id = ?`)
+        await env.DB.prepare(`UPDATE ${spec.commentsTable} SET body = ?, updated_at = ? WHERE id = ?`)
           .bind(body, nowSeconds(), known.id)
           .run();
       }
@@ -312,19 +307,19 @@ export async function syncComments(env, connection, board, prospectId, cardId) {
     const pending = local.find((c) => !c.bc_comment_id && c.source === 'platform'
       && body.includes(String(c.body).split('\n')[0].trim()));
     if (pending) {
-      await env.DB.prepare(`UPDATE prospect_comments SET bc_comment_id = ? WHERE id = ?`).bind(id, pending.id).run();
+      await env.DB.prepare(`UPDATE ${spec.commentsTable} SET bc_comment_id = ? WHERE id = ?`).bind(id, pending.id).run();
       pending.bc_comment_id = id;
       continue;
     }
 
     const at = Math.floor(Date.parse(remote.created_at ?? '') / 1000) || nowSeconds();
     await env.DB.prepare(
-      `INSERT INTO prospect_comments
-         (id, prospect_id, body, author_name, author_user_id, source, bc_comment_id, created_at, updated_at)
+      `INSERT INTO ${spec.commentsTable}
+         (id, ${spec.commentKey}, body, author_name, author_user_id, source, bc_comment_id, created_at, updated_at)
        VALUES (?, ?, ?, ?, NULL, 'basecamp', ?, ?, ?)
        ON CONFLICT(bc_comment_id) DO NOTHING`,
     )
-      .bind(crypto.randomUUID(), prospectId, body, remote.creator?.name ?? '', id, at, at)
+      .bind(crypto.randomUUID(), rowId, body, remote.creator?.name ?? '', id, at, at)
       .run();
     fresh.push(body);
   }
@@ -338,11 +333,12 @@ export async function syncComments(env, connection, board, prospectId, cardId) {
 }
 
 async function sendComment(env, connection, board, cardId, comment) {
+  const spec = entity(board.kind);
   const created = await sendJson(connection.accountId, connection.token, commentsPath(board, cardId), {
     body: { content: renderComment(comment) },
   });
   if (created?.id) {
-    await env.DB.prepare(`UPDATE prospect_comments SET bc_comment_id = ? WHERE id = ? AND bc_comment_id IS NULL`)
+    await env.DB.prepare(`UPDATE ${spec.commentsTable} SET bc_comment_id = ? WHERE id = ? AND bc_comment_id IS NULL`)
       .bind(String(created.id), comment.id)
       .run()
       .catch(() => {});
@@ -356,25 +352,25 @@ async function sendComment(env, connection, board, cardId, comment) {
  *
  * والفارغُ وحده: ما في المنصة لا يُدهس باستخراجٍ آليّ أبداً.
  */
-async function fillFromText(env, prospect, text) {
-  const platform = canonical(prospect);
-  const missing = ['phone', 'email', 'idNumber', 'commercialRegister', 'source', 'expectedValue', 'followUpDate']
-    .filter((field) => !platform[field]);
+async function fillFromText(env, spec, row, text) {
+  const platform = canonical(row);
+  const missing = spec.cardFields.map(([field]) => field)
+    .filter((field) => field !== 'clientType' && field !== 'idType' && !platform[field]);
   /* ونوعُ العميل له افتراضٌ في القاعدة (`individual`) — فلا يُعرف أنه «فارغ».
      يُسأل عنه ما دام لم يُكتب في البطاقة صراحةً. */
-  if (!prospect.bc_synced_values) missing.push('clientType');
+  if (!row.bc_synced_values) missing.push('clientType');
   if (!missing.length) return {};
 
   const found = await extractProspect(env, { text, missing });
-  if (Object.keys(found).length) await writeProspect(env, prospect.id, found);
+  if (Object.keys(found).length) await writeRow(env, spec, row.id, found);
   return found;
 }
 
-async function readProspect(env, where, value) {
-  return env.DB.prepare(`SELECT * FROM prospects WHERE ${where} = ?`).bind(value).first();
-}
-
 /* ═══ من بيسكامب ═══ */
+
+const isDeleted = async (env, cardId) => Boolean(await env.DB.prepare(
+  `SELECT 1 AS x FROM basecamp_prospect_tombstones WHERE card_id = ?`,
+).bind(String(cardId)).first());
 
 /**
  * بطاقةٌ تبدّلت في بيسكامب — تُقرأ وتُدمج.
@@ -383,43 +379,44 @@ async function readProspect(env, where, value) {
  * والحالُ يُعرف من مصدره.
  */
 export async function applyCard(env, connection, board, cardId, { card: given } = {}) {
-  const card = given ?? await getJson(connection.accountId, connection.token, `/buckets/${board.projectId}/card_tables/cards/${cardId}.json`);
+  const spec = entity(board.kind);
+  const card = given ?? await getJson(connection.accountId, connection.token, cardPath(board, cardId));
   if (String(card.bucket?.id ?? board.projectId) !== String(board.projectId)) return { skipped: 'other_project' };
   if (card.status && card.status !== 'active') return { skipped: 'inactive' };
 
-  let prospect = await readProspect(env, 'bc_card_id', String(card.id));
+  let row = await readRow(env, spec, 'bc_card_id', String(card.id));
 
-  if (!prospect) {
-    /* بطاقةُ عميلٍ حُوِّل — لا تُعاد عميلاً محتملاً. */
-    const converted = await env.DB.prepare(`SELECT id FROM clients WHERE bc_card_id = ?`).bind(String(card.id)).first();
-    if (converted) return { skipped: 'converted' };
-    /* وبطاقةُ من حُذف في المنصة — لا يُعاد. */
-    const deleted = await env.DB.prepare(`SELECT 1 AS x FROM basecamp_prospect_tombstones WHERE card_id = ?`)
-      .bind(String(card.id)).first();
-    if (deleted) return { skipped: 'deleted' };
+  if (!row) {
+    /* بطاقةُ من حُذف في المنصة، أو محتملٍ صار عميلاً — لا يُعاد. */
+    if (await isDeleted(env, card.id)) return { skipped: 'deleted' };
+    /* وبطاقةٌ مربوطةٌ بالنوع الآخر — لوحةٌ رُبطت خطأً ثم صُحّحت — لا تُستورد مرّتين. */
+    for (const other of KINDS.filter((kind) => kind !== spec.kind)) {
+      if (await readRow(env, entity(other), 'bc_card_id', String(card.id))) return { skipped: 'linked_elsewhere' };
+    }
     /* والمنصةُ تُنشئ هذه البطاقة الآن — ويُترك ربطُها لها. */
-    if (await env.AUTH_KV?.get(creatingKey(card.title ?? ''))) return { skipped: 'creating' };
+    if (await env.AUTH_KV?.get(creatingKey(spec.kind, card.title ?? ''))) return { skipped: 'creating' };
     /* وعمودُ التحويل ليس بابَ دخول. */
     if (statusForColumn(board, card.parent?.id) === CONVERTED) return { skipped: 'converted_column' };
 
-    prospect = await createFromCard(env, connection, board, card);
+    row = await createFromCard(env, connection, board, card);
   }
 
-  const fresh = await syncComments(env, connection, board, prospect.id, card.id);
+  const fresh = await syncComments(env, connection, board, row.id, card.id);
 
   /* تعليقٌ جديدٌ في بيسكامب قد يحمل ما ينقص الملفّ: جوّالاً أو بريداً. */
   if (fresh.length) {
-    await fillFromText(env, prospect, fresh.join('\n\n'));
-    prospect = await readProspect(env, 'id', prospect.id);
+    await fillFromText(env, spec, row, fresh.join('\n\n'));
+    row = await readRow(env, spec, 'id', row.id);
   }
 
-  return reconcile(env, connection, board, prospect, card);
+  return reconcile(env, connection, board, row, card);
 }
 
-/** عميلٌ محتملٌ جديد من بطاقةٍ أُنشئت في بيسكامب. */
+/** صفٌّ جديد من بطاقةٍ أُنشئت في بيسكامب. */
 async function createFromCard(env, connection, board, card) {
-  const { values, structured, text } = cardValues(board, card);
-  const statuses = await prospectStatuses(env);
+  const spec = entity(board.kind);
+  const { values, structured, text } = cardValues(spec, board, card);
+  const statuses = await statusesOf(env, spec.kind);
   const id = crypto.randomUUID();
   const now = nowSeconds();
 
@@ -428,158 +425,205 @@ async function createFromCard(env, connection, board, card) {
      البطاقة بالصيغة. ثم يُسأل الطرازُ عن الحقول في النصّ وتعليقاته. */
   if (!structured && text && !values.notes) values.notes = text;
 
-  const row = {
+  const data = {
     id,
-    full_name: values.fullName || 'عميل محتمل',
-    prospect_status: values.prospectStatus || statuses[0] || 'جديد',
-    phone: values.phone ?? '',
-    email: values.email ?? '',
-    client_type: values.clientType || 'individual',
-    id_type: values.idType ?? null,
-    id_number: values.idNumber ?? null,
-    commercial_register: values.commercialRegister ?? null,
-    source: values.source ?? null,
-    expected_value: values.expectedValue ? Number(values.expectedValue) : null,
-    follow_up_date: values.followUpDate ?? null,
-    notes: values.notes ?? '',
+    full_name: values.fullName || spec.defaultName,
+    [spec.columns[spec.statusField]]: values[spec.statusField] || statuses[0] || spec.fallbackStatus,
+    phone: '',
+    email: '',
+    notes: '',
+    client_type: 'individual',
     bc_card_id: String(card.id),
     bc_column_id: String(card.parent?.id ?? ''),
     bc_app_url: card.app_url ?? null,
     created_at: now,
     updated_at: now,
   };
+  for (const [field] of spec.cardFields) {
+    if (values[field]) data[spec.columns[field]] = columnValue(field, values[field]);
+  }
+  if (values.notes) data.notes = values.notes;
 
-  const insert = async (data) => {
-    const columns = Object.keys(data).filter((column) => data[column] !== null);
+  const insert = async (row) => {
+    const columns = Object.keys(row).filter((column) => row[column] !== null && row[column] !== undefined);
     await env.DB.prepare(
-      `INSERT INTO prospects (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+      `INSERT INTO ${spec.table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
     )
-      .bind(...columns.map((column) => data[column]))
+      .bind(...columns.map((column) => row[column]))
       .run();
   };
 
   try {
-    await insert(row);
+    await insert(data);
   } catch (error) {
-    /* هويةٌ مكتوبةٌ في البطاقة لعميلٍ محتملٍ آخر: يُنشأ بدونها. */
+    /* هويةٌ مكتوبةٌ في البطاقة لصفٍّ آخر: يُنشأ بدونها. */
     if (!String(error?.message ?? '').includes('id_number')) throw error;
-    await insert({ ...row, id_number: null });
+    await insert({ ...data, id_number: null });
   }
 
-  let prospect = await readProspect(env, 'id', id);
+  let row = await readRow(env, spec, 'id', id);
 
   /* الحقولُ تُستخرج من النصّ الحرّ وتعليقاته — والقاعدةُ سبقت، فما قرأته لا يُسأل عنه. */
   const { items } = await listAll(connection.accountId, connection.token, commentsPath(board, card.id)).catch(() => ({ items: [] }));
   const comments = items.map((c) => htmlToText(c.content ?? '')).join('\n\n');
   const textForAi = [structured ? '' : text, comments].filter(Boolean).join('\n\n');
   if (textForAi) {
-    await fillFromText(env, { ...prospect, bc_synced_values: structured ? '{}' : null }, `${card.title ?? ''}\n${textForAi}`);
-    prospect = await readProspect(env, 'id', id);
+    await fillFromText(env, spec, { ...row, bc_synced_values: structured ? '{}' : null }, `${card.title ?? ''}\n${textForAi}`);
+    row = await readRow(env, spec, 'id', id);
   }
 
   await logActivity(env, { id: 'basecamp', name: 'بيسكامب' }, {
-    resource: 'prospects',
+    resource: spec.resource,
     action: 'create',
-    row: { id, fullName: prospect.full_name },
+    row: { id, fullName: row.full_name },
   }).catch(() => {});
 
-  return prospect;
+  return row;
 }
 
 /* ═══ من المنصة ═══ */
 
 /**
- * عميلٌ محتملٌ حُفظ في المنصة — يُنشأ له بطاقة أو تُدمج بطاقتُه.
+ * صفٌّ حُفظ في المنصة — يُنشأ له بطاقة أو تُدمج بطاقتُه.
  *
  * لا ترمي: تُنادى بعد الردّ (`waitUntil`) ولا مستمعَ لخطئها. فيُقيَّد السبب
  * في صفّ اللوحة، وتُعيد المزامنةُ الساعيةُ المحاولة.
  */
-export async function pushProspect(env, prospectId) {
+export async function pushRecord(env, kind, rowId) {
   try {
-    const board = await readBoard(env);
+    const board = await readBoard(env, kind);
     if (!board) return null;
     const connection = await connectionOrNull(env);
     if (!connection) return null;
 
-    const prospect = await readProspect(env, 'id', prospectId);
-    if (!prospect) return null;
-    return await pushRow(env, connection, board, prospect);
+    const row = await readRow(env, entity(kind), 'id', rowId);
+    if (!row) return null;
+    return await pushRow(env, connection, board, row);
   } catch (error) {
-    console.error('Basecamp/prospects: تعذّر الإرسال —', error?.code ?? error?.message ?? error);
-    await recordError(env, error);
+    console.error(`Basecamp/${kind}: تعذّر الإرسال —`, error?.code ?? error?.message ?? error);
+    await recordError(env, kind, error);
     return null;
   }
 }
 
-async function pushRow(env, connection, board, prospect) {
-  if (prospect.bc_card_id) {
-    const card = await getJson(connection.accountId, connection.token,
-      `/buckets/${board.projectId}/card_tables/cards/${prospect.bc_card_id}.json`);
-    /* بطاقةٌ حُذفت أو أُرشفت في بيسكامب: لا تُكتب، ولا يُحذف العميل. */
+export const pushProspect = (env, id) => pushRecord(env, 'prospects', id);
+export const pushClient = (env, id) => pushRecord(env, 'clients', id);
+
+async function pushRow(env, connection, board, row) {
+  const spec = entity(board.kind);
+  if (row.bc_card_id) {
+    const card = await getJson(connection.accountId, connection.token, cardPath(board, row.bc_card_id));
+    /* بطاقةٌ حُذفت أو أُرشفت في بيسكامب: لا تُكتب، ولا يُحذف الصفّ. */
     if (card.status && card.status !== 'active') return { skipped: 'inactive' };
-    await syncComments(env, connection, board, prospect.id, card.id);
-    return reconcile(env, connection, board, prospect, card);
+    await syncComments(env, connection, board, row.id, card.id);
+    return reconcile(env, connection, board, row, card);
   }
 
   /* المؤرشَفُ لا تُنشأ له بطاقة. */
-  if (prospect.archived_at) return null;
+  if (row.archived_at) return null;
 
-  const values = canonical(prospect);
-  const column = columnForStatus(board, values.prospectStatus) ?? Object.values(board.columnMap)[0];
+  const values = canonical(row);
+  const firstColumn = Object.entries(board.columnMap).find(([key]) => !key.startsWith('__'))?.[1];
+  const column = columnForStatus(board, values[spec.statusField]) ?? firstColumn;
   if (!column) return null;
 
-  const key = creatingKey(values.fullName || 'عميل محتمل');
+  const key = creatingKey(spec.kind, values.fullName || spec.defaultName);
   await env.AUTH_KV?.put(key, '1', { expirationTtl: 120 });
   try {
     const card = await sendJson(connection.accountId, connection.token,
-      `/buckets/${board.projectId}/card_tables/lists/${column}/cards.json`, { body: renderCard(values) });
+      `/buckets/${board.projectId}/card_tables/lists/${column}/cards.json`,
+      { body: renderCard(values, spec.cardFields, spec.defaultName) });
 
     await env.DB.prepare(
-      `UPDATE prospects
+      `UPDATE ${spec.table}
        SET bc_card_id = ?, bc_column_id = ?, bc_app_url = ?, bc_synced_values = ?, bc_updated_at = ?
        WHERE id = ?`,
     )
-      .bind(String(card.id), String(column), card.app_url ?? null, JSON.stringify(values), card.updated_at ?? null, prospect.id)
+      .bind(String(card.id), String(column), card.app_url ?? null, JSON.stringify(values), card.updated_at ?? null, row.id)
       .run();
 
-    await syncComments(env, connection, board, prospect.id, card.id);
-    return { created: true };
+    await syncComments(env, connection, board, row.id, card.id);
+    return { created: true, card };
   } finally {
     await env.AUTH_KV?.delete(key);
   }
 }
 
-/** تعليقٌ كُتب في المنصة — يُرسل إلى بطاقته إن كانت لها بطاقة. */
-export async function pushComment(env, commentId) {
+/** تعليقٌ كُتب في المنصة — يُرسل إلى بطاقة صاحبه إن كانت له بطاقة. */
+export async function pushComment(env, kind, commentId) {
+  const spec = entity(kind);
   try {
-    const board = await readBoard(env);
+    const board = await readBoard(env, kind);
     if (!board) return;
     const connection = await connectionOrNull(env);
     if (!connection) return;
 
     const comment = await env.DB.prepare(
-      `SELECT c.*, p.bc_card_id FROM prospect_comments c JOIN prospects p ON p.id = c.prospect_id WHERE c.id = ?`,
+      `SELECT c.*, p.bc_card_id FROM ${spec.commentsTable} c
+       JOIN ${spec.table} p ON p.id = c.${spec.commentKey} WHERE c.id = ?`,
     )
       .bind(commentId)
       .first();
     if (!comment || comment.bc_comment_id) return;
-    /* بلا بطاقةٍ بعد: إرسالُ العميل نفسِه يُنشئها ويرسل تعليقاتِه معها. */
+    /* بلا بطاقةٍ بعد: إرسالُ الصفّ نفسِه يُنشئها ويرسل تعليقاتِه معها. */
     if (!comment.bc_card_id) {
-      await pushProspect(env, comment.prospect_id);
+      await pushRecord(env, kind, comment[spec.commentKey]);
       return;
     }
     await sendComment(env, connection, board, comment.bc_card_id, comment);
   } catch (error) {
-    console.error('Basecamp/prospects: تعذّر إرسال التعليق —', error?.code ?? error?.message ?? error);
-    await recordError(env, error);
+    console.error(`Basecamp/${kind}: تعذّر إرسال التعليق —`, error?.code ?? error?.message ?? error);
+    await recordError(env, kind, error);
   }
 }
 
-/** عميلٌ محتملٌ صار عميلاً — بطاقتُه إلى عمود التحويل، وتعليقٌ يقول ذلك. */
-export async function pushConversion(env, { cardId, clientName }) {
-  if (!cardId) return;
+/* ═══ التحويل ═══ */
+
+/**
+ * ما يُحفظ قبل حذف المحتمل: تعليقاتُه تنتقل إلى العميل، وبطاقتُه تُعلَّم فلا
+ * تُعيدها المزامنةُ عميلاً محتملاً. ويُنادى بعد إنشاء العميل وقبل ردّ التحويل.
+ */
+export async function carryConversion(env, { prospectCardId, comments, clientId }) {
+  for (const comment of comments ?? []) {
+    await env.DB.prepare(
+      `INSERT INTO client_comments
+         (id, client_id, body, author_name, author_user_id, source, bc_comment_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(bc_comment_id) DO NOTHING`,
+    )
+      /* ورقمُ التعليق في بيسكامب يبقى: هو تعليقٌ على بطاقة المحتمل، ومعه
+         يُعرف أنه أُرسل — فلا يُعاد نشرُه على بطاقة العميل. */
+      .bind(crypto.randomUUID(), clientId, comment.body, comment.author_name ?? '', comment.author_user_id ?? null,
+        comment.source, comment.bc_comment_id ?? null, comment.created_at, comment.updated_at ?? comment.created_at)
+      .run();
+  }
+  if (prospectCardId) {
+    await env.DB.prepare(
+      `INSERT INTO basecamp_prospect_tombstones (card_id, deleted_at) VALUES (?, ?) ON CONFLICT(card_id) DO NOTHING`,
+    )
+      .bind(String(prospectCardId), nowSeconds())
+      .run();
+  }
+}
+
+/**
+ * محتملٌ صار عميلاً — بطاقةٌ له في لوحة العملاء، وبطاقتُه القديمة إلى عمود
+ * التحويل وعليها تعليقٌ برابط الجديدة. والقديمةُ تبقى: سجلُّ رحلته.
+ */
+export async function pushConversion(env, { prospectCardId, clientId, clientName }) {
+  let clientCard = null;
+  if (clientId) {
+    const pushed = await pushClient(env, clientId);
+    clientCard = pushed?.card ?? null;
+    if (!clientCard) {
+      const client = await env.DB.prepare(`SELECT bc_app_url FROM clients WHERE id = ?`).bind(clientId).first();
+      if (client?.bc_app_url) clientCard = { app_url: client.bc_app_url };
+    }
+  }
+  if (!prospectCardId) return;
+
   try {
-    const board = await readBoard(env);
+    const board = await readBoard(env, 'prospects');
     if (!board) return;
     const connection = await connectionOrNull(env);
     if (!connection) return;
@@ -587,93 +631,97 @@ export async function pushConversion(env, { cardId, clientName }) {
     const column = board.columnMap[CONVERTED];
     if (column) {
       await sendJson(connection.accountId, connection.token,
-        `/buckets/${board.projectId}/card_tables/cards/${cardId}/moves.json`, { body: { column_id: Number(column) } });
+        `/buckets/${board.projectId}/card_tables/cards/${prospectCardId}/moves.json`, { body: { column_id: Number(column) } });
     }
-    await sendJson(connection.accountId, connection.token, commentsPath(board, cardId), {
-      body: { content: `<div>تحوّل <strong>${escapeHtml(clientName ?? '')}</strong> إلى عميل في منصة ناف.</div>` },
+    const link = clientCard?.app_url
+      ? ` — <a href="${escapeHtml(clientCard.app_url)}">بطاقتُه في العملاء الفعليين</a>`
+      : '';
+    await sendJson(connection.accountId, connection.token, commentsPath(board, prospectCardId), {
+      body: { content: `<div>تحوّل <strong>${escapeHtml(clientName ?? '')}</strong> إلى عميل في منصة ناف${link}.</div>` },
     });
   } catch (error) {
     console.error('Basecamp/prospects: تعذّر نقل بطاقة التحويل —', error?.code ?? error?.message ?? error);
-    await recordError(env, error);
+    await recordError(env, 'prospects', error);
   }
 }
 
 /* ═══ المطابقةُ الكاملة ═══ */
 
 /**
- * يمرّ على اللوحة كلِّها وعلى العملاء المحتملين كلِّهم.
+ * يمرّ على لوحةٍ كلِّها وعلى صفوف نوعها كلِّها.
  *
  * تُنادى بعد الإعداد وكلَّ ساعة — احتياطاً لـWebhook سقط أو لم يُسجَّل.
  * والبطاقةُ التي لم تتبدّل ولم يُضف إليها تعليقٌ لا تُقرأ تعليقاتُها:
  * حدُّ النداءات أربعون كلَّ عشر ثوانٍ.
  */
 export async function fullSync(env, connection, board) {
+  const spec = entity(board.kind);
+  const fields = syncedFields(spec);
   const result = { cards: 0, created: 0, pushed: 0, conflicts: 0, errors: 0 };
   const table = await getJson(connection.accountId, connection.token,
     `/buckets/${board.projectId}/card_tables/${board.cardTableId}.json`);
 
-  const seen = new Set();
   for (const list of table.lists ?? []) {
     if (!list.cards_url || statusForColumn(board, list.id) === CONVERTED) continue;
     const { items } = await listAll(connection.accountId, connection.token, list.cards_url);
 
     for (const card of items) {
-      seen.add(String(card.id));
       result.cards++;
-      const prospect = await readProspect(env, 'bc_card_id', String(card.id));
+      const row = await readRow(env, spec, 'bc_card_id', String(card.id));
       /* لم يتبدّل شيء: لا نصّ ولا عمود ولا تعليق. */
-      if (prospect && prospect.bc_updated_at === card.updated_at
-        && String(prospect.bc_column_id) === String(card.parent?.id ?? list.id)) {
+      if (row && row.bc_updated_at === card.updated_at
+        && String(row.bc_column_id) === String(card.parent?.id ?? list.id)) {
         const count = await env.DB.prepare(
-          `SELECT COUNT(*) AS n FROM prospect_comments WHERE prospect_id = ? AND bc_comment_id IS NOT NULL`,
-        ).bind(prospect.id).first();
+          `SELECT COUNT(*) AS n FROM ${spec.commentsTable} WHERE ${spec.commentKey} = ? AND bc_comment_id IS NOT NULL`,
+        ).bind(row.id).first();
         const pending = await env.DB.prepare(
-          `SELECT COUNT(*) AS n FROM prospect_comments WHERE prospect_id = ? AND bc_comment_id IS NULL`,
-        ).bind(prospect.id).first();
+          `SELECT COUNT(*) AS n FROM ${spec.commentsTable} WHERE ${spec.commentKey} = ? AND bc_comment_id IS NULL`,
+        ).bind(row.id).first();
         /* وما تبدّل في المنصة يُعرف بالصورة لا بالوقت: الدمجُ نفسُه يكتب
            `updated_at`، والوقتُ يجعل كلَّ ساعةٍ تُعيد ما دُمج. */
-        const snapshot = parse(prospect.bc_synced_values, {});
-        const now = canonical(prospect);
-        const changedLocally = SYNCED_FIELDS.some((field) => (now[field] ?? '') !== (snapshot[field] ?? ''));
+        const snapshot = parse(row.bc_synced_values, {});
+        const now = canonical(row);
+        const changedLocally = fields.some((field) => (now[field] ?? '') !== (snapshot[field] ?? ''));
         if ((count?.n ?? 0) === (card.comments_count ?? 0) && !(pending?.n) && !changedLocally) continue;
       }
       try {
         const outcome = await applyCard(env, connection, board, card.id, {
           card: { ...card, parent: card.parent ?? { id: list.id } },
         });
-        if (!prospect && !outcome?.skipped) result.created++;
+        if (!row && !outcome?.skipped) result.created++;
         result.conflicts += outcome?.conflicts ?? 0;
       } catch (error) {
         result.errors++;
-        console.error('Basecamp/prospects: تعذّرت بطاقة', card.id, '—', error?.code ?? error?.message ?? error);
+        console.error(`Basecamp/${spec.kind}: تعذّرت بطاقة`, card.id, '—', error?.code ?? error?.message ?? error);
       }
     }
   }
 
   /* ما في المنصة بلا بطاقة: يُنشأ له. */
   const { results } = await env.DB.prepare(
-    `SELECT * FROM prospects WHERE bc_card_id IS NULL AND archived_at IS NULL`,
+    `SELECT * FROM ${spec.table} WHERE bc_card_id IS NULL AND archived_at IS NULL`,
   ).all();
-  for (const prospect of results ?? []) {
+  for (const row of results ?? []) {
     try {
-      await pushRow(env, connection, board, prospect);
+      await pushRow(env, connection, board, row);
       result.pushed++;
     } catch (error) {
       result.errors++;
-      console.error('Basecamp/prospects: تعذّر إنشاء بطاقة —', error?.code ?? error?.message ?? error);
+      console.error(`Basecamp/${spec.kind}: تعذّر إنشاء بطاقة —`, error?.code ?? error?.message ?? error);
     }
   }
 
-  await markSynced(env);
+  await markSynced(env, spec.kind);
   return result;
 }
 
-/** يُعلَّم ما سيُحذف قبل حذفه — ليُعرف بعده أنّ بطاقته لا تُعاد عميلاً. */
-export async function rememberDeleted(env, ids) {
+/** يُعلَّم ما سيُحذف قبل حذفه — ليُعرف بعده أنّ بطاقته لا تُعيده. */
+export async function rememberDeleted(env, ids, kind = 'prospects') {
+  const spec = entity(kind);
   const list = (ids ?? []).filter(Boolean);
   if (!list.length) return;
   const { results } = await env.DB.prepare(
-    `SELECT bc_card_id FROM prospects WHERE bc_card_id IS NOT NULL AND id IN (${list.map(() => '?').join(', ')})`,
+    `SELECT bc_card_id FROM ${spec.table} WHERE bc_card_id IS NOT NULL AND id IN (${list.map(() => '?').join(', ')})`,
   )
     .bind(...list)
     .all();
@@ -686,18 +734,27 @@ export async function rememberDeleted(env, ids) {
   }
 }
 
-/** المزامنةُ الساعية — لا ترمي. */
+/** المزامنةُ الساعية — للوحات كلِّها، ولا ترمي. */
 export async function scheduledProspectSync(env) {
+  let boards = [];
   try {
-    const board = await readBoard(env);
-    if (!board) return;
-    const connection = await connectionOrNull(env);
-    if (!connection) return;
-    const result = await fullSync(env, connection, board);
-    console.log('Basecamp/prospects:', JSON.stringify(result));
+    boards = await readBoards(env);
+    if (!boards.length) return;
   } catch (error) {
-    console.error('Basecamp/prospects/cron:', error?.code ?? error?.message ?? error);
-    await recordError(env, error);
+    console.error('Basecamp/boards/cron:', error?.message ?? error);
+    return;
+  }
+  const connection = await connectionOrNull(env).catch(() => null);
+  if (!connection) return;
+
+  for (const board of boards) {
+    try {
+      const result = await fullSync(env, connection, board);
+      console.log(`Basecamp/${board.kind}:`, JSON.stringify(result));
+    } catch (error) {
+      console.error(`Basecamp/${board.kind}/cron:`, error?.code ?? error?.message ?? error);
+      await recordError(env, board.kind, error);
+    }
   }
 }
 
