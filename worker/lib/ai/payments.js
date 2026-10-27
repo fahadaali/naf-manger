@@ -1,0 +1,71 @@
+// ربطُ دفعةٍ من وافق بقضيتها — سؤالٌ مغلق.
+//
+// ═══ ما يُسأل عنه الطراز، وما يُصنع بجوابه ═══
+//
+// يُعطى نصَّ الدفعة وفواتيرها واسمَ الجهة، وقائمةً مغلقة من القضايا
+// المرشّحة: رقمُها ونوعُها وموضوعُها وما بقي من أتعابها. فيردّ رقماً منها
+// أو «لا أعرف». **ورقمٌ خارج القائمة يُطرح** — كما يُطرح في `classifyValue`.
+//
+// **وجوابُه اقتراحٌ لا ربط.** يُعلَّم `suggested` بسببه ويؤكّده إنسان بضغطة:
+// الدفعةُ تُحرّك المحصَّل وكشفَ حسابِ موكّل، وترجيحٌ خاطئٌ يُكتب في دفترٍ
+// ماليّ لا يراه أحد.
+//
+// ═══ ما يخرج إليه ═══
+// النصُّ واسمُ الجهة، ورقمُ القضية ونوعُها وموضوعُها ومتبقّيها. **لا رقمَ
+// هويةٍ ولا جوّال** — لا يُحتاج إليهما في الربط. والاستدلال على Workers AI،
+// داخل الشبكة التي تحمل القاعدة.
+
+import { ask, readJson } from './extract.js';
+
+const SYSTEM = `أنت محاسبٌ في مكتب محاماة سعودي. تُعطى دفعةً وصلت من موكّل — نصَّها ومرجعَها وفواتيرَها واسمَ الدافع — وقائمةَ قضايا مرشّحة لها.
+
+مهمّتك: أيُّ قضيةٍ من القائمة تخصّها هذه الدفعة؟
+
+القواعد:
+- **أجب برقم قضيةٍ من القائمة حرفاً بحرف، أو "لا-أعرف".** لا تخترع رقماً خارجها.
+- استند إلى ما في نصّ الدفعة والفواتير: رقمُ قضية، أو موضوعٌ، أو نوعُ عمل، أو اسمُ طرف. ومبلغٌ يساوي المتبقّي قرينةٌ لا دليلٌ وحده.
+- إن احتملت الدفعةُ أكثر من قضيةٍ ولا شيء يرجّح، فأجب "لا-أعرف". **ولا-أعرف جوابٌ صحيح**: هذا دفترٌ ماليّ، والربطُ الخاطئ يُحسب على قضيةٍ لم تُدفع.
+- السببُ جملةٌ قصيرة بالعربية تقول ما الذي في النصّ دلّك.
+
+أعِد JSON فقط: {"case":"رقم القضية أو لا-أعرف","reason":"…"}`;
+
+/**
+ * يقترح قضيةً لدفعة — أو `null`.
+ *
+ * @returns {{ caseNumber: string, reason: string } | null}
+ */
+export async function suggestCaseForPayment(env, { payment, candidates }) {
+  if (!env?.AI || !candidates?.length) return null;
+
+  const answer = await ask(
+    env,
+    SYSTEM,
+    JSON.stringify({
+      الدفعة: {
+        التاريخ: payment.date ?? '',
+        المبلغ: payment.amount,
+        الدافع: payment.contactName ?? '',
+        المرجع: payment.reference ?? '',
+        الوصف: payment.description ?? '',
+        الفواتير: String(payment.invoiceText ?? '').slice(0, 1200),
+      },
+      القضايا: candidates.map((item) => ({
+        الرقم: item.caseNumber,
+        النوع: item.caseType ?? '',
+        الموضوع: String(item.summary ?? '').slice(0, 200),
+        المتبقّي: item.remaining ?? 0,
+      })),
+    }),
+    120,
+  );
+
+  const parsed = readJson(answer);
+  const chosen = typeof parsed?.case === 'string' ? parsed.case.trim() : '';
+  const match = candidates.find((item) => item.caseNumber === chosen);
+  if (!match) return null;
+
+  return {
+    caseNumber: match.caseNumber,
+    reason: typeof parsed.reason === 'string' ? parsed.reason.trim().slice(0, 200) : '',
+  };
+}

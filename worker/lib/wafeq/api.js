@@ -1,0 +1,187 @@
+// قارئُ وافق — قراءةٌ لا كتابة.
+//
+// ═══ قارئٌ متحمّل، وذلك مقصود ═══
+//
+// الأساس `https://api.wafeq.com/v1/`، والترويسة `Authorization: Api-Key …`،
+// والدفعةُ تربط فواتيرها في `invoice_payments` — هذا ما ثبت عند كتابة الملفّ.
+// أمّا أسماءُ الحقول في ردّ القوائم فلم تُقرأ من مرجعٍ يُطمأنّ إليه. فكلُّ
+// حقلٍ يُقرأ من أسمائه المحتملة، والموحَّدُ وحدَه يخرج من هذا الملفّ — فإن
+// تبيّن من «اختبار الاتصال» اسمٌ آخر عُدِّل هنا وحده، ولا يمسّ الباقي.
+//
+// ولا يُخترع ما لا يُقرأ: دفعةٌ بلا معرّفٍ أو بلا مبلغٍ يُفهم تُطرح ويُعدّ
+// طرحُها، لا تُكتب بصفر.
+
+import { toLatinDigits } from '../digits.js';
+
+const BASE = 'https://api.wafeq.com/v1/';
+
+/** أقصى الصفحات في الدورة — حسابٌ فيه آلافُ الدفعات يُقرأ على دورات. */
+const MAX_PAGES = 20;
+
+export class WafeqError extends Error {
+  constructor(code, status) {
+    super(code);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+/** المفتاحُ سرٌّ في `wrangler secret`. وغيابُه غيابُ الربط. */
+export const configured = (env) => Boolean(env?.WAFEQ_API_KEY);
+
+async function call(env, url) {
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Api-Key ${env.WAFEQ_API_KEY}`,
+        Accept: 'application/json',
+      },
+    });
+  } catch {
+    throw new WafeqError('unreachable', 502);
+  }
+
+  if (response.status === 401 || response.status === 403) throw new WafeqError('unauthorized', 503);
+  if (response.status === 429) throw new WafeqError('rate_limited', 503);
+  if (response.status === 404) throw new WafeqError('not_found', 502);
+  if (!response.ok) throw new WafeqError('request_failed', 502);
+
+  try {
+    return await response.json();
+  } catch {
+    throw new WafeqError('invalid_response', 502);
+  }
+}
+
+const urlOf = (path, params = {}) => {
+  const url = new URL(path.replace(/^\//, ''), BASE);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
+  }
+  return url.toString();
+};
+
+/* الصفحةُ قائمةٌ مجرّدة، أو `{ results, next }` على نمط DRF. و`next` يُتبع
+   إن كان على نطاقهم وحده — رابطٌ إلى نطاقٍ آخر لا يُحمل إليه المفتاح. */
+const itemsOf = (page) => (Array.isArray(page) ? page : Array.isArray(page?.results) ? page.results : []);
+const nextOf = (page) => {
+  const next = Array.isArray(page) ? null : page?.next;
+  if (typeof next !== 'string' || !next) return null;
+  try {
+    return new URL(next).host === new URL(BASE).host ? next : null;
+  } catch {
+    return null;
+  }
+};
+
+/** يقرأ القائمة كلَّها صفحةً صفحة، إلى السقف. */
+export async function listAll(env, path, params = {}, { maxPages = MAX_PAGES } = {}) {
+  const items = [];
+  let url = urlOf(path, { page_size: 100, ...params });
+  let pages = 0;
+  let truncated = false;
+
+  while (url) {
+    if (pages >= maxPages) { truncated = true; break; }
+    const page = await call(env, url);
+    items.push(...itemsOf(page));
+    pages++;
+    url = nextOf(page);
+  }
+  return { items, pages, truncated };
+}
+
+/** صفحةٌ واحدة كما هي — لـ«اختبار الاتصال». */
+export async function firstPage(env, path) {
+  return call(env, urlOf(path, { page_size: 5 }));
+}
+
+export async function readInvoice(env, id) {
+  return call(env, urlOf(`invoices/${encodeURIComponent(id)}/`));
+}
+
+/* ═══ التوحيد ═══ */
+
+const first = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
+
+const text = (value) => (value === undefined || value === null ? '' : String(value).trim());
+
+/** مبلغٌ نصّاً أو عدداً — «1,250.50» و1250.5 واحد. وما لا يُفهم `null`. */
+export function amountOf(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const number = Number(toLatinDigits(String(value)).replace(/[,\s٬]/g, ''));
+  return Number.isFinite(number) ? number : null;
+}
+
+const dayOf = (value) => {
+  const raw = text(value);
+  return /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : null;
+};
+
+/** الجهةُ كائناً أو معرّفاً — والمعرّفُ وحده لا اسمَ فيه يُطابَق. */
+function contactOf(raw) {
+  const contact = raw.contact && typeof raw.contact === 'object' ? raw.contact : {};
+  return {
+    name: text(first(contact.name, contact.display_name, raw.contact_name, raw.customer_name)),
+    number: text(first(
+      contact.tax_registration_number, contact.vat_number, contact.tax_number,
+      contact.commercial_registration_number, contact.national_id, raw.tax_registration_number,
+    )),
+  };
+}
+
+/** فواتيرُ الدفعة: أرقامُها ومعرّفاتُها ونصُّ ما فيها إن جاء مع الدفعة. */
+function invoicesOf(raw) {
+  const list = first(raw.invoice_payments, raw.allocations, raw.invoices) ?? [];
+  if (!Array.isArray(list)) return [];
+  return list.map((entry) => {
+    const invoice = entry?.invoice && typeof entry.invoice === 'object' ? entry.invoice : null;
+    return {
+      id: text(invoice?.id ?? (typeof entry?.invoice === 'string' || typeof entry?.invoice === 'number' ? entry.invoice : entry?.id)),
+      number: text(first(invoice?.invoice_number, invoice?.number, entry?.invoice_number)),
+      text: invoice ? invoiceText(invoice) : '',
+    };
+  });
+}
+
+/** نصُّ الفاتورة: مرجعُها وملاحظاتُها ووصفُ بنودها — ما قد يحمل رقمَ القضية. */
+export function invoiceText(invoice) {
+  if (!invoice || typeof invoice !== 'object') return '';
+  const lines = Array.isArray(invoice.line_items) ? invoice.line_items
+    : Array.isArray(invoice.items) ? invoice.items : [];
+  return [
+    invoice.invoice_number, invoice.number, invoice.reference, invoice.notes, invoice.description,
+    ...lines.map((line) => first(line?.description, line?.name)),
+  ].map(text).filter(Boolean).join(' | ');
+}
+
+/**
+ * دفعةٌ كما يفهمها هذا الملفّ — أو `null` إن لم تُفهم.
+ *
+ * ودفعةُ مورّدٍ (فاتورةُ شراء) ليست من موكّل: تُعرف بـ`bill_payments` ولا
+ * فواتيرَ بيعٍ معها، فتُطرح هنا ولا تبلغ المطابقة.
+ */
+export function normalizePayment(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const id = text(raw.id);
+  const amount = amountOf(first(raw.amount, raw.total, raw.amount_to_pcy));
+  if (!id || amount === null || amount <= 0) return null;
+
+  const invoices = invoicesOf(raw);
+  const bills = Array.isArray(raw.bill_payments) ? raw.bill_payments : [];
+  if (bills.length && !invoices.length) return null;
+
+  const contact = contactOf(raw);
+  return {
+    externalId: id,
+    date: dayOf(first(raw.date, raw.payment_date, raw.created_ts, raw.created_at)),
+    amount,
+    currency: text(first(raw.currency, raw.currency_code)) || null,
+    contactName: contact.name,
+    contactNumber: contact.number,
+    reference: text(first(raw.reference, raw.payment_reference, raw.number)),
+    description: text(first(raw.description, raw.notes, raw.memo)),
+    invoices,
+  };
+}

@@ -34,6 +34,16 @@ import {
   writeMap,
 } from './lib/basecamp/handlers.js';
 import { scheduledSync } from './lib/basecamp/cron.js';
+import { scheduledWafeqSync } from './lib/wafeq/sync.js';
+import {
+  decideWafeqPayment,
+  listWafeqPayments,
+  previewWafeq,
+  readWafeqStatus,
+  setWafeqAutoSync,
+  syncWafeq,
+  testWafeq,
+} from './lib/wafeq/handlers.js';
 import {
   createReport,
   deleteReport,
@@ -67,7 +77,8 @@ export default {
      مزامنةُ بيسكامب كلَّ ساعة. ولا تعمل إلا إذا فُتحت صراحةً بعد معاينةٍ
      رآها صاحبُ المكتب — والفحصُ في `cron.js` لا هنا. */
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(scheduledSync(env));
+    /* ووافق معها — مستقلّتان: سقوطُ إحداهما لا يُسقط الأخرى. */
+    ctx.waitUntil(Promise.allSettled([scheduledSync(env), scheduledWafeqSync(env)]));
   },
 
   async fetch(request, env) {
@@ -223,6 +234,20 @@ export default {
          والفحصُ في `basecamp/handlers.js` لا هنا. و`callback` تحويلُ متصفّح
          لا نداءُ `fetch` — لكنه بعد الحارس كغيره، لأنّ من يعود من صفحة
          الإذن يحمل جلسته. */
+      /* ═══ وافق ═══
+         قراءةٌ لا كتابة، كبيسكامب. والتصاريحُ في `wafeq/handlers.js`. */
+      if (name === 'wafeq') {
+        if (id === 'status' && request.method === 'GET') return readWafeqStatus(env, user);
+        if (id === 'test' && request.method === 'POST') return testWafeq(env, user);
+        if (id === 'preview' && request.method === 'POST') return previewWafeq(env, user);
+        if (id === 'sync' && request.method === 'POST') return syncWafeq(env, user);
+        if (id === 'auto-sync' && request.method === 'PUT') return setWafeqAutoSync(request, env, user);
+        if (id === 'payments' && !verb && request.method === 'GET') return listWafeqPayments(env, user, url);
+        /* القرارُ في الجسم: `{ action: link | ignore | unlink, caseId? }`. */
+        if (id === 'decide' && verb && request.method === 'POST') {
+          return decideWafeqPayment(request, env, user, decodeURIComponent(verb));
+        }
+      }
       if (name === 'basecamp') {
         if (id === 'status' && request.method === 'GET') return readStatus(env, user);
         if (id === 'connect' && request.method === 'GET') {

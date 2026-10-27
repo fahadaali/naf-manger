@@ -252,6 +252,60 @@ export interface DisplayToken {
  * الأولى يعالجها من يملك أسرارَ المنصة، والثانية ضغطةُ زرٍّ في الشاشة —
  * وخلطُهما يرسل صاحبَ المكتب يبحث في المكان الخطأ.
  */
+/** حالةُ الربط بوافق — `GET /api/wafeq/status`. */
+export interface WafeqStatus {
+  state: 'not_configured' | 'configured';
+  syncEnabled?: boolean;
+  lastSyncAt?: number | null;
+  lastSyncError?: string | null;
+  newestPaymentDate?: string | null;
+  counts?: Record<WafeqPaymentStatus, number>;
+}
+
+export type WafeqPaymentStatus = 'linked' | 'suggested' | 'unmatched' | 'ignored';
+
+/** دفعةٌ قُرئت من وافق، وحالُ ربطها بقضية. */
+export interface WafeqPayment {
+  externalId: string;
+  paymentDate: string | null;
+  amount: number;
+  currency?: string | null;
+  contactName: string;
+  reference: string;
+  description: string;
+  status: WafeqPaymentStatus;
+  caseId?: string | null;
+  caseNumber?: string | null;
+  suggestedCaseId?: string | null;
+  suggestedCaseNumber?: string | null;
+  clientId?: string | null;
+  clientName?: string | null;
+  matchBy?: 'case_number' | 'client' | 'ai' | 'manual' | null;
+  reason: string;
+}
+
+/** حصيلةُ دورة مزامنة — أو معاينتِها. */
+export interface WafeqSummary {
+  read: number;
+  skipped: number;
+  linked: number;
+  suggested: number;
+  unmatched: number;
+  unchanged: number;
+  updated: number;
+  truncated: boolean;
+  ai: { enabled: boolean; used: number; deferred: number; failed: number };
+}
+
+/** «اختبار الاتصال»: أسماءُ الحقول لا قيمُها. */
+export interface WafeqProbe {
+  reachable: boolean;
+  paginated: boolean;
+  count: number;
+  fields: string[];
+  nested: Record<string, string[]>;
+}
+
 export interface BasecampStatus {
   state: 'not_configured' | 'not_connected' | 'connected';
   accountName?: string;

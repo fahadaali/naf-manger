@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
    الملفّ نداءً للشاشة لا رسماً لأيقونة — تستدعي نفسَها بلا قرار توقّف،
    فتنمو شجرةُ التصيير حتى يعلق المتصفّح والجهاز معه.
    فالأيقونة تُستعار باسمٍ صريح، ويبقى الاسم الأصلي للشاشة وحدها. */
-import { Bell, Check, CircleCheck, ExternalLink, FileOutput, Globe, Import, Info, Link2, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
+import { Bell, Check, CircleCheck, ExternalLink, FileOutput, Globe, Import, Info, Landmark, Link2, Mail, Settings as SettingsIcon, ShieldCheck, TriangleAlert, Tv, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import SystemConfiguration from './SystemConfiguration';
 import DataExport from './DataExport';
 import DataImport from './DataImport';
 import BasecampSync from './BasecampSync';
+import WafeqSync from './WafeqSync';
 import EmailSettings from './EmailSettings';
 import { useAuth } from '../../contexts/AuthContext';
 import GeneralSettings from './GeneralSettings';
@@ -100,7 +101,8 @@ export default function Settings() {
         { id: 'users', label: 'إدارة المستخدمين', icon: Users, description: 'إضافة وتعديل المستخدمين والصلاحيات', permission: 'users.read' },
         { id: 'export', label: 'تصدير البيانات', icon: FileOutput, description: 'تصدير بيانات العملاء والقضايا', permission: 'settings.read' },
         { id: 'import', label: 'استيراد البيانات', icon: Import, description: 'استيراد البيانات من ملفات Excel', permission: 'settings.update' },
-        { id: 'basecamp', label: 'الربط ببيسكامب', icon: Link2, description: 'استيراد بيانات العملاء من بيسكامب ومزامنتها', permission: 'admin.only' }
+        { id: 'basecamp', label: 'الربط ببيسكامب', icon: Link2, description: 'استيراد بيانات العملاء من بيسكامب ومزامنتها', permission: 'admin.only' },
+        { id: 'wafeq', label: 'الربط بوافق', icon: Landmark, description: 'قراءة مدفوعات الموكّلين من وافق وربطها بالقضايا', permission: 'admin.only' }
       ]
     },
     {
@@ -320,6 +322,9 @@ export default function Settings() {
 
       case 'basecamp':
         return <BasecampSync />;
+
+      case 'wafeq':
+        return <WafeqSync />;
 
       case 'security':
         return (
