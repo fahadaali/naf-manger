@@ -36,6 +36,7 @@ import {
 import { scheduledSync } from './lib/basecamp/cron.js';
 import { scheduledWafeqSync } from './lib/wafeq/sync.js';
 import { readConflicts } from './lib/conflicts.js';
+import { importCases } from './lib/case-import.js';
 import { readMailStatus, sendTestMail } from './lib/mail.js';
 import { scheduledNotifications } from './lib/notify.js';
 import {
@@ -308,6 +309,10 @@ export default {
       }
       if (name === 'export' && !id && request.method === 'GET') {
         return exportAll(env, user);
+      }
+      /* استيرادُ القضايا من ملف — معاينةٌ ثم تنفيذ، والتفصيل في `lib/case-import.js`. */
+      if (name === 'cases' && id === 'import' && !verb && request.method === 'POST') {
+        return importCases(request, env, user);
       }
       if (name === 'prospects' && id && verb === 'convert' && request.method === 'POST') {
         return convertProspect(env, user, id);

@@ -797,6 +797,48 @@ export interface Marketer {
   updatedDate: Date;
 }
 
+/** صفٌّ من ملفّ استيراد القضايا — مفاتيحُ القالب نصوصاً كما كُتبت. */
+export interface CaseImportRow {
+  line: number;
+  caseNumber?: string;
+  clientName?: string;
+  clientIdNumber?: string;
+  clientPhone?: string;
+  caseType?: string;
+  summary?: string;
+  status?: string;
+  outcome?: string;
+  lawyer?: string;
+  opposingParties?: string;
+  feeType?: string;
+  totalAmount?: string;
+  collectedAmount?: string;
+  createdDate?: string;
+  notes?: string;
+}
+
+/** معاينةُ الاستيراد — أو حصيلةُ تنفيذه. */
+export interface CaseImportPreview {
+  summary: {
+    rows: number;
+    cases: number;
+    clientsCreated: number;
+    clientsLinked: number;
+    rejected: number;
+    warnings: number;
+    written?: number;
+    failed?: number;
+  };
+  rows: {
+    line: number;
+    status: 'create' | 'rejected';
+    reasons: string[];
+    warnings: string[];
+    caseNumber: string | null;
+    client: { action: 'create' | 'link' | 'pending'; name: string | null } | null;
+  }[];
+}
+
 /** عضوٌ في دليل الأعضاء — `GET /api/members/directory`: الاسمُ والدورُ وحدهما. */
 export interface MemberEntry {
   id: string;

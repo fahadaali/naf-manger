@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
+import { CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -136,6 +136,11 @@ export class LocalDatabase {
 
   async getCase(id: string): Promise<Case> {
     return asCase(await api.get<any>('cases', id));
+  }
+
+  /* استيرادُ القضايا: `dryRun` معاينةٌ لا تكتب، ثم التنفيذُ بالصفوف نفسِها. */
+  async importCases(rows: CaseImportRow[], dryRun: boolean): Promise<CaseImportPreview> {
+    return await api.post<CaseImportPreview>('/cases/import', { rows, dryRun });
   }
 
   async getCasesByClient(clientId: string): Promise<Case[]> {

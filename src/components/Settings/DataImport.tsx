@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { CircleCheck, FileText, TriangleAlert, Users } from 'lucide-react';
 import { db } from '../../data/database';
+import CaseImport from './CaseImport';
 import { Client, ContactNumber, Prospect } from '../../types';
 import { downloadText, parseCsv, toCsv } from '../../lib/csv';
 import { Button } from '@/registry/naf/ui/button';
@@ -339,9 +340,9 @@ export default function DataImport() {
         />
       </div>
 
-      {/* القضايا لا تُستورد بعد: الصفُّ يشير إلى عميلٍ بمعرّفه، ومطابقةُ
-          العميل من ملفٍّ تحتاج قراراً — بالهوية أم بالاسم، وما العمل إن
-          تعدّد المطابق. وهو عملٌ يبدأ من ذلك القرار لا من نموذجٍ في شاشة. */}
+      {/* والقضايا: الصفُّ يذكر العميلَ باسمه وربما بهويته، فيُطابَق بالهوية ثم
+          بالاسم وإلا أُنشئ — في الخادم، بمعاينةٍ قبل التنفيذ. */}
+      <CaseImport />
     </div>
   );
 }
