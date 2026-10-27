@@ -4,6 +4,7 @@ import { Attachment, Case, Client, Marketer, FeeStructure, MemberEntry, Opposing
 import AttachmentList from '../Common/AttachmentList';
 import CasePayments from './CasePayments';
 import OpposingParties from './OpposingParties';
+import BasecampTimeline from './BasecampTimeline';
 import { db } from '../../data/database';
 import { useSettingList } from '../../lib/use-settings';
 import { caseStatusLabel, collectionStatusLabel, feeTypeLabel } from '../../lib/labels';
@@ -274,6 +275,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <h3 className="text-lg font-semibold text-foreground mb-3">موضوع المشروع</h3>
               <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
             </div>
+
+            {/* ما حدث في مشروعها ببيسكامب — يظهر إن كانت مربوطةً بمشروع. */}
+            <BasecampTimeline caseId={existingCase.id} />
 
             {(existingCase.lawyerId || (existingCase.team ?? []).length > 0) && (
               <div className="bg-muted rounded-lg p-4">

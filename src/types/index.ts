@@ -262,6 +262,25 @@ export interface DisplayToken {
  * الأولى يعالجها من يملك أسرارَ المنصة، والثانية ضغطةُ زرٍّ في الشاشة —
  * وخلطُهما يرسل صاحبَ المكتب يبحث في المكان الخطأ.
  */
+/** الخطُّ الزمنيّ من بيسكامب — `GET /api/cases/:id/timeline`. */
+export interface CaseTimeline {
+  linked: boolean;
+  projectUrl?: string;
+  events: {
+    id: string;
+    kind: string;
+    label: string;
+    title: string;
+    excerpt: string;
+    author: string;
+    at: string;
+    url: string | null;
+  }[];
+  partial?: boolean;
+  cached?: boolean;
+  error?: string;
+}
+
 /** بندٌ في جرس الإشعارات — `GET /api/notifications`. و`link` اسمُ الشاشة. */
 export interface InAppNotification {
   id: string;
