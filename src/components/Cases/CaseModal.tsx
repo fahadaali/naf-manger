@@ -43,6 +43,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   const [members, setMembers] = useState<MemberEntry[]>([]);
   const [formData, setFormData] = useState({
     caseNumber: existingCase?.caseNumber || '',
+    title: existingCase?.title || '',
     authority: existingCase?.authority || '',
     courtCaseNumber: existingCase?.courtCaseNumber || '',
     caseType: existingCase?.caseType || 'قضية تجارية',
@@ -83,6 +84,25 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   /* قائمةٌ لا نصّ، فخارج `formData` كالمرفقات. */
   const [opposingParties, setOpposingParties] = useState<OpposingParty[]>(existingCase?.opposingParties ?? []);
   const [team, setTeam] = useState<string[]>(existingCase?.team ?? []);
+
+  /* ═══ الصياغة من النافذة ═══
+     ما يردّه الخادم يُعرض هنا في الحال — والقائمةُ تقرؤه في تحميلها التالي. */
+  const [phrased, setPhrased] = useState<{ title: string | null; summary: string; summaryRaw: string | null } | null>(null);
+  const [phrasing, setPhrasing] = useState(false);
+  const [phraseError, setPhraseError] = useState('');
+  const [showRaw, setShowRaw] = useState(false);
+  const phraseNow = async () => {
+    if (!existingCase) return;
+    setPhrasing(true);
+    setPhraseError('');
+    try {
+      setPhrased(await db.phraseCase(existingCase.id));
+    } catch {
+      setPhraseError('تعذّرت الصياغة — أعد المحاولة بعد قليل');
+    } finally {
+      setPhrasing(false);
+    }
+  };
 
   /* المنسدلات من «تكوين النظام» لا من نصوصٍ في التصيير. والقيمةُ المحفوظة
      تُمرَّر فتبقى ظاهرةً حتى لو حُذفت من التكوين بعد حفظها. */
@@ -286,11 +306,44 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               </div>
             </div>
 
-            {/* موضوع المشروع */}
-            <div className="bg-primary-soft rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-foreground mb-3">موضوع المشروع</h3>
-              <p className="text-foreground whitespace-pre-wrap">{existingCase.summary}</p>
-            </div>
+            {/* ═══ العنوانُ والموضوع ═══
+                المصاغُ يُسمّى بذلك، وأصلُه كما ورد من بيسكامب تحته لمن أراده. */}
+            {(() => {
+              const title = phrased?.title ?? existingCase.title;
+              const summary = phrased?.summary ?? existingCase.summary;
+              const raw = phrased ? phrased.summaryRaw : existingCase.summaryRaw;
+              const isPhrased = Boolean(phrased) || (Boolean(existingCase.aiSummaryText) && existingCase.summary === existingCase.aiSummaryText);
+              return (
+                <div className="bg-primary-soft rounded-lg p-4 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      موضوع المشروع
+                      {isPhrased && (
+                        <Badge variant="outline">
+                          <Sparkles aria-hidden="true" />
+                          مصاغ آلياً
+                        </Badge>
+                      )}
+                    </h3>
+                    <Button type="button" variant="outline" size="sm" onClick={phraseNow} disabled={phrasing}>
+                      <Sparkles aria-hidden="true" />
+                      {phrasing ? 'جارٍ الصياغة' : 'صُغ بالذكاء الاصطناعي'}
+                    </Button>
+                  </div>
+                  {title && <p className="font-semibold text-foreground">{title}</p>}
+                  <p className="text-foreground whitespace-pre-wrap">{summary}</p>
+                  {phraseError && <p className="text-sm text-destructive">{phraseError}</p>}
+                  {raw && raw !== summary && (
+                    <div>
+                      <button type="button" className="text-sm text-primary" onClick={() => setShowRaw(!showRaw)}>
+                        {showRaw ? 'إخفاء الموضوع كما ورد' : 'الموضوع كما ورد'}
+                      </button>
+                      {showRaw && <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{raw}</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ما حدث في مشروعها ببيسكامب — يظهر إن كانت مربوطةً بمشروع. */}
             <BasecampTimeline caseId={existingCase.id} />
@@ -815,6 +868,18 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               )}
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              عنوان القضية
+            </label>
+            <Input
+              type="text"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              placeholder="مطالبةٌ عمّالية ضد شركة…"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">

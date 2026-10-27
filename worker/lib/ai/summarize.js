@@ -248,42 +248,55 @@ export async function suggestCaseType(env, { text, options }) {
   return list.find((entry) => normalize(entry) === wanted) ?? null;
 }
 
-const TOPIC_SYSTEM = `أنت مساعدٌ في مكتب محاماة سعودي. تُعطى نصَّ ملفّ «بيانات المشروع» لقضيةٍ وأحدثَ ما جرى في مشروعها (مهامّ ورسائل وتعليقات)، فتكتب **موضوعَ القضية** مختصراً: ما النزاعُ أو العملُ القانوني ومع من.
+const PHRASE_SYSTEM = `أنت محرّرٌ في مكتب محاماة سعودي. تُعطى «موضوعَ القضية» كما كُتب في ملفّ المشروع — خاماً، وقد يكون مختصراً أو مطوّلاً أو بلغةٍ عامّية — ومعه نصُّ الملفّ وربما أحدثُ ما جرى في المشروع. فتكتب:
+
+- **title**: عنواناً للقضية من ثلاث كلماتٍ إلى ثماني: نوعُ العمل ومع من، مثل «مطالبةٌ عمّالية ضد شركة الريان».
+- **topic**: موضوعَ القضية مصاغاً بالعربية الفصحى، جملةً أو جملتين وأقلَّ من أربعين كلمة: ما النزاعُ أو العملُ القانوني، ومع من، وما المطلوب.
+- **outcome**: واحدةً من won (لصالح موكّلنا) أو lost (ضدّه) أو settled (صلح أو تسوية) — **فقط إن نُصّ عليها صراحةً**، وإلا null.
 
 القواعد:
-- بالعربية الفصحى، جملةٌ أو جملتان، وأقلُّ من ثلاثين كلمة.
-- لا تذكر إلا ما في المعطيات. **ولا تخترع اسماً ولا رقماً ولا تاريخاً ولا مبلغاً ولا مادّةً نظامية.**
-- إن كانت المعطيات لا تكفي لمعرفة الموضوع فاجعل الموضوع فارغاً.
-- والنتيجةُ واحدةٌ من: won (لصالح موكّلنا) أو lost (ضدّه) أو settled (صلح أو تسوية) — **فقط إن نُصّ عليها صراحةً** في المعطيات، وإلا null. لا تستنتجها.
+- **أعِد صياغةَ ما في المعطيات وحده.** لا تُضف واقعةً ولا اسماً ولا رقماً ولا تاريخاً ولا مبلغاً ولا مادّةً نظامية ليست فيها.
+- لا تُبدِ رأياً في القضية ولا تتوقّع نتيجتَها.
+- إن كانت المعطيات لا تكفي لمعرفة الموضوع فاجعل title وtopic فارغين.
 
-أعِد JSON فقط: {"topic":"…","outcome":null}`;
+أعِد JSON فقط: {"title":"…","topic":"…","outcome":null}`;
 
 const OUTCOMES = new Set(['won', 'lost', 'settled']);
 
 /**
- * موضوعٌ مقترح لقضيةٍ بلا موضوع — ونتيجتُها إن نُصّ عليها.
+ * يصوغ عنوانَ القضية وموضوعَها — ونتيجتَها إن نُصّ عليها.
  *
- * ويُعطى الطرازُ نصَّ الملفّ ونشاطَ المشروع وحدهما — ولا رقمَ هويةٍ ولا
- * جوّال: يُقصّان من النصّ قبل أن يخرج.
+ * ويُعطى الطرازُ الموضوعَ الخامَ ونصَّ الملفّ والنشاطَ وحدها — والأرقامُ
+ * الطويلة (هويةٌ أو جوّال) تُقصّ قبل أن تخرج.
  *
- * @returns {{ topic: string, outcome: string | null } | null}
+ * @returns {{ title: string, topic: string, outcome: string | null } | null}
  */
-export async function suggestTopic(env, { text, activity = [], caseType = '' }) {
+export async function phraseCase(env, { raw = '', text = '', activity = [], caseType = '' }) {
   const scrub = (value) => String(value ?? '').replace(/[0-9٠-٩]{9,}/g, '…');
+  const topic = scrub(raw).slice(0, 1500);
   const source = scrub(text).slice(0, 3000);
   const lines = activity.map(scrub).filter(Boolean).slice(0, 15);
-  if (!source.trim() && !lines.length) return null;
+  if (!topic.trim() && !source.trim() && !lines.length) return null;
 
   const answer = await ask(
     env,
-    TOPIC_SYSTEM,
-    JSON.stringify({ نوع_القضية: caseType || undefined, نص_الملف: source, نشاط_المشروع: lines }),
-    { maxTokens: 220 },
+    PHRASE_SYSTEM,
+    JSON.stringify({
+      نوع_القضية: caseType || undefined,
+      الموضوع_كما_ورد: topic || undefined,
+      نص_الملف: source || undefined,
+      نشاط_المشروع: lines.length ? lines : undefined,
+    }),
+    { maxTokens: 320 },
   );
   const parsed = readJsonObject(answer);
-  const topic = cleanText(typeof parsed?.topic === 'string' ? parsed.topic : '', 300);
-  if (!topic) return null;
-  return { topic, outcome: OUTCOMES.has(parsed?.outcome) ? parsed.outcome : null };
+  const phrased = cleanText(typeof parsed?.topic === 'string' ? parsed.topic : '', 400);
+  if (!phrased) return null;
+  return {
+    title: cleanText(typeof parsed?.title === 'string' ? parsed.title : '', 90) ?? '',
+    topic: phrased,
+    outcome: OUTCOMES.has(parsed?.outcome) ? parsed.outcome : null,
+  };
 }
 
 function readJsonObject(text) {

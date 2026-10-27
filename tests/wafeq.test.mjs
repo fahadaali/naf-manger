@@ -443,5 +443,36 @@ db.prepare(`DELETE FROM client_payments WHERE case_id = 'k-afaq-2'`).run();
 db.prepare(`DELETE FROM cases WHERE id = 'k-afaq-2'`).run();
 check('وحذفُ القضية يُزيل ربطَ مشروعها', !db.prepare(`SELECT 1 FROM wafeq_project_links WHERE project_id = 'wp-1'`).get());
 
+// ═══════════════════════════════════════════════════════════
+group('إيرادٌ عام بلا قضية');
+
+({ db, env } = setup());
+env.AI = { run: async () => ({ response: '{"case":"لا-أعرف"}' }) };
+globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ count: payments.length, next: null, results: payments }) });
+payments = [{ id: 'g1', date: new Date().toISOString().slice(0, 10), amount: 1200, contact: { name: 'مؤسسة النور' } }];
+await runWafeqSync(env, { actorId: 'u1' });
+const generalAdmin = { id: 'u1', role: 'admin', permissions: { cases: { read: true } } };
+res = await handlers.decideWafeqPayment(request({ action: 'general' }), env, generalAdmin, 'g1');
+check('تُسجَّل إيراداً عامّاً لموكّلها المعروف',
+  row('g1').status === 'general' && row('g1').client_id === 'c-noor' && !row('g1').case_id, row('g1'));
+check('ولا تنزل إلى سجلّ دفعات القضايا', !db.prepare(`SELECT 1 FROM client_payments`).get());
+
+await runWafeqSync(env, { actorId: 'u1' });
+check('والمزامنةُ لا تنقضها', row('g1').status === 'general');
+
+res = await handlers.listClientGeneralPayments(env, generalAdmin, 'c-noor');
+check('وتظهر في كشف حساب الموكّل', (await bodyOf(res)).data[0]?.amount === 1200);
+
+const { readStats } = await import('../worker/lib/queries.js');
+let stats = (await bodyOf(await readStats(env))).data;
+check('وتُجمع في المحصَّل هذا العام', stats.collectedThisYear?.general === 1200, stats.collectedThisYear);
+stats = (await bodyOf(await readStats(env, { publicBoard: true }))).data;
+check('ولا تبلغ لوحةَ العرض العامّة', stats.collectedThisYear === undefined);
+
+res = await handlers.decideWafeqPayment(request({ action: 'general', clientId: null }), env, generalAdmin, 'g1');
+check('و«بلا موكّل» اختيارٌ يُحترم', row('g1').status === 'general' && row('g1').client_id === null, row('g1'));
+await handlers.decideWafeqPayment(request({ action: 'unlink' }), env, generalAdmin, 'g1');
+check('و«فكّ» يعيدها بلا قضية', row('g1').status === 'unmatched');
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);

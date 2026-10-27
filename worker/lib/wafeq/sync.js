@@ -483,7 +483,8 @@ export async function runWafeqSync(env, { actorId, actorName, source = 'يدوي
       .first();
 
     /* ما حُسم يبقى. ويُنقل تبدُّلُ المبلغ أو التاريخ إلى السجلّ. */
-    if (stored && (stored.status === 'linked' || stored.status === 'ignored')) {
+    /* و«إيرادٌ عام» حكمُ إنسانٍ كالربط والتجاهل: لا تنقضه دورة. */
+    if (stored && (stored.status === 'linked' || stored.status === 'ignored' || stored.status === 'general')) {
       const changed = stored.amount !== amount || (payment.date && stored.payment_date !== payment.date);
       if (!changed) { summary.unchanged++; continue; }
       summary.updated++;

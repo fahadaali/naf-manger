@@ -289,7 +289,8 @@ export function PreviewPanel({
 }) {
   const [preview, setPreview] = useState<BasecampPreview | null>(null);
   const [applied, setApplied] = useState<BasecampSummary | null>(null);
-  const [busy, setBusy] = useState<'preview' | 'sync' | 'auto' | 'ai' | 'policy' | null>(null);
+  const [busy, setBusy] = useState<'preview' | 'sync' | 'auto' | 'ai' | 'policy' | 'phrase' | null>(null);
+  const [phraseResult, setPhraseResult] = useState<{ phrased: number; failed: number; human: number; remaining: number } | null>(null);
   const [error, setError] = useState('');
 
   const run = async (which: 'preview' | 'sync') => {
@@ -323,6 +324,20 @@ export function PreviewPanel({
       onChanged();
     } catch {
       setError('تعذّر حفظ السياسة');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /* «صُغ القضايا الآن» — دفعةٌ بسقف، وتُضغط حتى لا يبقى شيء. */
+  const phraseNow = async () => {
+    setBusy('phrase');
+    setError('');
+    try {
+      setPhraseResult(await db.phraseCasesNow());
+      onChanged();
+    } catch {
+      setError('تعذّرت صياغةُ القضايا — تحقّق أنّ الذكاء الاصطناعي مشغَّل');
     } finally {
       setBusy(null);
     }
@@ -604,6 +619,31 @@ export function PreviewPanel({
         >
           <Sparkles className={`h-4 w-4 ${busy === 'ai' ? 'animate-pulse' : ''}`} />
           {aiEnabled ? 'أطفئه' : 'شغّله'}
+        </Button>
+      </div>
+
+      {/* ═══ صياغةُ القضايا ═══
+          العنوانُ والموضوعُ بالفصحى من الموضوع الخام والملفّ — والأصلُ يُحفظ،
+          وما عدّلتَه بيدك لا يُمسّ. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
+        <div>
+          <p className="font-medium text-foreground">صياغةُ العنوان والموضوع</p>
+          <p className="text-xs text-muted-foreground">
+            تُصاغ في كل مزامنة ٢٠ قضيةً، والمنتهيةُ أوّلاً. وهذا الزرّ يصوغ ٣٠ في الضغطة — اضغطه حتى لا يبقى شيء.
+          </p>
+          {phraseResult && (
+            <p className="text-xs text-muted-foreground mt-1">
+              صيغت {formatNumber(phraseResult.phrased)}
+              {phraseResult.remaining > 0 && <> · بقيت {formatNumber(phraseResult.remaining)}</>}
+              {phraseResult.human > 0 && <> · {formatNumber(phraseResult.human)} عدّلتَها بيدك فلم تُمسّ</>}
+              {phraseResult.failed > 0 && <> · تعذّرت {formatNumber(phraseResult.failed)}</>}
+              {phraseResult.remaining === 0 && ' — لم يبقَ شيء'}
+            </p>
+          )}
+        </div>
+        <Button onClick={phraseNow} disabled={busy !== null || !aiEnabled} variant="outline">
+          <Sparkles className={`h-4 w-4 ${busy === 'phrase' ? 'animate-pulse' : ''}`} />
+          {busy === 'phrase' ? 'جارٍ الصياغة' : 'صُغ القضايا الآن'}
         </Button>
       </div>
 

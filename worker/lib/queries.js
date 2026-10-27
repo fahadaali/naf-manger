@@ -376,7 +376,9 @@ const WINDOW = {
    وحدها — لا مبلغ. فالمبلغُ لا يُحسب لها أصلاً، لا يُحسب ثم يُقصّ: حقلٌ
    يُضاف هنا بعد اليوم لا يتسرّب إليها لأنّ أحداً نسي قصَّه هناك. */
 export async function readStats(env, { publicBoard = false } = {}) {
-  const [clients, prospects, cases, newClients, newProspects, newCases, proBono, closed, outstanding, byLawyer] = await env.DB.batch([
+  const [
+    clients, prospects, cases, newClients, newProspects, newCases, proBono, closed, outstanding, byLawyer, collected,
+  ] = await env.DB.batch([
     env.DB.prepare(
       `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
     ),
@@ -459,6 +461,17 @@ export async function readStats(env, { publicBoard = false } = {}) {
         WHERE c.archived_at IS NULL AND c.status <> 'completed'
         GROUP BY c.lawyer_id ORDER BY n DESC`,
     ),
+
+    /* ═══ المحصَّلُ هذا العام ═══
+       دفعاتُ القضايا من سجلّها، والإيرادُ العامّ — عملياتٌ بلا قضية سُجّلت
+       من وافق. كلٌّ بمفرده، ومجموعُهما المحصَّل. */
+    env.DB.prepare(
+      `SELECT
+         (SELECT COALESCE(SUM(amount), 0) FROM client_payments
+           WHERE payment_date >= date('now', 'start of year')) cases_total,
+         (SELECT COALESCE(SUM(amount), 0) FROM wafeq_payments
+           WHERE status = 'general' AND payment_date >= date('now', 'start of year')) general_total`,
+    ),
   ]);
 
   const clientsByType = {};
@@ -503,6 +516,10 @@ export async function readStats(env, { publicBoard = false } = {}) {
       ...(publicBoard ? {} : {
         outstandingAmount: Number(outstanding.results?.[0]?.n ?? 0),
         proBonoValue: Number(proBono.results?.[0]?.value ?? 0) / 100,
+        collectedThisYear: {
+          cases: Number(collected.results?.[0]?.cases_total ?? 0) / 100,
+          general: Number(collected.results?.[0]?.general_total ?? 0) / 100,
+        },
         casesByLawyer: (byLawyer.results ?? []).map((row) => ({
           lawyerId: row.id ?? null,
           name: row.id ? row.name ?? '' : '',

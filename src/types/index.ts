@@ -156,6 +156,15 @@ export interface Case {
    */
   authority?: string | null;
   courtCaseNumber?: string | null;
+  /**
+   * عنوانُ القضية — سطرٌ قصير يصوغه الطراز ويُعدَّل من الشاشة. و`aiTitle`
+   * و`aiSummaryText` آخرُ ما صاغه: بهما يُعرف أنّ إنساناً لم يمسّ الحقل.
+   * و`summaryRaw` الموضوعُ كما ورد من بيسكامب قبل الصياغة.
+   */
+  title?: string | null;
+  aiTitle?: string | null;
+  aiSummaryText?: string | null;
+  summaryRaw?: string | null;
 
   /* ═══ حقولٌ ثلاثةٌ حُذفت ═══
      كانت `commissionPayments` و`totalCommissionPaid` و`remainingCommission`
@@ -317,11 +326,13 @@ export interface WafeqStatus {
   lastSyncError?: string | null;
   newestPaymentDate?: string | null;
   counts?: Record<WafeqPaymentStatus, number>;
+  /** مجموعُ الإيراد العامّ بلا قضية — ريالات. */
+  generalTotal?: number;
   /** الطرازُ مربوطٌ بالمنصة، ومشغَّلٌ بمفتاح «التلخيص الآليّ». */
   ai?: { available: boolean; enabled: boolean; model?: string | null };
 }
 
-export type WafeqPaymentStatus = 'linked' | 'suggested' | 'unmatched' | 'ignored';
+export type WafeqPaymentStatus = 'linked' | 'suggested' | 'unmatched' | 'ignored' | 'general';
 
 /** دفعةٌ قُرئت من وافق، وحالُ ربطها بقضية. */
 export interface WafeqPayment {
@@ -344,6 +355,15 @@ export interface WafeqPayment {
   clientName?: string | null;
   matchBy?: 'case_number' | 'client' | 'ai' | 'manual' | 'project_name' | 'wafeq_project' | null;
   reason: string;
+}
+
+/** إيرادٌ عامّ بلا قضية — من وافق، لكشف حساب الموكّل. */
+export interface GeneralPayment {
+  externalId: string;
+  paymentDate: string | null;
+  amount: number;
+  reference: string;
+  description: string;
 }
 
 /** مشروعُ وافق مربوطٌ بقضية — تُربط دفعاتُه آلياً. */
@@ -757,6 +777,8 @@ export interface DashboardStats {
   outstandingAmount: number;
   /** القيمةُ التقديرية للعمل التطوّعي في السنة الجارية — ريالات. */
   proBonoValue?: number;
+  /** المحصَّل هذا العام: دفعاتُ القضايا، والإيرادُ العامّ بلا قضية — ريالات. */
+  collectedThisYear?: { cases: number; general: number };
   /** القضايا المفتوحة لكلّ محامٍ مسؤول. و`lawyerId: null` هي «بلا محامٍ». */
   casesByLawyer?: { lawyerId: string | null; name: string; open: number }[];
   growth?: {

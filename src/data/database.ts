@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact, WafeqProjectLink } from '../types';
+import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact, WafeqProjectLink, GeneralPayment } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -135,6 +135,16 @@ export class LocalDatabase {
   }
 
   /* آخرُ ما حدث في بيسكامب — وسقوطُه يُخفي اللوحَ ولا يُسقط النافذة. */
+  /* صياغةُ عنوان القضية وموضوعها — بطلب صاحبها، والأصلُ يُحفظ. */
+  async phraseCase(id: string): Promise<{ title: string | null; summary: string; summaryRaw: string | null }> {
+    return await api.post(`/cases/${encodeURIComponent(id)}/phrase`);
+  }
+
+  /* «صُغ القضايا الآن» — دفعةٌ بسقف، ويُضغط حتى لا يبقى شيء. */
+  async phraseCasesNow(): Promise<{ phrased: number; failed: number; human: number; remaining: number }> {
+    return await api.post('/basecamp/phrase');
+  }
+
   async getCaseTimeline(id: string): Promise<CaseTimeline> {
     try {
       return await api.read<CaseTimeline>(`/cases/${encodeURIComponent(id)}/timeline`);
@@ -398,12 +408,18 @@ export class LocalDatabase {
     return await api.read<WafeqPayment[]>(`/wafeq/payments${status ? `?status=${status}` : ''}`);
   }
 
+  /* و`general` إيرادٌ عامّ بلا قضية — و`targetId` فيه معرّفُ الموكّل لا القضية. */
   async decideWafeqPayment(
     externalId: string,
-    action: 'link' | 'ignore' | 'unlink',
-    caseId?: string,
+    action: 'link' | 'ignore' | 'unlink' | 'general',
+    targetId?: string,
   ): Promise<void> {
-    await api.post(`/wafeq/decide/${encodeURIComponent(externalId)}`, { action, ...(caseId ? { caseId } : {}) });
+    const target = action === 'general' ? { clientId: targetId || null } : targetId ? { caseId: targetId } : {};
+    await api.post(`/wafeq/decide/${encodeURIComponent(externalId)}`, { action, ...target });
+  }
+
+  async getClientGeneralPayments(clientId: string): Promise<GeneralPayment[]> {
+    return await api.read<GeneralPayment[]>(`/clients/${encodeURIComponent(clientId)}/general-payments`);
   }
 
   async getBasecampStatus(): Promise<BasecampStatus> {
