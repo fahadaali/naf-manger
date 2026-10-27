@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Sparkles } from 'lucide-react';
+import { ExternalLink, HandHeart, Sparkles } from 'lucide-react';
 import { Attachment, Case, Client, Marketer, FeeStructure, PaymentStatus, CommissionStructure } from '../../types';
 import AttachmentList from '../Common/AttachmentList';
 import { db } from '../../data/database';
@@ -136,18 +136,23 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
       };
     }
     
+    /* ═══ والتطوّعيةُ بلا مال ═══
+       لا أتعابَ ولا تحصيلَ ولا عمولة: تُصفَّر هنا، فلا يبقى في صفّها مبلغٌ
+       كُتب قبل أن تُعلَّم تطوّعاً فيُحسب إيراداً في مكانٍ ما. */
+    const proBono = formData.feeType === 'pro_bono';
+
     // Build payment status
-    const totalAmount = parseFloat(formData.totalAmount) || 0;
-    const collectedAmount = parseFloat(formData.collectedAmount) || 0;
+    const totalAmount = proBono ? 0 : parseFloat(formData.totalAmount) || 0;
+    const collectedAmount = proBono ? 0 : parseFloat(formData.collectedAmount) || 0;
     const paymentStatus: PaymentStatus = {
       totalAmount,
       collectedAmount,
       remainingAmount: totalAmount - collectedAmount,
-      collectionStatus: formData.collectionStatus as PaymentStatus['collectionStatus']
+      collectionStatus: proBono ? 'unpaid' : formData.collectionStatus as PaymentStatus['collectionStatus']
     };
     
     // Build commission structure
-    const commissionStructure: CommissionStructure | undefined = formData.marketerId ? {
+    const commissionStructure: CommissionStructure | undefined = formData.marketerId && !proBono ? {
       type: formData.commissionType as 'fixed_amount' | 'percentage',
       value: parseFloat(formData.commissionValue) || 0,
       baseAmount: formData.commissionType === 'percentage' ? collectedAmount : undefined
@@ -431,6 +436,16 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               </Select>
             </div>
 
+            {formData.feeType === 'pro_bono' && (
+              <div className="flex items-start gap-2 p-3 bg-card rounded border">
+                <HandHeart className="h-5 w-5 text-primary mt-0.5" aria-hidden="true" />
+                <p className="text-sm text-muted-foreground">
+                  قضيةٌ يقدّمها المكتب مجاناً تطوّعاً — بلا أتعابٍ ولا تحصيلٍ ولا عمولة،
+                  ولا تدخل الإيرادات.
+                </p>
+              </div>
+            )}
+
             {/* Advance Fee */}
             {(formData.feeType === 'advance_only' || formData.feeType === 'advance_and_deferred') && (
               <div className="space-y-3 p-3 bg-card rounded border">
@@ -515,6 +530,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
           </div>
 
           {/* Payment Status */}
+          {formData.feeType !== 'pro_bono' && (
           <div className="space-y-4 p-4 bg-success-soft rounded-lg">
             <h4 className="font-medium text-foreground">حالة التحصيل من العميل</h4>
             
@@ -569,8 +585,10 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             )}
           </div>
 
+          )}
+
           {/* Commission Structure (only if marketer is selected) */}
-          {formData.marketerId && (
+          {formData.marketerId && formData.feeType !== 'pro_bono' && (
             <div className="space-y-4 p-4 bg-info-soft rounded-lg">
               <h4 className="font-medium text-foreground">هيكل عمولة المسوّق</h4>
               

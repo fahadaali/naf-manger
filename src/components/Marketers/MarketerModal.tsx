@@ -138,7 +138,8 @@ export default function MarketerModal({ marketer, onClose, onSave, isEditing = f
   /** العمولةُ المستحقّة على قضيةٍ بعينها — كما تُحسب في الخادم للمجموع. */
   const earnedOn = (case_: Case): number => {
     const commission = case_.commissionStructure;
-    if (!commission) return 0;
+    /* والتطوّعيةُ بلا عمولة — كما تُحسب في الخادم. */
+    if (!commission || case_.feeStructure?.type === 'pro_bono') return 0;
     const collected = case_.paymentStatus?.collectedAmount ?? 0;
     return commission.type === 'percentage'
       ? (collected * (commission.value ?? 0)) / 100

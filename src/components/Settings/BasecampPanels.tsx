@@ -49,6 +49,7 @@ const PLAN_ERROR: Record<string, string> = {
   no_document: 'لا ملفّ «بيانات المشروع» في هذا المشروع',
   no_client_name: 'الملفّ بلا اسم عميل',
   duplicate_case_number: 'رقم القضية مكرّر بين مشروعين',
+  case_number_taken: 'رقم القضية لقضيةٍ يربطها مشروعٌ آخر — لم يُكتب فيها',
   read_failed: 'تعذّرت قراءة الملفّ',
   rate_limited: 'تجاوز حدّ النداءات',
   not_found: 'الملفّ غير موجود عندهم',
@@ -549,9 +550,8 @@ export function PreviewPanel({
       )}
 
       {/* ═══ حين يتبدّل الطرفان ═══
-          حقلٌ مسّته يدٌ في المنصة وتبدّل عندهم معاً. والافتراضُ أن يُسأل —
-          فتصحيحُ المحامي لا يُمحى صامتاً. ومن استقرّ عنده أيُّ الطرفين
-          أصحّ يختار، فلا يحسم حقلاً حقلاً. */}
+          حقلٌ مسّته يدٌ في المنصة وتبدّل عندهم معاً. والافتراضُ أنّ المنصة
+          هي المعتمدة — ما عُدِّل فيها لا يُدهس. ومن أراد غيرَ ذلك يختار. */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
         <div className="flex items-start gap-2">
           <ArrowLeftRight className="h-5 w-5 text-muted-foreground mt-0.5" aria-hidden="true" />
@@ -572,9 +572,9 @@ export function PreviewPanel({
           disabled={busy !== null}
           className="min-w-52"
         >
-          <option value="ask">اسألني — وهو الافتراض</option>
+          <option value="platform">أبقِ ما في المنصة دائماً — وهو الافتراض</option>
+          <option value="ask">اسألني</option>
           <option value="basecamp">خذ من بيسكامب دائماً</option>
-          <option value="platform">أبقِ ما في المنصة دائماً</option>
         </Select>
       </div>
 

@@ -579,6 +579,8 @@ export interface DashboardStats {
   prospectsByStatus: Record<string, number>;
   casesByStatus: Record<string, number>;
   conversionRate: number; // Prospects to clients conversion rate
+  /** القضايا المقدَّمة مجاناً تطوّعاً — حاضرةً غيرَ مؤرشفة. */
+  proBonoCases: number;
   /* والنموّ لثلاثةٍ فقط: «معدّل الربح» لا عمودَ يقول متى أُغلقت قضيتُه،
      فلا يُقاس نموُّه ولا يُفبرك له رقم. */
   growth?: {
@@ -718,7 +720,9 @@ export interface Marketer {
 }
 
 export interface FeeStructure {
-  type: 'advance_only' | 'deferred_only' | 'advance_and_deferred';
+  /** و`pro_bono` قضيةٌ يقدّمها المكتب مجاناً تطوّعاً: لا أتعابَ ولا تحصيلَ
+      ولا عمولة، ولا تدخل الإيرادَ في أيّ حساب. */
+  type: 'advance_only' | 'deferred_only' | 'advance_and_deferred' | 'pro_bono';
   advance?: {
     feeType: 'fixed_amount' | 'percentage';
     value: number;

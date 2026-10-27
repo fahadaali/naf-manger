@@ -70,6 +70,7 @@ const FEE_TYPE: Record<string, string> = {
   advance_only: 'مقدَّم فقط',
   deferred_only: 'مؤخَّر فقط',
   advance_and_deferred: 'مقدَّم ومؤخَّر',
+  pro_bono: 'مجاني — تطوّعي',
 }
 
 /* دورُ العضو — وكانت هذه الخريطة مكتوبةً في `Header` و`UserManagement`

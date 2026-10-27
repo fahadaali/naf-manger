@@ -34,6 +34,7 @@ export const REPORT_FIELDS: Record<string, ReportField[]> = {
     { id: 'outcome', name: 'النتيجة', type: 'select', source: 'cases', options: ['won', 'lost', 'settled'] },
     { id: 'clientName', name: 'اسم العميل', type: 'text', source: 'cases' },
     { id: 'marketerName', name: 'المسوّق', type: 'text', source: 'cases' },
+    { id: 'feeType', name: 'نوع الأتعاب', type: 'select', source: 'cases', options: ['advance_only', 'deferred_only', 'advance_and_deferred', 'pro_bono'] },
     { id: 'createdDate', name: 'تاريخ الإنشاء', type: 'date', source: 'cases' },
     { id: 'updatedDate', name: 'تاريخ التحديث', type: 'date', source: 'cases' }
   ]

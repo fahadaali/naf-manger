@@ -13,10 +13,11 @@
 //
 //   المنصة كما تركناها + بيسكامب تبدّل  →  يُكتب بلا إزعاج
 //   المنصة تبدّلت (يدٌ مسّته) + بيسكامب كما هو  →  يُترك، المنصة أحدث
-//   تبدّل الطرفان  →  تعارضٌ يُسجَّل بالقيمتين، ولا يُكتب
+//   تبدّل الطرفان  →  تبقى قيمةُ المنصة (الافتراض)، أو تعارضٌ يُسجَّل
+//                     بالقيمتين إن اختار المكتبُ «اسألني»
 //
-// وهذا ما اختاره صاحبُ المكتب صراحةً على «بيسكامب يفوز دائماً»: تصحيحٌ
-// يُمحى صامتاً في بيانات موكّلين أسوأُ من تعارضٍ ينتظر قراراً.
+// فما عُدِّل في المنصة هو المعتمد وإن خالف بيسكامب — قرارُ صاحب المكتب.
+// وتصحيحٌ يُمحى صامتاً في بيانات موكّلين لا يقع في أيٍّ من الحالات.
 
 import { BasecampError } from './api.js';
 import { readProjectDocument } from './discover.js';
@@ -147,18 +148,20 @@ async function readVocabulary(env) {
 }
 
 const POLICY_KEY = 'basecamp_conflict_policy';
+export const DEFAULT_POLICY = 'platform';
 
 /**
  * ═══ ماذا يقع حين يتبدّل الطرفان؟ ═══
  *
- * `ask` — يُسجَّل بالقيمتين ولا يُكتب، ويُحسم من الشاشة. وهو الافتراض،
- *         واختاره صاحبُ المكتب صراحةً على «بيسكامب يفوز دائماً»: تصحيحٌ
- *         يُمحى صامتاً في بيانات موكّلين أسوأُ من تعارضٍ ينتظر قراراً.
+ * `platform` — تُترك قيمةُ المنصة وتُثبَّت الصورة، فلا يُسأل عنها ثانيةً.
+ *         وهو الافتراض: **ما عُدِّل في المنصة هو المعتمد وإن خالف بيسكامب**،
+ *         كما قرّره صاحبُ المكتب. والحقلُ الذي لم تمسّه يدٌ يبقى يتحدّث من
+ *         بيسكامب كما كان.
+ *
+ * `ask` — يُسجَّل بالقيمتين ولا يُكتب، ويُحسم من الشاشة.
  *
  * `basecamp` — تُكتب قيمتُهم. لمكتبٍ يحرّر في بيسكامب ويقرأ في المنصة،
  *         فبيسكامب مصدرُه وما في المنصة صورةٌ عنه.
- *
- * `platform` — تُترك قيمةُ المنصة وتُثبَّت الصورة، فلا يُسأل عنها ثانيةً.
  *
  * وليس في الثلاثة ما «يوقف الاستيراد»: التعارضُ حقلٌ واحد لا يُكتب،
  * وبقيةُ الحقول والقضايا والعملاء تُكتب كلُّها. والسياسةُ إنما تُغني عن
@@ -170,9 +173,9 @@ async function readConflictPolicy(env) {
     .first();
   try {
     const stored = JSON.parse(row?.value ?? '{}');
-    return ['ask', 'basecamp', 'platform'].includes(stored?.policy) ? stored.policy : 'ask';
+    return ['ask', 'basecamp', 'platform'].includes(stored?.policy) ? stored.policy : DEFAULT_POLICY;
   } catch {
-    return 'ask';
+    return DEFAULT_POLICY;
   }
 }
 
@@ -225,7 +228,7 @@ function readSnapshot(raw) {
  */
 const strictly = (one, other) => String(one ?? '') === String(other ?? '');
 
-function mergeField({ current, incoming, lastSynced, blank, firstContact, same = strictly, policy = 'ask' }) {
+function mergeField({ current, incoming, lastSynced, blank, firstContact, same = strictly, policy = DEFAULT_POLICY }) {
   if (incoming === undefined || incoming === null || incoming === '') return { action: 'keep' };
   if (same(current, incoming)) return { action: 'keep' };
 
@@ -640,8 +643,6 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
     });
   }
 
-  /* القضيةُ تُطابَق برقمها، ثم بالمشروع المربوط سابقاً — فتغييرُ رقمِ
-     القضية في الملفّ يُحدِّث القضيةَ نفسَها ولا يُنشئ ثانية. */
   if (seen.cases.has(caseValues.caseNumber)) {
     /* مشروعان يحملان رقم القضية نفسَه: أحدهما سيدهس الآخر أو يسقط بقيد
        التفرّد. وهو تضاربٌ في ملفّاتهم لا في شيفرتنا — فيُسمّى ويُترك
@@ -651,13 +652,61 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
   }
   seen.cases.add(caseValues.caseNumber);
 
-  let existingCase = await env.DB.prepare(`SELECT * FROM cases WHERE case_number = ?`)
-    .bind(caseValues.caseNumber)
-    .first();
+  /* ═══ كلُّ تحديثٍ مربوطٌ بمعرّف المشروع ═══
 
-  if (!existingCase && row.case_id) {
-    existingCase = await env.DB.prepare(`SELECT * FROM cases WHERE id = ?`).bind(row.case_id).first();
-    if (existingCase) plan.warnings.push('تبدّل رقم القضية في الملفّ');
+     للموكّل مشاريعُ عدّة، ولكلٍّ قضيتُه. فالقضيةُ التي ربطها هذا المشروعُ
+     من قبل هي قضيتُه أبداً — يتبدّل رقمُها في الملفّ فتتبدّل هي، ولا
+     يُنشأ غيرُها. ورقمُ القضية لا يُطابَق به إلا لمشروعٍ لم يُربط بعد.
+
+     وكان الترتيبُ معكوساً: الرقمُ أوّلاً. فملفٌّ يذكر رقمَ قضيةٍ أخرى —
+     خطأً في الكتابة أو نسخاً من ملفٍّ قديم — كان يكتب حقولَه في قضية
+     مشروعٍ آخر، ولموكّلٍ آخر ربما. */
+  let existingCase = row.case_id
+    ? await env.DB.prepare(`SELECT * FROM cases WHERE id = ?`).bind(row.case_id).first()
+    : null;
+
+  if (existingCase) {
+    if (existingCase.case_number !== caseValues.caseNumber) {
+      /* والرقمُ الجديد قد يكون لقضيةٍ قائمة: كتابتُه يُسقطها قيدُ التفرّد،
+         أو تجمع قضيتين على رقمٍ واحد. فيبقى الرقمُ القائم ويُقال. */
+      const taken = await env.DB.prepare(`SELECT id FROM cases WHERE case_number = ? AND id <> ?`)
+        .bind(caseValues.caseNumber, existingCase.id)
+        .first();
+      if (taken) {
+        plan.warnings.push(`رقمُ المشروع في الملفّ «${caseValues.caseNumber}» لقضيةٍ أخرى — بقي «${existingCase.case_number}»`);
+        caseValues.caseNumber = existingCase.case_number;
+      } else {
+        plan.warnings.push('تبدّل رقم القضية في الملفّ');
+      }
+    }
+  } else {
+    existingCase = await env.DB.prepare(`SELECT * FROM cases WHERE case_number = ?`)
+      .bind(caseValues.caseNumber)
+      .first();
+
+    /* قضيةٌ بالرقم نفسِه ربطها مشروعٌ آخر: ليست لهذا المشروع. فيُسمّى
+       ولا يُكتب فيها — وإلا تقاسم مشروعان قضيةً واحدة، يدهس كلٌّ ما كتبه
+       الآخر في كل دورة. */
+    if (existingCase) {
+      const owner = await env.DB.prepare(
+        `SELECT project_id FROM basecamp_projects WHERE case_id = ? AND project_id <> ?`,
+      )
+        .bind(existingCase.id, row.project_id)
+        .first();
+      if (owner) {
+        plan.error = 'case_number_taken';
+        return plan;
+      }
+    }
+  }
+
+  /* ═══ المشروعُ المؤرشف منتهٍ ═══
+     أرشفةُ المشروع في بيسكامب هي إعلانُ المكتب أنّ العمل انتهى، وإن بقي
+     في الملفّ «قيد المعالجة» لأنّ أحداً لم يعدّله. فالحالةُ «مكتملة»، وتمرّ
+     على الدمج كقيمةٍ من بيسكامب — فحالةٌ عدّلتها يدٌ في المنصة تبقى. */
+  if (row.status === 'archived') {
+    if (caseValues.status !== 'completed') plan.warnings.push('المشروع مؤرشفٌ في بيسكامب — الحالة: مكتملة');
+    caseValues.status = 'completed';
   }
 
   /* ═══ نوعُ القضية حين يخلو منه الملفّ ═══
@@ -975,6 +1024,7 @@ async function applyPlan(env, plan, actorId, ai) {
   }
 
   result.clientId = clientId;
+  result.caseId = caseId;
 
   /* ═══ ملخّصُ القضية — نصٌّ يُصاغ لا حقلٌ يُملأ ═══
 
@@ -1196,6 +1246,17 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
       deferred: ai.budget.deferred,
       failed: ai.budget.failed,
     },
+    /* وكلُّ تحديثٍ يُنسب إلى مشروعه: معرّفُه عند بيسكامب وما أنشأه وما
+       حدّثه. فيُعرف من السجلّ أيُّ مشروعٍ كتب في أيّ قضية — والموكّلُ
+       الواحد قد تتوزّع قضاياه على مشاريع. */
+    projects: results
+      .filter((r) => r.created?.length || r.updated?.client?.length || r.updated?.case?.length)
+      .map((r) => ({
+        projectId: r.projectId,
+        caseId: r.caseId ?? null,
+        created: r.created,
+        updated: r.updated,
+      })),
   };
 
   await env.DB.prepare(

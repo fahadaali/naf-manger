@@ -464,7 +464,7 @@ export default function BasecampSync() {
             syncEnabled={status.syncEnabled === true}
             lastSyncAt={status.lastSyncAt ?? null}
             aiEnabled={status.aiEnabled === true}
-            conflictPolicy={status.conflictPolicy ?? 'ask'}
+            conflictPolicy={status.conflictPolicy ?? 'platform'}
             onChanged={() => load(true)}
           />
           <FieldMapPanel />

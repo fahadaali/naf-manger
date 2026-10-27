@@ -61,7 +61,8 @@ const DEFAULT_SETTINGS = {
      وشاشةُ القضية تكتب بنيةَ الاستحقاق: مقدَّمٌ ومؤخَّر. فالقائمةُ تُحرَّر
      من «تكوين النظام» ولا يقرؤها أحد، وخياراتُ الشاشة مكتوبةٌ في تصييرها.
      فصارت مفرداتِ ما يُكتب فعلاً، وصارت الشاشةُ تقرؤها. */
-  feeTypes: ['advance_only', 'deferred_only', 'advance_and_deferred'],
+  /* و`pro_bono` قضيةٌ مجانيةٌ تطوّعاً — بلا أتعابٍ ولا تحصيلٍ ولا عمولة. */
+  feeTypes: ['advance_only', 'deferred_only', 'advance_and_deferred', 'pro_bono'],
   companyName: 'شركة ناف',
   companyDescription: 'نظام إدارة العملاء',
 };
@@ -324,7 +325,7 @@ const WINDOW = {
 
    والمؤرشفُ خارجَها كلِّها: أُخرج من شاشته بقصد، فعدُّه في لوحته يناقضها. */
 export async function readStats(env) {
-  const [clients, prospects, cases, newClients, newProspects, newCases] = await env.DB.batch([
+  const [clients, prospects, cases, newClients, newProspects, newCases, proBono] = await env.DB.batch([
     env.DB.prepare(
       `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
     ),
@@ -358,6 +359,14 @@ export async function readStats(env) {
               SUM(CASE WHEN created_at >= strftime('%s', ${WINDOW.priorDate})
                         AND created_at <  strftime('%s', ${WINDOW.recentDate}) THEN 1 ELSE 0 END) prior
          FROM cases WHERE archived_at IS NULL`,
+    ),
+
+    /* والتطوّعيةُ تُعدّ من بنية الأتعاب نفسها — ولا عمودَ لها يُحفظ فيفترق
+       عنها. والتالفُ من JSON يُطرح بـ`json_valid` ولا يُسقط اللوحة. */
+    env.DB.prepare(
+      `SELECT COUNT(*) n FROM cases
+        WHERE archived_at IS NULL AND json_valid(fee_structure)
+          AND json_extract(fee_structure, '$.type') = 'pro_bono'`,
     ),
   ]);
 
@@ -398,6 +407,7 @@ export async function readStats(env) {
       clientsByType,
       prospectsByStatus,
       casesByStatus,
+      proBonoCases: Number(proBono.results?.[0]?.n ?? 0),
       conversionRate:
         totalClients + totalProspects > 0
           ? Math.round((totalClients / (totalClients + totalProspects)) * 100)
@@ -433,7 +443,7 @@ export async function readMarketerStats(env, user, marketerId) {
      بقصد لا تُحسب في أداء المسوّق ولا في عمولته المستحقّة. */
   const [cases, paid] = await env.DB.batch([
     env.DB.prepare(
-      `SELECT status, outcome, payment_status, commission_structure
+      `SELECT status, outcome, fee_structure, payment_status, commission_structure
        FROM cases WHERE marketer_id = ? AND archived_at IS NULL`,
     ).bind(marketerId),
     env.DB.prepare(
@@ -453,6 +463,11 @@ export async function readMarketerStats(env, user, marketerId) {
     if (row.status === 'completed') completedCases += 1;
     if (row.outcome === 'won') wonCases += 1;
     if (row.outcome === 'lost') lostCases += 1;
+
+    /* والتطوّعيةُ تُعدّ قضيةً ونتيجةً، ولا تُعدّ إيراداً ولا عمولة: لا
+       أتعابَ فيها يُحسب منها شيء — وإن بقي في صفّها مبلغٌ من قبل أن
+       تُعلَّم تطوّعاً. */
+    if (safeJson(row.fee_structure)?.type === 'pro_bono') continue;
 
     const payment = safeJson(row.payment_status);
     const commission = safeJson(row.commission_structure);

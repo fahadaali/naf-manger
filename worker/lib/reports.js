@@ -49,6 +49,9 @@ const FIELDS = {
     outcome: { column: 'outcome', type: 'text' },
     clientName: { column: 'client_name', type: 'text' },
     marketerName: { column: 'marketer_name', type: 'text' },
+    /* نوعُ الأتعاب في بنية JSON لا في عمود — والتعبيرُ ثابتٌ من هذا الملفّ
+       كبقية الأعمدة، فلا يدخل الجملةَ نصٌّ وارد. وبه تُعزل التطوّعية. */
+    feeType: { column: "json_extract(fee_structure, '$.type')", type: 'text' },
     createdDate: { column: 'created_at', type: 'epoch' },
     updatedDate: { column: 'updated_at', type: 'epoch' },
   },

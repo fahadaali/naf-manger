@@ -199,3 +199,42 @@ test('ولا صفَّ يُنشأ لمن لم يضبط شيئاً، ولا يُم
   );
   db.close();
 });
+
+/* ═══ «مجاني — تطوّعي» يبلغ أنواعَ الأتعاب المحفوظة ═══
+ *
+ * الافتراضُ في الشيفرة يحمله، لكنّ مكتباً حرّر أنواعَ الأتعاب من «تكوين
+ * النظام» تُقرأ قائمتُه المحفوظة كما هي — فلا يظهر له الخيار. وذلك ما
+ * تُصلحه الهجرة السادسة عشرة.
+ */
+const PRO_BONO = '0016_pro_bono.sql';
+const applyProBono = (db) => db.exec(fs.readFileSync(path.join(DIR, PRO_BONO), 'utf8'));
+const settingsOf = (db) =>
+  JSON.parse(db.prepare(`SELECT value FROM system_settings WHERE key = 'settings'`).get().value);
+
+test('«pro_bono» يُلحق بآخر أنواع الأتعاب المحفوظة، وما قبله يبقى', () => {
+  const db = upTo(PRO_BONO);
+  setting(db, 'settings', JSON.stringify({ feeTypes: ['advance_only', 'deferred_only'], companyName: 'ناف' }));
+
+  applyProBono(db);
+  assert.deepEqual(settingsOf(db), { feeTypes: ['advance_only', 'deferred_only', 'pro_bono'], companyName: 'ناف' });
+
+  applyProBono(db);
+  assert.deepEqual(settingsOf(db).feeTypes, ['advance_only', 'deferred_only', 'pro_bono']);
+  db.close();
+});
+
+test('ولا يُمسّ صفٌّ بلا أنواع أتعابٍ محفوظة ولا تالف', () => {
+  const db = upTo(PRO_BONO);
+  applyProBono(db);
+  assert.equal(db.prepare(`SELECT COUNT(*) n FROM system_settings WHERE key = 'settings'`).get().n, 0);
+
+  /* بلا `feeTypes`: تُقرأ من الافتراض، وهو يحمله. */
+  setting(db, 'settings', JSON.stringify({ companyName: 'ناف' }));
+  applyProBono(db);
+  assert.deepEqual(settingsOf(db), { companyName: 'ناف' });
+
+  db.prepare(`UPDATE system_settings SET value = 'ليس JSON' WHERE key = 'settings'`).run();
+  applyProBono(db);
+  assert.equal(db.prepare(`SELECT value FROM system_settings WHERE key = 'settings'`).get().value, 'ليس JSON');
+  db.close();
+});
