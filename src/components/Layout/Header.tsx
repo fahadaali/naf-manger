@@ -3,11 +3,14 @@ import { House, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../data/database';
 import ProfileAvatar from '../Common/ProfileAvatar';
+import NotificationBell from './NotificationBell';
 import { roleLabel } from '../../lib/labels';
 
 interface HeaderProps {
   currentView: string;
   onMenuClick: () => void;
+  /** يفتح شاشةً بعينها — يناديه بندُ الإشعار. */
+  onNavigate: (view: string) => void;
 }
 
 /* naf-terms.md §٢ «الانتقال إلى المنصات من الترويسة»، وأيقونته `House`
@@ -25,7 +28,7 @@ const viewTitles: Record<string, string> = {
   settings: 'الإعدادات'
 };
 
-export default function Header({ currentView, onMenuClick }: HeaderProps) {
+export default function Header({ currentView, onMenuClick, onNavigate }: HeaderProps) {
   const { user, logout, center } = useAuth();
   const [settings, setSettings] = useState<any>(null);
 
@@ -64,10 +67,9 @@ export default function Header({ currentView, onMenuClick }: HeaderProps) {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* كان هنا جرسُ إشعاراتٍ بلا `onClick` ولا اسمٍ مقروء: يُضغط فلا
-              يقع شيء. والإشعاراتُ غيرُ مبنيّةٍ أصلاً — تفضيلاتُها تُحفظ
-              ولا مُرسِل لها، وREADME يقول ذلك — فزرٌّ يَعِد بها وعدٌ كاذب.
-              ويعود حين يُبنى الإرسال. */}
+          {/* الجرسُ عاد حين بُنيت الإشعارات: يُكتب بندٌ لكلّ مستلمٍ ربط البريدُ
+              أم لم يُربط، والبندُ يفتح شاشتَه. */}
+          <NotificationBell onNavigate={onNavigate} />
 
           <div className="flex items-center gap-3">
             {/* إلى شبكة المنصات في المركز، بجوار الاسم مباشرةً. صورةُ
