@@ -63,7 +63,9 @@ const MAP_SYSTEM = `أنت تربط عناوينَ حقولٍ في ملفّ مك
 
 أعِد JSON فقط: {"العنوان":"مفتاح الحقل"}`;
 
-async function ask(env, system, user, maxTokens) {
+/* ويُصدَّر لمن يسأل الطرازَ سؤالاً مغلقاً بالحدود نفسِها — ربطُ مدفوعات
+   وافق (`ai/payments.js`) — فلا يُكتب نداءٌ ثانٍ بحرارةٍ وسقوطٍ يفترقان. */
+export async function ask(env, system, user, maxTokens) {
   const model = env.AI_MODEL || DEFAULT_MODEL;
   try {
     const output = await env.AI.run(model, {
@@ -87,7 +89,7 @@ async function ask(env, system, user, maxTokens) {
 }
 
 /* الردُّ يُنقّى قبل التحليل: الطُّرز تُحيط JSON بسياجٍ أو تسبقه بجملة. */
-function readJson(text) {
+export function readJson(text) {
   if (typeof text !== 'string') return null;
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const body = fenced ? fenced[1] : text;

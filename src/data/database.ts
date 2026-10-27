@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CustomReport, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats } from '../types';
+import { CustomReport, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -297,6 +297,41 @@ export class LocalDatabase {
      الاتّجاه واحد: يُقرأ منه ولا يُكتب فيه. ولا `listOr` في شيءٍ منها —
      شاشةُ الربط تعرض سببَ السقوط، و«لم يُسجَّل التطبيق» غيرُ «لم يُربط
      الحساب» غيرُ «بُدِّل المفتاح». والصمتُ يخلط الثلاثة. */
+  /* ═══ وافق ═══
+     قراءةٌ لا كتابة. ولا `listOr`: الشاشةُ تعرض سببَ السقوط — «لم يُضبط
+     المفتاح» غيرُ «رُفض المفتاح». */
+  async getWafeqStatus(): Promise<WafeqStatus> {
+    return await api.read<WafeqStatus>('/wafeq/status');
+  }
+
+  async testWafeq(): Promise<WafeqProbe> {
+    return await api.post<WafeqProbe>('/wafeq/test');
+  }
+
+  async previewWafeq(): Promise<{ summary: WafeqSummary; items: Partial<WafeqPayment>[] }> {
+    return await api.post('/wafeq/preview');
+  }
+
+  async syncWafeq(): Promise<WafeqSummary> {
+    return await api.post<WafeqSummary>('/wafeq/sync');
+  }
+
+  async setWafeqAutoSync(enabled: boolean): Promise<void> {
+    await api.put('/wafeq/auto-sync', { enabled });
+  }
+
+  async getWafeqPayments(status?: WafeqPaymentStatus): Promise<WafeqPayment[]> {
+    return await api.read<WafeqPayment[]>(`/wafeq/payments${status ? `?status=${status}` : ''}`);
+  }
+
+  async decideWafeqPayment(
+    externalId: string,
+    action: 'link' | 'ignore' | 'unlink',
+    caseId?: string,
+  ): Promise<void> {
+    await api.post(`/wafeq/decide/${encodeURIComponent(externalId)}`, { action, ...(caseId ? { caseId } : {}) });
+  }
+
   async getBasecampStatus(): Promise<BasecampStatus> {
     return await api.read<BasecampStatus>('/basecamp/status');
   }
