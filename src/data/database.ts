@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
+import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -132,6 +132,15 @@ export class LocalDatabase {
   // ── القضايا ──
   async getCases(): Promise<Case[]> {
     return (await listOr(api.list<any>('cases'), 'القضايا')).map(asCase);
+  }
+
+  /* آخرُ ما حدث في بيسكامب — وسقوطُه يُخفي اللوحَ ولا يُسقط النافذة. */
+  async getCaseTimeline(id: string): Promise<CaseTimeline> {
+    try {
+      return await api.read<CaseTimeline>(`/cases/${encodeURIComponent(id)}/timeline`);
+    } catch {
+      return { linked: false, events: [] };
+    }
   }
 
   async getCase(id: string): Promise<Case> {
