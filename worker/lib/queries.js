@@ -311,6 +311,24 @@ function growth(current, previous) {
   };
 }
 
+/**
+ * ═══ تبدُّلُ «معدّل الربح» بالنقاط لا بالنسبة ═══
+ *
+ * معدّلٌ من ٥٠٪ إلى ٦٠٪ تقدّمُ عشرِ نقاط — وقولُ «‎+٢٠٪‎» عنه يُقرأ أنّ
+ * المعدّل صار ٧٠٪. فـ`percent` هنا فرقُ النقاط بين معدّلَي النافذتين.
+ *
+ * ولا مؤشّرَ إن خلت إحدى النافذتين من قضيةٍ مغلقة: معدّلٌ من لا شيء ليس
+ * صفراً، والمقارنةُ به تُفبرك تقدّماً أو تراجعاً.
+ */
+function rateShift(row) {
+  const recent = Number(row?.recent ?? 0);
+  const prior = Number(row?.prior ?? 0);
+  if (!recent || !prior) return null;
+  const now = Math.round((Number(row.recent_won ?? 0) / recent) * 100);
+  const before = Math.round((Number(row.prior_won ?? 0) / prior) * 100);
+  return { current: now, previous: before, percent: now - before };
+}
+
 /* حدودُ النافذتين — يومياً لا لحظياً: «الشهر الماضي» في كلام المكتب يومٌ
    لا ثانية، والحدُّ اليوميّ يجعل الرقم ثابتاً طوال اليوم لا يتزحزح مع كل
    تحديثِ صفحة. */
@@ -325,7 +343,7 @@ const WINDOW = {
 
    والمؤرشفُ خارجَها كلِّها: أُخرج من شاشته بقصد، فعدُّه في لوحته يناقضها. */
 export async function readStats(env) {
-  const [clients, prospects, cases, newClients, newProspects, newCases, proBono] = await env.DB.batch([
+  const [clients, prospects, cases, newClients, newProspects, newCases, proBono, closed] = await env.DB.batch([
     env.DB.prepare(
       `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
     ),
@@ -367,6 +385,21 @@ export async function readStats(env) {
       `SELECT COUNT(*) n FROM cases
         WHERE archived_at IS NULL AND json_valid(fee_structure)
           AND json_extract(fee_structure, '$.type') = 'pro_bono'`,
+    ),
+
+    /* ═══ ما أُغلق في كلّ نافذة، وما رُبح منه ═══
+       بـ`closed_at` — لحظةُ صيرورتها مكتملة (`migrations/0017`) — لا
+       بـ`updated_at` الذي يتحرّك مع أيّ تعديل. */
+    env.DB.prepare(
+      `SELECT SUM(CASE WHEN closed_at >= strftime('%s', ${WINDOW.recentDate}) THEN 1 ELSE 0 END) recent,
+              SUM(CASE WHEN closed_at >= strftime('%s', ${WINDOW.recentDate}) AND outcome = 'won'
+                       THEN 1 ELSE 0 END) recent_won,
+              SUM(CASE WHEN closed_at >= strftime('%s', ${WINDOW.priorDate})
+                        AND closed_at <  strftime('%s', ${WINDOW.recentDate}) THEN 1 ELSE 0 END) prior,
+              SUM(CASE WHEN closed_at >= strftime('%s', ${WINDOW.priorDate})
+                        AND closed_at <  strftime('%s', ${WINDOW.recentDate}) AND outcome = 'won'
+                       THEN 1 ELSE 0 END) prior_won
+         FROM cases WHERE archived_at IS NULL AND status = 'completed' AND closed_at IS NOT NULL`,
     ),
   ]);
 
@@ -413,14 +446,11 @@ export async function readStats(env) {
           ? Math.round((totalClients / (totalClients + totalProspects)) * 100)
           : 0,
 
-      /* ولا نموَّ لـ«معدّل الربح»: لا عمودَ يقول متى أُغلقت القضية —
-         `updated_at` يتحرّك مع أيّ تعديل، فبناءُ «ربحُ هذا الشهر» عليه
-         يقيس التحريرَ لا الحُكم. فتُترك بطاقتُه بلا مؤشّر حتى يوجد ما
-         يُقاس، ولا يُوضع رقمٌ يُقرأ قياساً وليس منه. */
       growth: {
         clients: growth(newClients.results?.[0]?.recent, newClients.results?.[0]?.prior),
         prospects: growth(newProspects.results?.[0]?.recent, newProspects.results?.[0]?.prior),
         cases: growth(newCases.results?.[0]?.recent, newCases.results?.[0]?.prior),
+        winRate: rateShift(closed.results?.[0]),
       },
     },
   });

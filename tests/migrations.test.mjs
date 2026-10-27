@@ -238,3 +238,57 @@ test('ولا يُمسّ صفٌّ بلا أنواع أتعابٍ محفوظة و�
   assert.equal(db.prepare(`SELECT value FROM system_settings WHERE key = 'settings'`).get().value, 'ليس JSON');
   db.close();
 });
+
+/* ═══ لحظةُ الإغلاق تكتبها القاعدة ═══
+ *
+ * الحالةُ تُكتب من أبوابٍ كثيرة، فالمشغّلان في الهجرة السابعة عشرة يكتبان
+ * `closed_at` أيّاً كان الباب. وما أُغلق قبلها يُقدَّر بآخر تعديلٍ له.
+ */
+const CLOSED = '0017_case_closed_at.sql';
+const closedOf = (db, id) => db.prepare(`SELECT closed_at FROM cases WHERE id = ?`).get(id).closed_at;
+
+test('ما أُغلق قبل الهجرة يُقدَّر بآخر تعديله، والمفتوحُ يبقى فارغاً', () => {
+  const db = upTo(CLOSED);
+  db.prepare(`INSERT INTO clients (id, full_name, created_at, updated_at) VALUES ('c', 'س', 1, 1)`).run();
+  db.prepare(
+    `INSERT INTO cases (id, case_number, case_type, client_id, client_name, status, created_at, updated_at)
+     VALUES ('done', '1', 't', 'c', 'س', 'completed', 10, 500),
+            ('open', '2', 't', 'c', 'س', 'pending',   10, 600)`,
+  ).run();
+
+  db.exec(fs.readFileSync(path.join(DIR, CLOSED), 'utf8'));
+
+  assert.equal(closedOf(db, 'done'), 500);
+  assert.equal(closedOf(db, 'open'), null);
+  /* ولم يسقط صفّ. */
+  assert.equal(db.prepare(`SELECT COUNT(*) n FROM cases`).get().n, 2);
+  db.close();
+});
+
+test('الإغلاقُ يُكتب ويُمحى مع الحالة، وحفظٌ بلا تبدّلٍ لا يزحزحه', () => {
+  const db = upTo('9999');
+  db.prepare(`INSERT INTO clients (id, full_name, created_at, updated_at) VALUES ('c', 'س', 1, 1)`).run();
+  db.prepare(
+    `INSERT INTO cases (id, case_number, case_type, client_id, client_name, status, created_at, updated_at)
+     VALUES ('k', '1', 't', 'c', 'س', 'pending', 10, 10),
+            ('imported', '2', 't', 'c', 'س', 'completed', 10, 700)`,
+  ).run();
+
+  /* قضيةٌ تُنشأ مكتملةً تُعدّ مغلقةً لحظةَ كتابتها. */
+  assert.equal(closedOf(db, 'imported'), 700);
+  assert.equal(closedOf(db, 'k'), null);
+
+  db.prepare(`UPDATE cases SET status = 'completed' WHERE id = 'k'`).run();
+  const closedAt = closedOf(db, 'k');
+  assert.ok(closedAt > 1_000_000_000, String(closedAt));
+
+  /* وحفظُها ثانيةً بالحالة نفسها لا يُزحزح اللحظة. */
+  db.prepare(`UPDATE cases SET closed_at = 42 WHERE id = 'k'`).run();
+  db.prepare(`UPDATE cases SET status = 'completed', summary = 'تعديل' WHERE id = 'k'`).run();
+  assert.equal(closedOf(db, 'k'), 42);
+
+  /* وتُفتح ثانيةً فيُمحى. */
+  db.prepare(`UPDATE cases SET status = 'in-progress' WHERE id = 'k'`).run();
+  assert.equal(closedOf(db, 'k'), null);
+  db.close();
+});

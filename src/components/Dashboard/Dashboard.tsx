@@ -132,6 +132,7 @@ export default function Dashboard() {
           value={`${formatNumber(stats.winRate)}%`}
           icon={Award}
           color="bg-chart-5"
+          trend={stats.growth?.winRate ?? undefined}
         />
         <StatsCard
           title="قضايا تطوّعية"

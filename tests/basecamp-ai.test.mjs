@@ -266,6 +266,26 @@ plan = await buildPlan(env, connection);
 check('ونوعٌ كتبه الملفّ لا يُمسّ',
   plan.plans[0].case.values.caseType === 'قضية عمالية', plan.plans[0].case.values);
 
+/* ═══ والمفتاحُ الذي تكتبه شاشةُ «تكوين النظام» ═══
+   هو `settings` — وكان القارئُ يقرأ `platform` وحده، فما يضبطه المكتب من
+   الشاشة لا يبلغ الاقتراح. والفقرةُ أعلاه زرعت `platform` بيدها، فمرّت
+   خضراء والعطلُ قائم. وهنا يُكتب من الباب الذي يكتب منه المكتب. */
+({ db, env } = setup());
+db.prepare(
+  `INSERT INTO system_settings (key, value, updated_at) VALUES ('platform', ?, 1)`,
+).run(JSON.stringify({ caseTypes: ['قضية تجارية'] }));
+const { writeSettings } = await import('../worker/lib/queries.js');
+await writeSettings(
+  { json: async () => ({ caseTypes: ['قضية إيجارات', 'قضية عمالية'] }) },
+  env,
+  { id: 'u1', permissions: { settings: { update: true } } },
+);
+docContent = FULL_NAME_DOC.replace('<div>نوع المشروع: قضية عمالية</div>', '');
+typeAnswer = 'قضية إيجارات';
+plan = await buildPlan(env, connection);
+check('أنواعُ «تكوين النظام» المحفوظة من الشاشة تبلغ الاقتراح',
+  plan.plans[0].case.values.caseType === 'قضية إيجارات', plan.plans[0].case.values);
+
 // ── وسقوطُ الاستدلال لا يُسقط الاستيراد ──
 ({ db, env } = setup());
 broken = true;
