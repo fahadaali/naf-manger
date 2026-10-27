@@ -225,6 +225,7 @@ export default function WafeqSync() {
                   {!status.ai?.available
                     ? 'الذكاءُ الاصطناعي غيرُ مربوطٍ بالمنصة'
                     : status.ai.enabled ? 'الذكاءُ الاصطناعي يعمل — يقترح القضيةَ لما لا رقمَ فيه' : 'الذكاءُ الاصطناعي مطفأ'}
+                  {status.ai?.model && <Badge variant="outline"><bdi dir="ltr">{status.ai.model}</bdi></Badge>}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {status.ai?.available && (
@@ -264,6 +265,9 @@ export default function WafeqSync() {
                     مقترَحة {formatNumber(rematch.suggested)} · بقيت بلا قضية {formatNumber(rematch.unmatched)}
                   </p>
                   <AiLine ai={rematch.ai} />
+                  {(rematch.invoiceErrors ?? 0) > 0 && (
+                    <p className="text-destructive">تعذّرت قراءة {formatNumber(rematch.invoiceErrors ?? 0)} فاتورة</p>
+                  )}
                 </div>
               )}
             </div>
@@ -282,6 +286,21 @@ export default function WafeqSync() {
                     <bdi dir="ltr">{key}: {fields.join(', ')}</bdi>
                   </p>
                 ))}
+                {([['الفاتورة', probe.invoice], ['الجهة', probe.contact]] as const).map(([title, shape]) => shape && (
+                  <div key={title} className="pt-1">
+                    <p className="text-foreground">{title}:</p>
+                    {shape.error ? (
+                      <p className="text-destructive">تعذّرت القراءة ({shape.error})</p>
+                    ) : (
+                      <>
+                        <p className="text-muted-foreground"><bdi dir="ltr">{shape.fields?.join(', ') || '—'}</bdi></p>
+                        {Object.entries(shape.nested ?? {}).map(([key, fields]) => (
+                          <p key={key} className="text-muted-foreground"><bdi dir="ltr">{key}: {fields.join(', ')}</bdi></p>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -295,6 +314,9 @@ export default function WafeqSync() {
                   {summary.data.skipped > 0 && <> · طُرحت {formatNumber(summary.data.skipped)} لم تُفهم</>}
                 </p>
                 <AiLine ai={summary.data.ai} />
+                {(summary.data.invoiceErrors ?? 0) > 0 && (
+                  <p className="text-destructive">تعذّرت قراءة {formatNumber(summary.data.invoiceErrors ?? 0)} فاتورة — يعيدها «اربط بالذكاء الاصطناعي الآن»</p>
+                )}
                 {summary.data.truncated && <p className="text-muted-foreground">بلغت الدورةُ سقفَ الصفحات — الباقي في التي تليها.</p>}
               </div>
             )}
@@ -336,6 +358,13 @@ export default function WafeqSync() {
                       </div>
                       {(payment.reference || payment.description) && (
                         <p className="text-xs text-muted-foreground"><bdi>{[payment.reference, payment.description].filter(Boolean).join(' — ')}</bdi></p>
+                      )}
+                      {(payment.invoiceText || payment.projectName) && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          <span className="text-foreground">ما قُرئ: </span>
+                          {payment.projectName && <>المشروع «<bdi>{payment.projectName}</bdi>» · </>}
+                          <bdi>{payment.invoiceText}</bdi>
+                        </p>
                       )}
                       {payment.reason && <p className="text-xs text-muted-foreground">{payment.reason}</p>}
 

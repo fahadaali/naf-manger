@@ -24,6 +24,7 @@ import {
 import { closeReview, countOpen, listOpen, mergeClients } from './reviews.js';
 import { rememberPhrase, readLexicon } from '../ai/extract.js';
 import { aiEnabled, setAiEnabled } from '../ai/summarize.js';
+import { modelAvailable, modelInfo } from '../ai/model.js';
 import { suggestMapping } from '../ai/extract.js';
 import {
   activeConnection,
@@ -97,6 +98,7 @@ export async function readStatus(env, user) {
       /* والتلخيصُ الآليّ: حالتُه تُقرأ مع حالة الربط لأنّ مفتاحَه في
          شاشتها — ونداءٌ ثانٍ لعلمٍ واحد نداءٌ زائد. */
       aiEnabled: await aiEnabled(env),
+      aiModel: modelInfo(env, 'write')?.model ?? null,
       /* وما يستحقّ نظراً: عددٌ يُقرأ مع الحالة، فيُعرف أنّ هناك ما يُسوَّى
          بلا فتح لوحٍ ثانٍ. ولا يحجب شيئاً — الاستيرادُ وقع. */
       openReviews: await countOpen(env),
@@ -206,6 +208,17 @@ export async function resolveReview(request, env, user, reviewId) {
         /* ورقمُ القضية فريدٌ في المخطَّط: رقمٌ مأخوذٌ يُردّ ولا يُسقط الطلب. */
         return fail('duplicate_case_number', 409);
       }
+    } else if (choice !== 'accept') {
+      return fail('invalid_resolution', 400);
+    }
+  } else if (row.kind === 'ai_topic') {
+    /* موضوعٌ صاغه الطراز وكُتب: «صحيح» يُبقيه، أو يُكتب بدلُه. */
+    if (choice === 'set') {
+      if (!value) return fail('invalid_value', 400);
+      if (!row.case_id) return fail('not_found', 404);
+      await env.DB.prepare(`UPDATE cases SET summary = ?, updated_at = ? WHERE id = ?`)
+        .bind(value, now, row.case_id)
+        .run();
     } else if (choice !== 'accept') {
       return fail('invalid_resolution', 400);
     }
@@ -543,7 +556,7 @@ export async function writeMap(request, env, user) {
  */
 export async function suggestMap(env, user) {
   if (!isAdmin(user)) return fail('forbidden', 403);
-  if (!env.AI) return fail('not_connected', 503);
+  if (!modelAvailable(env)) return fail('not_connected', 503);
   if (!(await aiEnabled(env))) return fail('ai_disabled', 409);
 
   const connection = await activeConnection(env);

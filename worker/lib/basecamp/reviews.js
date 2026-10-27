@@ -30,6 +30,7 @@ export const REVIEW_KINDS = {
   similar_client: 'عميلٌ يشبه عميلاً',
   generated_number: 'رقمُ قضيةٍ مولَّد',
   unmatched_lawyer: 'محامٍ لم يُعرف',
+  ai_topic: 'موضوعٌ مقترح',
 };
 
 /**

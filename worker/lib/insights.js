@@ -16,16 +16,12 @@
 // إلى استدلالٍ لتُصاغ منها جملة. والأرقامُ تكفي لما يُطلب: أين يتسرّب
 // المحتملون، وأيُّ نوعِ قضايا يربح، وأيُّ شهرٍ تراجع.
 
+import { complete, modelAvailable, modelInfo } from './ai/model.js';
+
 const fail = (error, status) => Response.json({ ok: false, error }, { status });
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
-/**
- * الطراز الافتراضي — والعربية من لغاته المعلنة رسمياً، وهو شرطٌ في منصةٍ
- * عربية كلِّها. ويُبدَّل من `AI_MODEL` في `wrangler.toml` بلا نشرِ شيفرة،
- * وهذا السطر شبكةُ أمانٍ لو غاب المتغيّر لا مكانَ الاختيار.
- */
-const DEFAULT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 
 /* الخبيئة تُقرأ ما دامت البصمة مطابقة. والمهلة حدٌّ أعلى لا شرطُ صحّة:
    أرقامٌ لم تتبدّل منذ أسبوع استبصارُها قائم، لكن نصّاً يبقى شهراً يشيخ. */
@@ -238,11 +234,11 @@ export async function readInsights(request, env, user, url) {
 
   /* الارتباط غائبٌ يعني أن الميزة لم تُنشر بعد — رمزٌ مسجَّل تقرؤه الشاشة
      وتقول «غير مربوط»، لا خطأُ خادمٍ يوهم أن العطل عارض. */
-  if (!env.AI) return fail('not_connected', 503);
+  if (!modelAvailable(env)) return fail('not_connected', 503);
 
   const digest = await buildDigest(env);
   const hash = await hashDigest(digest);
-  const model = env.AI_MODEL || DEFAULT_MODEL;
+  const model = modelInfo(env, 'write')?.model ?? '';
   const refresh = url.searchParams.get('refresh') === '1';
 
   if (!refresh) {
@@ -266,24 +262,16 @@ export async function readInsights(request, env, user, url) {
     }
   }
 
-  let output;
-  try {
-    output = await env.AI.run(model, {
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: JSON.stringify(digest) },
-      ],
-      max_tokens: 1200,
-      temperature: 0.2,
-    });
-  } catch (error) {
-    console.error('Workers AI: تعذّر الاستدلال —', error?.message ?? error);
-    return fail('inference_failed', 502);
-  }
+  /* صياغةٌ يقرؤها المكتب — على المستوى الكاتب (Sonnet)، أو Workers AI احتياطاً. */
+  const text = await complete(env, {
+    tier: 'write',
+    system: SYSTEM_PROMPT,
+    user: JSON.stringify(digest),
+    maxTokens: 1200,
+    temperature: 0.2,
+  });
+  if (text === null) return fail('inference_failed', 502);
 
-  /* شكلُ الردّ يختلف بين طرازٍ وآخر: نصٌّ في `response` غالباً، وقد يأتي
-     ملفوفاً. والقراءةُ تحتمل الشكلين بدل أن تفترض واحداً. */
-  const text = typeof output === 'string' ? output : (output?.response ?? output?.result?.response);
   const insights = parseInsights(text);
 
   if (!insights) {

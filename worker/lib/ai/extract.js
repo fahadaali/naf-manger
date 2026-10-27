@@ -35,9 +35,8 @@
 // وُضعت في الحقل الخطأ — تُرى في المعاينة قبل أن تُكتب، وتُصحَّح.
 
 import { normalizeArabic } from '../basecamp/discover.js';
+import { complete } from './model.js';
 
-/** الطراز نفسُه — والعربيةُ من لغاته المعلنة. */
-const DEFAULT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 
 const EXTRACT_SYSTEM = `أنت قارئُ مستندات في مكتب محاماة سعودي. تُعطى نصَّ ملفّ مشروع وقائمةَ حقولٍ ناقصة، فتستخرج قيمةَ كلِّ حقلٍ من النصّ.
 
@@ -64,28 +63,11 @@ const MAP_SYSTEM = `أنت تربط عناوينَ حقولٍ في ملفّ مك
 أعِد JSON فقط: {"العنوان":"مفتاح الحقل"}`;
 
 /* ويُصدَّر لمن يسأل الطرازَ سؤالاً مغلقاً بالحدود نفسِها — ربطُ مدفوعات
-   وافق (`ai/payments.js`) — فلا يُكتب نداءٌ ثانٍ بحرارةٍ وسقوطٍ يفترقان. */
+   وافق (`ai/payments.js`) — فلا يُكتب نداءٌ ثانٍ بحرارةٍ وسقوطٍ يفترقان.
+   وهو المستوى السريع (Haiku): نقلٌ واختيارٌ من قائمة، لا صياغة. والحرارةُ
+   صفرٌ لـWorkers AI — المطلوبُ نقلٌ لا تنويع. */
 export async function ask(env, system, user, maxTokens) {
-  const model = env.AI_MODEL || DEFAULT_MODEL;
-  try {
-    const output = await env.AI.run(model, {
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      max_tokens: maxTokens,
-      /* صفرٌ عملياً: المطلوب نقلٌ لا صياغة، والحرارةُ هنا تُنتج تنويعاً
-         حيث لا يُراد تنويع. */
-      temperature: 0,
-    });
-    const text = typeof output === 'string'
-      ? output
-      : (output?.response ?? output?.result?.response);
-    return typeof text === 'string' ? text : null;
-  } catch (error) {
-    console.error('Workers AI: تعذّرت القراءة الآلية —', error?.message ?? error);
-    return null;
-  }
+  return complete(env, { tier: 'fast', system, user, maxTokens, temperature: 0 });
 }
 
 /* الردُّ يُنقّى قبل التحليل: الطُّرز تُحيط JSON بسياجٍ أو تسبقه بجملة. */

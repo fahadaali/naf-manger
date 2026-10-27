@@ -250,6 +250,9 @@ export function readLabelledLines(text) {
  */
 const ROOTS = {
   'case.outcome': [
+    /* و«لصالحنا» و«لصالح العميل» بعينهما — لا «لصالح» وحدها. */
+    [/لصالحنا|لصالح (ال)?(عميل|موكل)/, 'won'],
+    [/ضدنا|ضد (ال)?(عميل|موكل)/, 'lost'],
     [/ربح|كسب|فوز|فزن/, 'won'],
     [/خسر/, 'lost'],
     [/صلح|تسوي|تصالح/, 'settled'],
@@ -391,6 +394,17 @@ export function coerceTarget(target, rawValue, vocab = {}) {
   }
 
   const translated = translate(target, value);
+
+  /* ═══ النتيجةُ تحت عنوان الحالة ═══
+     المكتبُ يكتب «حالة القضية: ربحانة» — فالحالةُ منتهيةٌ والنتيجةُ ربح. ولفظٌ
+     لم يُفهم حالةً يُجرَّب نتيجةً قبل أن يُردّ مجهولاً، بالجذور نفسِها وبحارس
+     النفي نفسِه: «لم نربح» لا تُقرأ ربحاً. */
+  if (target === 'case.status' && (translated === null || translated === 'completed')) {
+    /* و«منتهية لصالحنا» حالةٌ ونتيجةٌ في لفظ. */
+    const outcome = translate('case.outcome', value);
+    if (outcome) return { entity, values: { status: 'completed', outcome } };
+  }
+
   /* وحقلٌ مغلقٌ لم يُفهَم لفظُه: لا يُكتب، ويُردّ بلفظه ليُسأل عنه. */
   if (translated === null) return { entity, values: {}, unresolved: { target, value } };
 
@@ -450,6 +464,8 @@ export function parseDocument(html, fieldMap = DEFAULT_FIELD_MAP, vocab = {}) {
       kase.opposingParties = [...(kase.opposingParties ?? []), ...coerced.values.opposingParties];
       continue;
     }
+    /* ونتيجةٌ قُرئت من عنوانها لا يمحوها ما قُرئ من عنوان الحالة. */
+    if (target === 'case.status' && kase.outcome !== undefined) delete coerced.values.outcome;
     Object.assign(coerced.entity === 'client' ? client : kase, coerced.values);
   }
 

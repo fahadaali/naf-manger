@@ -137,6 +137,20 @@ const PROJECT_DOC = `<div>
   <div>ملاحظات العميل: يُفوتر باسم المؤسسة لا باسم المالك</div>
 </div>`;
 
+/* ═══ النتيجةُ تحت عنوان الحالة ═══ */
+const outcomeOf = (line) => parseDocument(`<div>اسم العميل: س</div><div>${line}</div>`, DEFAULT_FIELD_MAP).case;
+check('«حالة القضية: ربحانة» نتيجةٌ وحالة',
+  outcomeOf('حالة القضية: ربحانة').outcome === 'won' && outcomeOf('حالة القضية: ربحانة').status === 'completed',
+  outcomeOf('حالة القضية: ربحانة'));
+check('و«خسرانة» خسارة', outcomeOf('حالة القضية: خسرانة').outcome === 'lost');
+check('و«منتهية لصالحنا» حالةٌ ونتيجةٌ في لفظ',
+  outcomeOf('حالة القضية: منتهية لصالحنا').outcome === 'won', outcomeOf('حالة القضية: منتهية لصالحنا'));
+check('و«لم نربح» لا تُقرأ ربحاً', outcomeOf('حالة القضية: لم نربح').outcome === undefined);
+{
+  const both = parseDocument('<div>نتيجة القضية: صلح</div><div>حالة القضية: ربحانة</div>', DEFAULT_FIELD_MAP).case;
+  check('ونتيجةٌ من عنوانها لا يمحوها عنوانُ الحالة', both.outcome === 'settled', both);
+}
+
 const project = parseDocument(PROJECT_DOC, DEFAULT_FIELD_MAP);
 check('و«رقم المشروع» في الملفّ لا يُقرأ رقماً — المعرّفُ هو الرقم', !project.case.caseNumber && !project.case.courtCaseNumber, project.case);
 check('و«نوع المشروع» نوعُها', project.case.caseType === 'استشارة نظامية', project.case);

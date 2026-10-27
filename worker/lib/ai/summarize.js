@@ -25,10 +25,10 @@
 // وسقوطُ الاستدلال لا يُسقط الاستيراد: يُردّ `null` ويمضي، فالقضيةُ تُكتب
 // بلا ملخّص — والملخّصُ زينةٌ على بياناتٍ صحيحة، لا شرطٌ لها.
 
+import { complete, modelAvailable } from './model.js';
+
 const SETTINGS_KEY = 'ai_import';
 
-/** الطراز نفسُه الذي تستعمله الاستبصارات — والعربيةُ من لغاته المعلنة. */
-const DEFAULT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 
 /**
  * سقفُ الاستدلالات في الدورة الواحدة.
@@ -61,7 +61,7 @@ export const newBudget = (limit = RUN_BUDGET) => ({
  * ارتباطٍ غائب يسقط في كل دورة.
  */
 export async function aiEnabled(env) {
-  if (!env?.AI) return false;
+  if (!modelAvailable(env)) return false;
   const row = await env.DB.prepare(`SELECT value FROM system_settings WHERE key = ?`)
     .bind(SETTINGS_KEY)
     .first();
@@ -131,27 +131,11 @@ export async function fingerprint(value) {
     .join('');
 }
 
-/* نداءٌ واحد إلى الطراز. ولا يرمي: كلُّ سقوطٍ يُردّ `null` ويُسجَّل. */
-async function ask(env, system, user, { maxTokens = 300 } = {}) {
-  const model = env.AI_MODEL || DEFAULT_MODEL;
-  try {
-    const output = await env.AI.run(model, {
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      max_tokens: maxTokens,
-      /* حرارةٌ منخفضة: المطلوب وصفٌ لما أُعطي لا صياغةٌ بديعة. */
-      temperature: 0.1,
-    });
-    const text = typeof output === 'string'
-      ? output
-      : (output?.response ?? output?.result?.response);
-    return typeof text === 'string' ? text : null;
-  } catch (error) {
-    console.error('Workers AI: تعذّر التلخيص —', error?.message ?? error);
-    return null;
-  }
+/* نداءٌ واحد إلى الطراز. ولا يرمي: كلُّ سقوطٍ يُردّ `null` ويُسجَّل.
+   والصياغةُ على المستوى الكاتب (Sonnet)، والتصنيفُ على السريع. والحرارةُ
+   المنخفضة لـWorkers AI: المطلوبُ وصفٌ لما أُعطي لا صياغةٌ بديعة. */
+async function ask(env, system, user, { maxTokens = 300, tier = 'write' } = {}) {
+  return complete(env, { tier, system, user, maxTokens, temperature: 0.1 });
 }
 
 /* الطُّرز تُحيط ردَّها بسياجٍ أو تسبقه بمقدّمة — والمقدّمةُ في حقلِ ملفّ
@@ -249,7 +233,7 @@ export async function suggestCaseType(env, { text, options }) {
     env,
     TYPE_SYSTEM,
     JSON.stringify({ الأنواع_المعتمدة: list, نص_الملف: String(text).slice(0, 2000) }),
-    { maxTokens: 40 },
+    { maxTokens: 40, tier: 'fast' },
   );
   const cleaned = cleanText(answer, 80);
   if (!cleaned) return null;
@@ -263,3 +247,50 @@ export async function suggestCaseType(env, { text, options }) {
   const wanted = normalize(cleaned);
   return list.find((entry) => normalize(entry) === wanted) ?? null;
 }
+
+const TOPIC_SYSTEM = `أنت مساعدٌ في مكتب محاماة سعودي. تُعطى نصَّ ملفّ «بيانات المشروع» لقضيةٍ وأحدثَ ما جرى في مشروعها (مهامّ ورسائل وتعليقات)، فتكتب **موضوعَ القضية** مختصراً: ما النزاعُ أو العملُ القانوني ومع من.
+
+القواعد:
+- بالعربية الفصحى، جملةٌ أو جملتان، وأقلُّ من ثلاثين كلمة.
+- لا تذكر إلا ما في المعطيات. **ولا تخترع اسماً ولا رقماً ولا تاريخاً ولا مبلغاً ولا مادّةً نظامية.**
+- إن كانت المعطيات لا تكفي لمعرفة الموضوع فاجعل الموضوع فارغاً.
+- والنتيجةُ واحدةٌ من: won (لصالح موكّلنا) أو lost (ضدّه) أو settled (صلح أو تسوية) — **فقط إن نُصّ عليها صراحةً** في المعطيات، وإلا null. لا تستنتجها.
+
+أعِد JSON فقط: {"topic":"…","outcome":null}`;
+
+const OUTCOMES = new Set(['won', 'lost', 'settled']);
+
+/**
+ * موضوعٌ مقترح لقضيةٍ بلا موضوع — ونتيجتُها إن نُصّ عليها.
+ *
+ * ويُعطى الطرازُ نصَّ الملفّ ونشاطَ المشروع وحدهما — ولا رقمَ هويةٍ ولا
+ * جوّال: يُقصّان من النصّ قبل أن يخرج.
+ *
+ * @returns {{ topic: string, outcome: string | null } | null}
+ */
+export async function suggestTopic(env, { text, activity = [], caseType = '' }) {
+  const scrub = (value) => String(value ?? '').replace(/[0-9٠-٩]{9,}/g, '…');
+  const source = scrub(text).slice(0, 3000);
+  const lines = activity.map(scrub).filter(Boolean).slice(0, 15);
+  if (!source.trim() && !lines.length) return null;
+
+  const answer = await ask(
+    env,
+    TOPIC_SYSTEM,
+    JSON.stringify({ نوع_القضية: caseType || undefined, نص_الملف: source, نشاط_المشروع: lines }),
+    { maxTokens: 220 },
+  );
+  const parsed = readJsonObject(answer);
+  const topic = cleanText(typeof parsed?.topic === 'string' ? parsed.topic : '', 300);
+  if (!topic) return null;
+  return { topic, outcome: OUTCOMES.has(parsed?.outcome) ? parsed.outcome : null };
+}
+
+function readJsonObject(text) {
+  if (typeof text !== 'string') return null;
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch { return null; }
+}
+
