@@ -17,6 +17,19 @@ import { loadSettings } from '../../queries.js';
 export const CONVERTED = '__converted';
 export const CONVERTED_TITLE = 'تحوّل إلى عميل';
 
+/* مفتاحُ الأعمدة القديمة في الخريطة: `{ معرّفُ العمود: الحالةُ الجديدة }`. */
+const LEGACY = '__legacy';
+
+/* ═══ الأسماءُ القديمة (`migrations/0030`) ═══
+   عمودٌ باسمٍ قديم يُعاد تسميتُه إلى الجديد إن لم يكن للجديد عمود — فتبقى
+   بطاقاتُه مكانها. وإن كان للجديد عمودٌ قائم بقي القديمُ كما هو (لا يُحذف عمودٌ
+   في بيسكامب)، وقُرئت بطاقاتُه بالحالة الجديدة فتُنقل منه إلى عمودها. */
+export const LEGACY_STATUSES = {
+  'مهتم': 'تم التواصل',
+  'غير مناسب': 'اعتذرنا عنه',
+  'تم الرفض': 'رفض العميل',
+};
+
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 const parse = (raw, fallback) => {
@@ -56,9 +69,10 @@ export const columnForStatus = (board, status) => board.columnMap[status] ?? nul
 export function statusForColumn(board, columnId) {
   const id = String(columnId ?? '');
   for (const [status, column] of Object.entries(board.columnMap)) {
+    if (status === LEGACY) continue;
     if (String(column) === id) return status;
   }
-  return null;
+  return board.columnMap[LEGACY]?.[id] ?? null;
 }
 
 /** يُقيَّد الخطأ في صفّ اللوحة — الجدولة والـWebhook لا مستمعَ لخطئهما. */
@@ -115,6 +129,7 @@ export async function setupBoard(env, connection, { projectId, origin, userId })
   const previous = await readBoard(env);
   const columnMap = {};
   const created = [];
+  const renamed = [];
 
   for (const [key, title] of [...statuses.map((s) => [s, s]), [CONVERTED, CONVERTED_TITLE]]) {
     /* الخريطةُ السابقة أوّلاً: عمودٌ أُعيدت تسميتُه في بيسكامب يبقى عمودَ حالته. */
@@ -122,6 +137,20 @@ export async function setupBoard(env, connection, { projectId, origin, userId })
     const byId = kept ? lists.find((list) => String(list.id) === String(kept)) : null;
     const byName = lists.find((list) => normalizeArabic(list.title) === normalizeArabic(title));
     let column = byId ?? byName;
+
+    /* عمودٌ باسمٍ قديم يصير عمودَ الحالة الجديدة بتسميته. */
+    if (!column) {
+      const legacy = lists.find((list) => Object.entries(LEGACY_STATUSES).some(([old, next]) =>
+        next === key && normalizeArabic(list.title) === normalizeArabic(old)));
+      if (legacy) {
+        column = await sendJson(accountId, token, `/buckets/${id}/card_tables/columns/${legacy.id}.json`, {
+          method: 'PUT',
+          body: { title },
+        }) ?? legacy;
+        legacy.title = title;
+        renamed.push(title);
+      }
+    }
 
     if (!column) {
       column = await sendJson(accountId, token, `/buckets/${id}/card_tables/${tool.id}/columns.json`, {
@@ -131,6 +160,17 @@ export async function setupBoard(env, connection, { projectId, origin, userId })
     }
     columnMap[key] = String(column.id);
   }
+
+  /* وما بقي باسمٍ قديم وللجديد عمود: يُقرأ بالحالة الجديدة. */
+  const mapped = new Set(Object.values(columnMap));
+  const legacyColumns = {};
+  for (const list of lists) {
+    if (mapped.has(String(list.id))) continue;
+    const match = Object.entries(LEGACY_STATUSES)
+      .find(([old, next]) => normalizeArabic(list.title) === normalizeArabic(old) && columnMap[next]);
+    if (match) legacyColumns[String(list.id)] = match[1];
+  }
+  if (Object.keys(legacyColumns).length) columnMap[LEGACY] = legacyColumns;
 
   const secret = previous?.webhookSecret ?? newSecret();
   let webhookId = previous?.projectId === id ? previous.webhookId : null;
@@ -167,5 +207,13 @@ export async function setupBoard(env, connection, { projectId, origin, userId })
     .bind(id, project.name ?? '', String(tool.id), JSON.stringify(columnMap), webhookId, secret, userId, nowSeconds())
     .run();
 
-  return { data: { projectName: project.name ?? '', columnsCreated: created, webhook: Boolean(webhookId), webhookError } };
+  return {
+    data: {
+      projectName: project.name ?? '',
+      columnsCreated: created,
+      columnsRenamed: renamed,
+      webhook: Boolean(webhookId),
+      webhookError,
+    },
+  };
 }

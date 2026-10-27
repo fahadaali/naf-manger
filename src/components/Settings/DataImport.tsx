@@ -122,7 +122,7 @@ const PROSPECT_COLUMNS: Column<Partial<Prospect>>[] = [
     sample: 'individual',
     apply: (t, v) => { t.clientType = (v || 'individual') as Prospect['clientType']; }
   },
-  { header: 'حالة العميل المحتمل', sample: 'مهتم', apply: (t, v) => { t.prospectStatus = v; } },
+  { header: 'حالة العميل المحتمل', sample: 'جديد', apply: (t, v) => { t.prospectStatus = v; } },
   { header: 'المصدر', sample: 'إعلان', apply: (t, v) => { if (v) t.source = v; } },
   {
     header: 'القيمة المتوقعة',

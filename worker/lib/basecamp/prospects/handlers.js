@@ -30,7 +30,7 @@ export async function readProspectBoard(env, user, url) {
       configured: true,
       projectId: board.projectId,
       projectName: board.projectName,
-      columns: Object.keys(board.columnMap).length,
+      columns: Object.keys(board.columnMap).filter((key) => key !== '__legacy').length,
       webhook: Boolean(board.webhookId),
       webhookUrl: board.webhookId ? null : webhookUrl(url.origin, board.webhookSecret),
       lastSyncAt: board.lastSyncAt,

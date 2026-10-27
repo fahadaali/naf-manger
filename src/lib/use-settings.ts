@@ -25,6 +25,7 @@ export type SettingList =
   | 'clientTypes'
   | 'clientStatuses'
   | 'prospectStatuses'
+  | 'prospectClosedStatuses'
   | 'prospectSources'
   | 'caseTypes'
   | 'caseStatuses'

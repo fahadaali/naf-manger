@@ -866,6 +866,8 @@ export interface SystemSettings {
   clientTypes: string[];
   clientStatuses: string[];
   prospectStatuses: string[];
+  /** ما يُغلق الرحلة بلا تحويل — بعضُ `prospectStatuses`، ولا يُعدّ «قيد المتابعة». */
+  prospectClosedStatuses: string[];
   prospectSources: string[];
   caseTypes: string[];
   caseStatuses: string[];

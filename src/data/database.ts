@@ -149,7 +149,7 @@ export class LocalDatabase {
   }
 
   async setupProspectBoard(projectId: string): Promise<{
-    projectName: string; columnsCreated: string[]; webhook: boolean; webhookError: string | null;
+    projectName: string; columnsCreated: string[]; columnsRenamed: string[]; webhook: boolean; webhookError: string | null;
   }> {
     return api.post('/basecamp/prospects/setup', { projectId });
   }

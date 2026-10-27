@@ -63,9 +63,12 @@ export default function BasecampProspects() {
       const created = result.columnsCreated.length
         ? ` وأُنشئت ${formatNumber(result.columnsCreated.length)} أعمدة: ${result.columnsCreated.join('، ')}.`
         : '';
+      const renamed = result.columnsRenamed?.length
+        ? ` وأُعيدت تسمية ${formatNumber(result.columnsRenamed.length)} أعمدة قديمة: ${result.columnsRenamed.join('، ')}.`
+        : '';
       setMessage(result.webhook
-        ? { tone: 'success', text: `تم ربط «${result.projectName}».${created}` }
-        : { tone: 'warning', text: `تم ربط «${result.projectName}»${created} لكن تعذّر تسجيل الإشعار الفوري — تعمل المزامنة كل ساعة.` });
+        ? { tone: 'success', text: `تم ربط «${result.projectName}».${created}${renamed}` }
+        : { tone: 'warning', text: `تم ربط «${result.projectName}»${created}${renamed} لكن تعذّر تسجيل الإشعار الفوري — تعمل المزامنة كل ساعة.` });
       await load();
     } catch (error) {
       setMessage({ tone: 'destructive', text: say(error) });

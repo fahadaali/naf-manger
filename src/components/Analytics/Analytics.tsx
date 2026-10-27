@@ -13,6 +13,7 @@ import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
 import AiInsights from './AiInsights';
 import { useSettingList } from '../../lib/use-settings';
+import { useProspectStages } from '../../lib/prospect-stages';
 import { saveText } from '../../lib/download';
 import { caseStatusLabel, clientTypeLabel } from '../../lib/labels';
 
@@ -153,6 +154,8 @@ export default function Analytics() {
   const configuredTypes = useSettingList('clientTypes');
   const configuredStatuses = useSettingList('caseStatuses');
   const configuredProspectStatuses = useSettingList('prospectStatuses');
+  /* «قيد المتابعة» كلُّ ما ليس إغلاقاً — من الإعداد لا من نصوصٍ حرفية. */
+  const stages = useProspectStages();
 
   const clientTypeDistribution = useMemo(() => {
     const rows = filteredData.clients;
@@ -614,7 +617,7 @@ export default function Analytics() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">العملاء المحتملين قيد المتابعة</span>
                   <span className="font-medium text-primary">
-                    <bdi>{formatNumber(prospects.filter(p => p.prospectStatus !== 'غير مناسب' && p.prospectStatus !== 'تم الرفض').length)}</bdi>
+                    <bdi>{formatNumber(prospects.filter(p => !stages.isClosed(p.prospectStatus)).length)}</bdi>
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

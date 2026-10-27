@@ -19,6 +19,7 @@
    ============================================================ */
 
 import {
+  CalendarClock,
   CalendarX,
   CircleCheck,
   CircleHelp,
@@ -29,6 +30,8 @@ import {
   Handshake,
   Info,
   LoaderCircle,
+  Phone,
+  Send,
 } from 'lucide-react';
 
 import { caseOutcomeLabel, caseStatusLabel } from './labels';
@@ -89,9 +92,16 @@ export function caseOutcomeBadge(outcome?: string): StatusBadge {
  * والنصُّ هو القيمةُ نفسُها: لا خريطةَ ترجمةٍ لها لأنها عربيةٌ أصلاً.
  */
 const PROSPECT_STATUS: Record<string, { variant: Variant; Icon: typeof Clock }> = {
-  'مهتم': { variant: 'primary', Icon: Info },
-  'تم التواصل': { variant: 'warning', Icon: Clock },
+  'جديد': { variant: 'primary', Icon: Info },
+  'تم التواصل': { variant: 'warning', Icon: Phone },
+  'استشارة مجدولة': { variant: 'warning', Icon: CalendarClock },
+  'تم إرسال عرض السعر': { variant: 'warning', Icon: Send },
   'بانتظار توقيع': { variant: 'success', Icon: FileCheck },
+  'لا يرد / متوقف': { variant: 'default', Icon: Clock },
+  'اعتذرنا عنه': { variant: 'destructive', Icon: CircleSlash },
+  'رفض العميل': { variant: 'default', Icon: CircleX },
+  /* والأسماءُ القديمة لمكتبٍ حرّر قائمته فأبقاها (`migrations/0030`). */
+  'مهتم': { variant: 'primary', Icon: Info },
   'غير مناسب': { variant: 'destructive', Icon: CircleSlash },
   'تم الرفض': { variant: 'default', Icon: CircleX },
 };

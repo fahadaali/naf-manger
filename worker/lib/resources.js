@@ -88,7 +88,9 @@ export const RESOURCES = {
     },
     readOnly: ['basecampUrl'],
     required: ['full_name'],
-    defaults: { phone: '', email: '', notes: '', attachments: '[]', contacts: '[]' },
+    /* والحالةُ «جديد» لا افتراضُ العمود («مهتم» منذ الهجرة الثانية): إعادةُ
+       بناء الجدول لتبديل افتراضٍ أثقلُ من سطرٍ هنا. */
+    defaults: { phone: '', email: '', notes: '', attachments: '[]', contacts: '[]', prospect_status: 'جديد' },
   },
 
   cases: {

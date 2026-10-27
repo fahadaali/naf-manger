@@ -39,7 +39,7 @@ export default function ProspectModal({ prospect, onClose, onSave, isEditing = f
     phone: prospect?.phone || '',
     email: prospect?.email || '',
     clientType: prospect?.clientType || 'individual',
-    prospectStatus: prospect?.prospectStatus || 'مهتم',
+    prospectStatus: prospect?.prospectStatus || 'جديد',
     notes: prospect?.notes || '',
     commercialRegister: prospect?.commercialRegister || '',
     legalRepresentativeName: prospect?.legalRepresentative?.name || '',

@@ -96,9 +96,14 @@ check('وفي الطرفين ← اختلاف', sync.mergeField('b', 'c', 'a').c
 /* ═══ بيسكامب مُحاكاة ═══ */
 
 const fake = {
+  /* أعمدةٌ سبقت الإعداد: «جديد» قائم، و«غير مناسب» اسمٌ قديمٌ لا جديدَ له
+     فيُسمّى، و«مهتم» اسمٌ قديمٌ وجديدُه («تم التواصل») قائم فيبقى ويُقرأ به. */
   lists: [
     { id: 1, title: 'Triage', type: 'Kanban::Triage' },
-    { id: 2, title: 'مهتم', type: 'Kanban::Column' },
+    { id: 2, title: 'جديد', type: 'Kanban::Column' },
+    { id: 3, title: 'غير مناسب', type: 'Kanban::Column' },
+    { id: 4, title: 'مهتم', type: 'Kanban::Column' },
+    { id: 5, title: 'تم التواصل', type: 'Kanban::Column' },
   ],
   cards: new Map(),
   comments: new Map(),
@@ -136,6 +141,11 @@ globalThis.fetch = async (url, init = {}) => {
     const list = { id: fake.nextId++, title: body.title, type: 'Kanban::Column' };
     fake.lists.push(list);
     return reply(201, list);
+  }
+  if ((m = path.match(/^\/buckets\/500\/card_tables\/columns\/(\d+)\.json$/)) && method === 'PUT') {
+    const list = fake.lists.find((l) => l.id === Number(m[1]));
+    list.title = body.title;
+    return reply(200, list);
   }
   if (path === '/buckets/500/webhooks.json' && method === 'POST') {
     return fake.webhookOk ? reply(201, { id: 77, payload_url: body.payload_url }) : reply(422, {});
@@ -211,9 +221,12 @@ group('الإعداد');
 
 const setup = await board.setupBoard(env, connection, { projectId: '500', origin: 'https://crm.naflaw.sa', userId: 'u1' });
 check('يُعدّ اللوحة', !setup.error, setup);
-check('والعمودُ الموجود لا يُنشأ ثانيةً', !setup.data.columnsCreated.includes('مهتم'), setup.data.columnsCreated);
+check('والعمودُ الموجود لا يُنشأ ثانيةً', !setup.data.columnsCreated.includes('جديد') && !setup.data.columnsCreated.includes('تم التواصل'), setup.data.columnsCreated);
 check('والناقصُ يُنشأ ومعه عمودُ التحويل',
-  setup.data.columnsCreated.includes('تم التواصل') && setup.data.columnsCreated.includes('تحوّل إلى عميل'), setup.data.columnsCreated);
+  setup.data.columnsCreated.includes('استشارة مجدولة') && setup.data.columnsCreated.includes('تحوّل إلى عميل'), setup.data.columnsCreated);
+check('والاسمُ القديم يُعاد تسميتُه إلى جديده', setup.data.columnsRenamed.includes('اعتذرنا عنه')
+  && fake.lists.find((l) => l.id === 3).title === 'اعتذرنا عنه', setup.data.columnsRenamed);
+check('ولا يُنشأ للمُسمّى عمودٌ ثانٍ', !setup.data.columnsCreated.includes('اعتذرنا عنه'));
 check('والـWebhook يُسجَّل', setup.data.webhook);
 
 const before = fake.lists.length;
@@ -221,7 +234,8 @@ await board.setupBoard(env, connection, { projectId: '500', origin: 'https://crm
 check('وإعادةُ الإعداد لا تُكرّر شيئاً', fake.lists.length === before);
 
 let theBoard = await board.readBoard(env);
-check('مهتم ← العمود ٢', theBoard.columnMap['مهتم'] === '2');
+check('جديد ← العمود ٢', theBoard.columnMap['جديد'] === '2');
+check('والعمودُ القديم «مهتم» يُقرأ «تم التواصل»', board.statusForColumn(theBoard, 4) === 'تم التواصل');
 
 // ═══════════════════════════════════════════════════════════
 group('من المنصة إلى بيسكامب');
@@ -239,7 +253,7 @@ check('في عمود حالته', String(card.parent.id) === theBoard.columnMap[
 check('ووصفُها يحمل الجوّال', format.parseCard(card.content).values.phone === '0501234567');
 
 /* تعديلٌ في المنصة ← البطاقة. */
-db.prepare(`UPDATE prospects SET email = 'saad@new.sa', prospect_status = 'مهتم' WHERE id = 'p1'`).run();
+db.prepare(`UPDATE prospects SET email = 'saad@new.sa', prospect_status = 'جديد' WHERE id = 'p1'`).run();
 await sync.pushProspect(env, 'p1');
 card = fake.cards.get(Number(row.bc_card_id));
 check('التعديلُ يصل الوصف', format.parseCard(card.content).values.email === 'saad@new.sa');
@@ -301,7 +315,7 @@ check('والجوّالُ مستخرَجٌ آلياً', created?.phone === '0559
 check('ونوعُ العميل', created?.client_type === 'company', created?.client_type);
 check('والبريدُ المؤلَّف يُطرح — ليس في النصّ', created?.email === '', created?.email);
 check('والنصُّ الحرّ محفوظٌ ملاحظةً', created?.notes.includes('تأسيس شركة'));
-check('وحالتُه الأولى (صندوقُ الوارد لا حالةَ له)', created?.prospect_status === 'مهتم', created?.prospect_status);
+check('وحالتُه الأولى (صندوقُ الوارد لا حالةَ له)', created?.prospect_status === 'جديد', created?.prospect_status);
 check('والتعليقُ منسوخ', db.prepare(`SELECT COUNT(*) n FROM prospect_comments WHERE prospect_id = ?`).get(created.id).n === 1);
 check('والبطاقةُ أُعيدت كتابتُها بالصيغة', format.parseCard(freeform.content).structured
   && format.parseCard(freeform.content).values.phone === '0559876543');
@@ -376,7 +390,7 @@ group('المطابقةُ الكاملة');
 
 db.prepare(
   `INSERT INTO prospects (id, full_name, phone, email, client_type, prospect_status, notes, created_at, updated_at)
-   VALUES ('p9', 'خالد', '', '', 'individual', 'مهتم', '', ?, ?)`,
+   VALUES ('p9', 'خالد', '', '', 'individual', 'جديد', '', ?, ?)`,
 ).run(now, now);
 const result = await sync.fullSync(env, connection, await board.readBoard(env));
 check('ما لا بطاقةَ له تُنشأ له', result.pushed === 1 && Boolean(db.prepare(`SELECT bc_card_id FROM prospects WHERE id='p9'`).get().bc_card_id), result);
@@ -385,6 +399,46 @@ check('بلا أخطاء', result.errors === 0, result);
 fake.calls.length = 0;
 await sync.fullSync(env, connection, await board.readBoard(env));
 check('وما لم يتبدّل لا تُقرأ تعليقاتُه', !fake.calls.some((c) => c.includes('comments')), fake.calls);
+
+// ═══════════════════════════════════════════════════════════
+group('بطاقةٌ في عمودٍ قديم');
+
+fake.cards.set(7000, {
+  id: 7000, title: 'ريم القحطاني', status: 'active', bucket: { id: 500 }, parent: { id: 4 },
+  content: '<div><strong>رقم الجوال:</strong> 0544445555</div><div><strong>نوع العميل:</strong> فرد</div>',
+  comments_count: 0, app_url: 'u', updated_at: 'z',
+});
+await sync.applyCard(env, connection, await board.readBoard(env), 7000);
+check('تُقرأ بالحالة الجديدة', db.prepare(`SELECT prospect_status FROM prospects WHERE bc_card_id='7000'`).get()?.prospect_status === 'تم التواصل');
+check('وتُنقل من العمود القديم إلى عمودها', fake.cards.get(7000).parent.id === 5, fake.cards.get(7000).parent);
+
+// ═══════════════════════════════════════════════════════════
+group('نقلُ الأسماء القديمة (الهجرة ٣٠)');
+
+{
+  const { readFileSync } = await import('node:fs');
+  const sql = readFileSync(new URL('../migrations/0030_prospect_pipeline.sql', import.meta.url), 'utf8');
+  const fresh = freshDatabase();
+  const seedOld = (id, status) => fresh.prepare(
+    `INSERT INTO prospects (id, full_name, prospect_status, bc_synced_values, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 1, 1)`,
+  ).run(id, id, status, JSON.stringify({ prospectStatus: status }));
+  seedOld('a', 'مهتم'); seedOld('b', 'غير مناسب'); seedOld('c', 'تم الرفض'); seedOld('d', 'بانتظار توقيع');
+  fresh.exec(sql);
+  const status = (id) => fresh.prepare(`SELECT prospect_status s, bc_synced_values v FROM prospects WHERE id = ?`).get(id);
+  check('مهتم ← تم التواصل', status('a').s === 'تم التواصل' && JSON.parse(status('a').v).prospectStatus === 'تم التواصل');
+  check('غير مناسب ← اعتذرنا عنه', status('b').s === 'اعتذرنا عنه');
+  check('تم الرفض ← رفض العميل', status('c').s === 'رفض العميل');
+  check('وما لم يتبدّل اسمُه يبقى', status('d').s === 'بانتظار توقيع');
+
+  const custom = freshDatabase();
+  custom.prepare(`INSERT INTO system_settings (key, value, updated_by, updated_at) VALUES ('settings', ?, 'u', 1)`)
+    .run(JSON.stringify({ prospectStatuses: ['مهتم', 'متعاقد'] }));
+  custom.prepare(`INSERT INTO prospects (id, full_name, prospect_status, created_at, updated_at) VALUES ('x', 'x', 'مهتم', 1, 1)`).run();
+  custom.exec(sql);
+  check('ومكتبٌ حرّر قائمته لا تُمسّ صفوفُه',
+    custom.prepare(`SELECT prospect_status s FROM prospects WHERE id='x'`).get().s === 'مهتم');
+}
 
 // ═══════════════════════════════════════════════════════════
 group('الحذف');

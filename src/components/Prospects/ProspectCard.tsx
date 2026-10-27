@@ -6,6 +6,7 @@ import { Money } from '@/registry/naf/currency/money';
 import { formatDate, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
 import { prospectStatusBadge } from '../../lib/status-badges';
+import { useProspectStages } from '../../lib/prospect-stages';
 import { Button } from '@/registry/naf/ui/button';
 import { Badge } from '@/registry/naf/ui/badge';
 import { Card } from '@/registry/naf/ui/card';
@@ -41,7 +42,9 @@ export default function ProspectCard({
      مرفوضةً — وهي ليست كذلك. */
   const statusOf = prospectStatusBadge;
 
-  const isReadyToConvert = prospect.prospectStatus === 'بانتظار توقيع';
+  /* آخرُ مرحلةٍ مفتوحة — لا اسمٌ مكتوب (`lib/prospect-stages.ts`). */
+  const stages = useProspectStages();
+  const isReadyToConvert = prospect.prospectStatus === stages.ready;
 
   return (
     <Card className={`p-6 hover:shadow-md transition-shadow ${

@@ -22,7 +22,21 @@ const SETTINGS_KEY = 'settings';
 const DEFAULT_SETTINGS = {
   clientTypes: ['individual', 'company', 'association', 'government'],
   clientStatuses: ['current', 'former'],
-  prospectStatuses: ['مهتم', 'تم التواصل', 'بانتظار توقيع', 'غير مناسب', 'تم الرفض'],
+  /* ═══ رحلةُ العميل المحتمل ═══
+     بترتيبها — وهو ترتيبُ أعمدة لوحة بيسكامب. والأوّلُ حالةُ من يُضاف، وآخرُ
+     الحالات المفتوحة «جاهزٌ للتحويل»، وما في `prospectClosedStatuses` إغلاقٌ
+     لا يُعدّ «قيد المتابعة». والنقلُ من الأسماء القديمة في `migrations/0030`. */
+  prospectStatuses: [
+    'جديد',
+    'تم التواصل',
+    'استشارة مجدولة',
+    'تم إرسال عرض السعر',
+    'بانتظار توقيع',
+    'لا يرد / متوقف',
+    'اعتذرنا عنه',
+    'رفض العميل',
+  ],
+  prospectClosedStatuses: ['لا يرد / متوقف', 'اعتذرنا عنه', 'رفض العميل'],
   prospectSources: [
     'موقع إلكتروني',
     'وسائل التواصل الاجتماعي',

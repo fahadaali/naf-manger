@@ -431,7 +431,7 @@ async function createFromCard(env, connection, board, card) {
   const row = {
     id,
     full_name: values.fullName || 'عميل محتمل',
-    prospect_status: values.prospectStatus || statuses[0] || 'مهتم',
+    prospect_status: values.prospectStatus || statuses[0] || 'جديد',
     phone: values.phone ?? '',
     email: values.email ?? '',
     client_type: values.clientType || 'individual',
