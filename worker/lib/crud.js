@@ -10,6 +10,7 @@
 
 import { RESOURCES, orderOf, toClient, toRow } from './resources.js';
 import { logActivity } from './activity.js';
+import { preparePayment, recomputeCollected } from './payments.js';
 
 const json = (body, status = 200) => Response.json(body, { status });
 const fail = (error, status) => json({ ok: false, error }, status);
@@ -230,6 +231,9 @@ export async function handleResource(request, env, user, name, id) {
      على الحارس العام لطُلب لمن يؤرشف تصريحُ الإنشاء — ولمنعتْ من يحذف
      ولا يُنشئ. و`bulkRows` تسأل عن تصريح فعلِها بعينه. */
   if (request.method === 'POST' && id === 'bulk') {
+    /* والسجلُّ الماليّ لا يُحذف جملةً: كلُّ دفعةٍ تُحذف تُعيد حسابَ قضيتها،
+       وحذفُ عشرين دفعةً بضغطةٍ في دفترٍ ماليّ ليس فعلاً يُتاح. */
+    if (resource.ledger) return fail('unknown_action', 400);
     let body;
     try {
       body = await request.json();
@@ -260,8 +264,12 @@ export async function handleResource(request, env, user, name, id) {
     /* الصفُّ يُقرأ قبل حذفه: بعده لا اسمَ يُذكر في الأثر، ورقمُ معرّفٍ
        وحده لا يقول لقارئ السجلّ من حُذف. */
     const doomed = await getRow(env, resource, id);
+    /* ودفعةٌ قُرئت من وافق تُصحَّح هناك: حذفُها هنا تعيده المزامنةُ التالية،
+       أو يُفارق الدفترُ دفترَ المحاسبة صامتاً. */
+    if (resource.ledger && doomed?.source === 'wafeq') return fail('external_payment', 409);
     const removed = await deleteRow(env, resource, id);
     if (!removed.error) {
+      if (resource.ledger) await recomputeCollected(env, doomed?.caseId);
       await logActivity(env, user, { resource: name, action: 'delete', row: doomed });
     }
     return respond(removed);
@@ -277,19 +285,42 @@ export async function handleResource(request, env, user, name, id) {
 
   if (request.method === 'POST') {
     if (id) return fail('not_found', 404);
+    if (resource.ledger) {
+      const prepared = await preparePayment(env, body);
+      if (prepared.error) return fail(prepared.error, prepared.status);
+      body = prepared.body;
+    }
     const created = await createRow(env, resource, body, user);
     if (!created.error) {
+      await afterWrite(env, name, resource, created);
       await logActivity(env, user, { resource: name, action: 'create', row: created.data });
     }
     return respond(created, 201);
   }
 
   if (!id) return fail('not_found', 404);
+  /* الدفعةُ لا تُعدَّل — تُحذف وتُكتب صحيحة. */
+  if (resource.ledger) return fail('method_not_allowed', 405);
   const updated = await updateRow(env, resource, id, body);
   if (!updated.error) {
+    await afterWrite(env, name, resource, updated);
     await logActivity(env, user, { resource: name, action: 'update', row: updated.data });
   }
   return respond(updated);
+}
+
+/**
+ * ما يلزم بعد كتابةٍ ناجحة: المحصَّلُ يُعاد حسابُه من السجلّ.
+ *
+ * بعد الدفعة لقضيتها، وبعد حفظ القضية نفسِها — فالشاشةُ ترسل
+ * `paymentStatus` كاملاً، ومحصَّلٌ فيه قديمٌ أو مكتوبٌ بيدٍ يُطمس بمجموع
+ * السجلّ. والصفُّ الراجع يُقرأ ثانيةً ليحمل ما كُتب.
+ */
+async function afterWrite(env, name, resource, result) {
+  const caseId = resource.ledger ? result.data?.caseId : name === 'cases' ? result.data?.id : null;
+  if (!caseId) return;
+  await recomputeCollected(env, caseId);
+  if (name === 'cases') result.data = await getRow(env, resource, caseId);
 }
 
 function respond(result, okStatus = 200) {

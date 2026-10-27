@@ -156,6 +156,37 @@ export const RESOURCES = {
     actor: 'created_by',
   },
 
+  /* ═══ دفعاتُ العميل ═══
+     سجلٌّ يُضاف إليه ويُحذف منه، ولا يُعدَّل: دفعةٌ أخطأ كاتبُها تُحذف وتُكتب
+     صحيحة، فيبقى ما وقع ظاهراً. والمحصَّلُ مجموعُها — `payments.js`.
+
+     وتُحرس بتصريح القضايا: هي ماليّةُ القضية، وشاشتُها نافذتُها. */
+  clientPayments: {
+    table: 'client_payments',
+    permission: 'cases',
+    timestamps: 'created',
+    ledger: true,
+    fields: {
+      caseId: ['case_id'],
+      clientId: ['client_id'],
+      amount: ['amount', 'money'],
+      paymentDate: ['payment_date', 'date'],
+      method: ['method'],
+      reference: ['reference'],
+      notes: ['notes'],
+      source: ['source'],
+      externalId: ['external_id'],
+      createdBy: ['created_by'],
+    },
+    /* المصدرُ ومعرّفُه الخارجي يكتبهما الخادم: دفعةٌ من الشاشة `manual`
+       أبداً، ولا تدّعي أنها من وافق. */
+    readOnly: ['source', 'externalId'],
+    required: ['case_id', 'amount'],
+    defaults: { source: 'manual' },
+    orderBy: 'payment_date DESC, created_at DESC',
+    actor: 'created_by',
+  },
+
   activities: {
     table: 'activity_logs',
     /* سجلُّ الأنشطة يقرؤه كل عضو ويكتب فيه كل فعل — وهو أثرٌ لا محتوى،

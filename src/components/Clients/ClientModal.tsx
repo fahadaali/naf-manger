@@ -6,6 +6,7 @@ import ProfilePictureUpload from '../Common/ProfilePictureUpload';
 import ProfileAvatar from '../Common/ProfileAvatar';
 import AttachmentList from '../Common/AttachmentList';
 import ContactNumbers from '../Common/ContactNumbers';
+import ClientStatement from './ClientStatement';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
 import { clientTypeLabel } from '../../lib/labels';
 import { useSettingList } from '../../lib/use-settings';
@@ -287,6 +288,8 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 </div>
               </div>
             </div>
+
+            <ClientStatement client={client} cases={clientCases} />
 
             {/* Cases List */}
             <div>

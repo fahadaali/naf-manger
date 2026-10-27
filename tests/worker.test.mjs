@@ -337,6 +337,8 @@ r = await hit('GET', `/api/display/${token}/stats`);
 check('يُقرأ بلا جلسة', r.body.ok && typeof r.body.data.totalClients === 'number', r.body);
 const leak = JSON.stringify(r.body);
 check('ولا يحمل اسمَ عميل', !leak.includes('شركة الأفق') && !leak.includes('ق-2026'), leak.slice(0, 200));
+/* ولا مبلغ: المستحقُّ غيرُ المحصَّل في اللوحة، ولا يبلغ شاشةً يراها كلُّ من يمرّ. */
+check('ولا يحمل مبلغاً', !('outstandingAmount' in r.body.data), Object.keys(r.body.data));
 check('رمزٌ باطل يُردّ ٤٠٤', (await hit('GET', '/api/display/' + 'z'.repeat(43) + '/stats')).status === 404);
 
 setUser(ADMIN);
@@ -629,6 +631,9 @@ r = await hit('POST', '/api/cases', {
   commissionStructure: { type: 'percentage', value: 10 },
 });
 check('تُنشأ قضيةٌ تطوّعية', r.status === 201 && r.body.data?.feeStructure?.type === 'pro_bono', r.body);
+check('ومحصَّلُها صفرٌ وإن كُتب', r.body.data?.paymentStatus?.collectedAmount === 0, r.body.data?.paymentStatus);
+r = await hit('POST', '/api/clientPayments', { caseId: r.body?.data?.id, amount: 100 });
+check('ولا دفعةَ على تطوّعية', r.status === 409 && r.body.error === 'pro_bono_case', r.body);
 
 const statsAfter = (await hit('GET', `/api/marketers/${marketerId}/stats`)).body.data;
 check('تُعدّ في قضايا المسوّق', statsAfter.totalCases === statsBefore.totalCases + 1, statsAfter);
@@ -640,8 +645,89 @@ check('ولا تُعدّ في إيراده ولا عمولته',
 r = await hit('GET', '/api/stats');
 check('واللوحةُ تعدّ التطوّعية', r.body.data.proBonoCases === 1, r.body.data);
 
+/* والتقريرُ يعزلها — ولا يسقط لصفٍّ بنيةُ أتعابه تالفة. */
+db.prepare(
+  `INSERT INTO cases (id, case_number, case_type, client_id, client_name, fee_structure, created_at, updated_at)
+   VALUES ('bad-fee', 'ق-2026-078', 't', ?, 'شركة الأفق التجارية', 'ليس JSON', 1, 1)`,
+).run(clientId);
+r = await hit('POST', '/api/reports/preview', {
+  dataSource: 'cases', fields: ['caseNumber', 'feeType'],
+  filters: [{ fieldId: 'feeType', operator: 'equals', value: 'pro_bono' }], grouping: [], aggregations: [],
+});
+check('التقريرُ يعزل التطوّعية ولا يسقط لصفٍّ تالف',
+  r.body.ok && r.body.data.rows.length === 1 && r.body.data.rows[0].caseNumber === 'ق-2026-077', r.body);
+r = await hit('GET', '/api/stats');
+check('واللوحةُ لا تسقط له', r.body.ok && r.body.data.proBonoCases === 1, r.body);
+
 r = await hit('GET', '/api/settings');
 check('و«مجاني — تطوّعي» في أنواع الأتعاب', r.body.data.feeTypes.includes('pro_bono'), r.body.data.feeTypes);
+
+// ═══════════════════════════════════════════════════════════
+group('دفعاتُ العميل — والمحصَّلُ مجموعُها');
+
+r = await hit('POST', '/api/cases', {
+  caseNumber: 'ق-2026-300', caseType: 'قضية تجارية', clientId, clientName: 'شركة الأفق التجارية',
+  status: 'in-progress',
+  /* ومحصَّلٌ مكتوبٌ بيدٍ في الجسم لا يُعتمد: لا دفعات، فهو صفر. */
+  paymentStatus: { totalAmount: 10000, collectedAmount: 7777, remainingAmount: 2223, collectionStatus: 'partially_paid' },
+});
+const ledgerCaseId = r.body?.data?.id;
+check('المحصَّلُ المكتوبُ بيدٍ يُطمس بمجموع السجلّ',
+  r.body.data?.paymentStatus?.collectedAmount === 0 && r.body.data?.paymentStatus?.collectionStatus === 'unpaid',
+  r.body.data?.paymentStatus);
+
+r = await hit('POST', '/api/clientPayments', {
+  caseId: ledgerCaseId, amount: 4000.5, paymentDate: '2026-09-01', method: 'تحويل بنكي', reference: 'TRX-1',
+  clientId: 'عميلٌ آخر', source: 'wafeq',
+});
+check('تُسجَّل دفعة', r.status === 201 && r.body.ok, r.body);
+const firstPayment = r.body?.data;
+check('وموكّلُها من القضية لا من الجسم', firstPayment?.clientId === clientId, firstPayment);
+check('ومصدرُها «يدويّ» وإن ادّعى غيره', firstPayment?.source === 'manual', firstPayment);
+
+await hit('POST', '/api/clientPayments', { caseId: ledgerCaseId, amount: 1000, paymentDate: '2026-09-10' });
+let ledgerCase = (await hit('GET', `/api/cases/${ledgerCaseId}`)).body.data;
+check('المحصَّلُ مجموعُ الدفعات',
+  ledgerCase.paymentStatus.collectedAmount === 5000.5 && ledgerCase.paymentStatus.remainingAmount === 4999.5 &&
+    ledgerCase.paymentStatus.collectionStatus === 'partially_paid' &&
+    ledgerCase.paymentStatus.lastPaymentDate === '2026-09-10',
+  ledgerCase.paymentStatus);
+
+/* حفظُ القضية من نافذتها يرسل `paymentStatus` كاملاً — ومحصَّلُه لا يُعتمد. */
+r = await hit('PATCH', `/api/cases/${ledgerCaseId}`, {
+  paymentStatus: { totalAmount: 5000.5, collectedAmount: 1, remainingAmount: 0, collectionStatus: 'unpaid' },
+});
+check('وحفظُ القضية لا يكتب فوق المحصَّل، والإجماليُّ يُحترم',
+  r.body.data?.paymentStatus?.collectedAmount === 5000.5 && r.body.data?.paymentStatus?.collectionStatus === 'fully_paid',
+  r.body.data?.paymentStatus);
+
+r = await hit('PATCH', `/api/clientPayments/${firstPayment.id}`, { amount: 1 });
+check('والدفعةُ لا تُعدَّل', r.status === 405, r.body);
+r = await hit('POST', '/api/clientPayments/bulk', { action: 'delete', ids: [firstPayment.id] });
+check('ولا تُحذف جملةً', r.status === 400, r.body);
+
+r = await hit('DELETE', `/api/clientPayments/${firstPayment.id}`);
+ledgerCase = (await hit('GET', `/api/cases/${ledgerCaseId}`)).body.data;
+check('وحذفُها يُعيد الحساب',
+  r.body.ok && ledgerCase.paymentStatus.collectedAmount === 1000 && ledgerCase.paymentStatus.remainingAmount === 4000.5,
+  ledgerCase.paymentStatus);
+
+r = await hit('POST', '/api/clientPayments', { caseId: ledgerCaseId, amount: 0 });
+check('ومبلغٌ صفرٌ يُردّ', r.status === 400 && r.body.error === 'invalid_amount', r.body);
+r = await hit('POST', '/api/clientPayments', { caseId: 'لا-يوجد', amount: 10 });
+check('وقضيةٌ مجهولة تُردّ', r.status === 409, r.body);
+
+/* ودفعةٌ من وافق تُصحَّح هناك. */
+db.prepare(
+  `INSERT INTO client_payments (id, case_id, client_id, amount, source, external_id, created_by, created_at)
+   VALUES ('wafeq-1', ?, ?, 500, 'wafeq', 'W-1', 'sync', 1)`,
+).run(ledgerCaseId, clientId);
+r = await hit('DELETE', '/api/clientPayments/wafeq-1');
+check('ودفعةُ وافق لا تُحذف هنا', r.status === 409 && r.body.error === 'external_payment', r.body);
+
+r = await hit('GET', '/api/stats');
+check('واللوحةُ تجمع ما لم يُحصَّل', typeof r.body.data.outstandingAmount === 'number' && r.body.data.outstandingAmount >= 4000.5,
+  r.body.data.outstandingAmount);
 
 // ═══════════════════════════════════════════════════════════
 group('«معدّل الربح» يُقاس بلحظة الإغلاق');

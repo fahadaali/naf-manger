@@ -311,6 +311,13 @@ function growth(current, previous) {
   };
 }
 
+/* ═══ نوعُ الأتعاب من بنيتها ═══
+   بـ`CASE` لا بـ`AND`: بنيةٌ فارغة (`NULL`) تجعل `NOT (json_valid(…) AND …)`
+   مجهولاً لا صادقاً فيُسقَط صفُّها من الجمع صامتاً — وهي أكثرُ القضايا. و
+   `json_extract` على نصٍّ تالف يرمي، ولا يُضمن قصرُ `AND` قبله. */
+const FEE_TYPE = `COALESCE(CASE WHEN json_valid(fee_structure)
+                             THEN json_extract(fee_structure, '$.type') END, '')`;
+
 /**
  * ═══ تبدُّلُ «معدّل الربح» بالنقاط لا بالنسبة ═══
  *
@@ -341,9 +348,14 @@ const WINDOW = {
    تُحسب في القاعدة لا في الذاكرة: الجمعُ على آلاف الصفوف في `Worker` يحمل
    الجدول كلَّه إليه في كل فتحةِ لوحة.
 
-   والمؤرشفُ خارجَها كلِّها: أُخرج من شاشته بقصد، فعدُّه في لوحته يناقضها. */
-export async function readStats(env) {
-  const [clients, prospects, cases, newClients, newProspects, newCases, proBono, closed] = await env.DB.batch([
+   والمؤرشفُ خارجَها كلِّها: أُخرج من شاشته بقصد، فعدُّه في لوحته يناقضها.
+
+   ═══ و`publicBoard` لشاشات العرض ═══
+   تلك تُفتح بلا دخولٍ في مكانٍ يمرّ به كلُّ أحد، وما خلفها أعدادٌ ونسبٌ
+   وحدها — لا مبلغ. فالمبلغُ لا يُحسب لها أصلاً، لا يُحسب ثم يُقصّ: حقلٌ
+   يُضاف هنا بعد اليوم لا يتسرّب إليها لأنّ أحداً نسي قصَّه هناك. */
+export async function readStats(env, { publicBoard = false } = {}) {
+  const [clients, prospects, cases, newClients, newProspects, newCases, proBono, closed, outstanding] = await env.DB.batch([
     env.DB.prepare(
       `SELECT client_type, COUNT(*) n FROM clients WHERE archived_at IS NULL GROUP BY client_type`,
     ),
@@ -383,8 +395,7 @@ export async function readStats(env) {
        عنها. والتالفُ من JSON يُطرح بـ`json_valid` ولا يُسقط اللوحة. */
     env.DB.prepare(
       `SELECT COUNT(*) n FROM cases
-        WHERE archived_at IS NULL AND json_valid(fee_structure)
-          AND json_extract(fee_structure, '$.type') = 'pro_bono'`,
+        WHERE archived_at IS NULL AND ${FEE_TYPE} = 'pro_bono'`,
     ),
 
     /* ═══ ما أُغلق في كلّ نافذة، وما رُبح منه ═══
@@ -400,6 +411,17 @@ export async function readStats(env) {
                         AND closed_at <  strftime('%s', ${WINDOW.recentDate}) AND outcome = 'won'
                        THEN 1 ELSE 0 END) prior_won
          FROM cases WHERE archived_at IS NULL AND status = 'completed' AND closed_at IS NOT NULL`,
+    ),
+
+    /* ما لم يُحصَّل: الإجماليُّ ناقصَ المحصَّل لكل قضيةٍ حاضرة، ولا يُحسب
+       فائضٌ سالباً يُنقص دَين غيرها. والتطوّعيةُ خارجه. */
+    env.DB.prepare(
+      `SELECT COALESCE(SUM(MAX(
+                COALESCE(json_extract(payment_status, '$.totalAmount'), 0)
+              - COALESCE(json_extract(payment_status, '$.collectedAmount'), 0), 0)), 0) n
+         FROM cases
+        WHERE archived_at IS NULL AND json_valid(payment_status) = 1
+          AND ${FEE_TYPE} <> 'pro_bono'`,
     ),
   ]);
 
@@ -441,6 +463,7 @@ export async function readStats(env) {
       prospectsByStatus,
       casesByStatus,
       proBonoCases: Number(proBono.results?.[0]?.n ?? 0),
+      ...(publicBoard ? {} : { outstandingAmount: Number(outstanding.results?.[0]?.n ?? 0) }),
       conversionRate:
         totalClients + totalProspects > 0
           ? Math.round((totalClients / (totalClients + totalProspects)) * 100)
@@ -535,7 +558,7 @@ export async function readMarketerStats(env, user, marketerId) {
 export async function exportAll(env, user) {
   if (!user.permissions?.settings?.read) return fail('forbidden', 403);
 
-  const tables = ['clients', 'prospects', 'cases', 'marketers', 'commission_payments', 'activity_logs'];
+  const tables = ['clients', 'prospects', 'cases', 'marketers', 'commission_payments', 'client_payments', 'activity_logs'];
   const data = {};
 
   for (const table of tables) {

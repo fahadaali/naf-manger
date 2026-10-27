@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CustomReport, DisplayToken, Marketer, CommissionPayment, MarketerStats } from '../types';
+import { CustomReport, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -56,6 +56,11 @@ const asReport = (row: any): CustomReport => ({
   ...row,
   createdDate: toDate(row.createdDate),
   lastModified: toDate(row.lastModified),
+});
+
+const asClientPayment = (row: any): ClientPayment => ({
+  ...row,
+  paymentDate: toDate(row.paymentDate),
 });
 
 const asPayment = (row: any): CommissionPayment => ({
@@ -127,6 +132,10 @@ export class LocalDatabase {
   // ── القضايا ──
   async getCases(): Promise<Case[]> {
     return (await listOr(api.list<any>('cases'), 'القضايا')).map(asCase);
+  }
+
+  async getCase(id: string): Promise<Case> {
+    return asCase(await api.get<any>('cases', id));
   }
 
   async getCasesByClient(clientId: string): Promise<Case[]> {
@@ -253,6 +262,26 @@ export class LocalDatabase {
     paymentData: Omit<CommissionPayment, 'id'>,
   ): Promise<CommissionPayment | null> {
     return asPayment(await api.create<any>('commissions', paymentData));
+  }
+
+  /* ═══ دفعاتُ العميل ═══
+     سجلٌّ يُضاف إليه ويُحذف منه، والمحصَّلُ في القضية مجموعُه يكتبه الخادم.
+     فبعد كل إضافةٍ أو حذفٍ تُقرأ القضيةُ ثانيةً لتحمل رقمها الجديد. */
+  async getClientPayments(filter?: { caseId?: string; clientId?: string }): Promise<ClientPayment[]> {
+    const all = (await listOr(api.list<any>('clientPayments'), 'دفعات العملاء')).map(asClientPayment);
+    return all.filter((row) =>
+      (!filter?.caseId || row.caseId === filter.caseId) &&
+      (!filter?.clientId || row.clientId === filter.clientId));
+  }
+
+  async createClientPayment(
+    payment: Pick<ClientPayment, 'caseId' | 'amount' | 'paymentDate' | 'method' | 'reference' | 'notes'>,
+  ): Promise<ClientPayment> {
+    return asClientPayment(await api.create<any>('clientPayments', payment));
+  }
+
+  async deleteClientPayment(id: string): Promise<void> {
+    await api.remove('clientPayments', id);
   }
 
   /* ═══ استبصارات التحليلات ═══
