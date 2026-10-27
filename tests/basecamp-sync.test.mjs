@@ -98,7 +98,7 @@ check('اسم العميل', parsed.client.fullName === 'شركة الأفق ا�
 check('رقم الهوية', parsed.client.idNumber === '7001234567', parsed.client);
 check('الجوال والبريد', parsed.client.phone === '0501234567' && parsed.client.email === 'afaq@example.com', parsed.client);
 check('«شركة» تُترجَم company', parsed.client.clientType === 'company', parsed.client);
-check('رقم القضية ونوعها', parsed.case.caseNumber === 'ق-2026-014' && parsed.case.caseType === 'قضية تجارية', parsed.case);
+check('«رقم القضية» رقمُها لدى الجهة لا رقمُ المشروع', parsed.case.courtCaseNumber === 'ق-2026-014' && !parsed.case.caseNumber && parsed.case.caseType === 'قضية تجارية', parsed.case);
 check('«قيد المعالجة» تُترجَم in-progress', parsed.case.status === 'in-progress', parsed.case);
 check('«موضوع القضية» يُربط بالملخّص', parsed.case.summary === 'نزاعٌ على عقد توريد', parsed.case);
 check('وحقلٌ لا مقابل له يُعرض لا يُبتلع',
@@ -138,7 +138,7 @@ const PROJECT_DOC = `<div>
 </div>`;
 
 const project = parseDocument(PROJECT_DOC, DEFAULT_FIELD_MAP);
-check('«رقم المشروع» رقمُ القضية', project.case.caseNumber === 'م-2026-002', project.case);
+check('و«رقم المشروع» في الملفّ لا يُقرأ رقماً — المعرّفُ هو الرقم', !project.case.caseNumber && !project.case.courtCaseNumber, project.case);
 check('و«نوع المشروع» نوعُها', project.case.caseType === 'استشارة نظامية', project.case);
 check('و«موضوع المشروع» ملخّصُها', project.case.summary === 'مراجعةُ عقود التوريد', project.case);
 check('و«منجزة» تُترجَم completed', project.case.status === 'completed', project.case);
@@ -325,7 +325,7 @@ globalThis.fetch = async () => {
 await runSync(env, connection, actor);
 
 const dayOf = (seconds) => new Date(Number(seconds) * 1000).toISOString().slice(0, 10);
-const dated = db.prepare(`SELECT case_number, created_at FROM cases ORDER BY case_number`).all();
+const dated = db.prepare(`SELECT case_number, created_at FROM cases ORDER BY case_number`).all(); // 101 ثم 102
 check('لكلّ قضيةٍ تاريخُ إنشاء مشروعها',
   dayOf(dated[0].created_at) === '2024-03-02' && dayOf(dated[1].created_at) === '2019-06-11',
   dated.map((row) => [row.case_number, dayOf(row.created_at)]));
@@ -342,11 +342,11 @@ check('ومزامنةٌ ثانيةٌ لا تُزحزح التاريخ',
 /* ═══ وما استُورد قبل هذا يُصحَّح ═══
    قضايا الاستيراد الأول حملت تاريخَ الاستيراد. و`created_at` ليس من حقول
    الدمج، فلا تُصلحه كتابةُ المتبدّل — بل نداءٌ صريح. */
-db.prepare(`UPDATE cases SET created_at = ? WHERE case_number = 'ق-2026-015'`).run(now);
+db.prepare(`UPDATE cases SET created_at = ? WHERE case_number = '102'`).run(now);
 db.prepare(`UPDATE clients SET join_date = '2026-08-10'`).run();
 await runSync(env, connection, actor);
 check('تاريخُ قضيةٍ استُوردت خطأً يُصحَّح',
-  dayOf(db.prepare(`SELECT created_at FROM cases WHERE case_number = 'ق-2026-015'`).get().created_at)
+  dayOf(db.prepare(`SELECT created_at FROM cases WHERE case_number = '102'`).get().created_at)
     === '2019-06-11');
 check('و«عميلٌ منذ» يرجع إلى أقدمها',
   db.prepare(`SELECT join_date FROM clients`).get().join_date === '2019-06-11');
@@ -365,11 +365,11 @@ globalThis.fetch = async () => ({ ok: true, status: 200, headers: new Map(),
   json: async () => ({ id: 901, title: 'ملخص القضية', content: docContent, app_url: 'x', updated_at: 'x' }) });
 
 plan = await buildPlan(env, connection);
-check('يُنبَّه على الرقمين المولَّدين', plan.plans[0].warnings.length === 2, plan.plans[0].warnings);
+check('يُنبَّه على الهوية وحدها — رقمُ المشروع لا يُولَّد', plan.plans[0].warnings.length === 1, plan.plans[0].warnings);
 await runSync(env, connection, actor);
 check('ولا تُسقَط القضية', db.prepare(`SELECT COUNT(*) n FROM cases`).get().n === 1);
-check('والرقم المولَّد ثابتٌ من معرّف المشروع',
-  db.prepare(`SELECT case_number FROM cases`).get().case_number === 'بيسكامب-101');
+check('ورقمُ القضية معرّفُ المشروع',
+  db.prepare(`SELECT case_number FROM cases`).get().case_number === '101');
 await runSync(env, connection, actor);
 check('فمزامنةٌ ثانيةٌ تجدها ولا تُنشئ ثانية',
   db.prepare(`SELECT COUNT(*) n FROM cases`).get().n === 1);
@@ -493,7 +493,7 @@ const upgraded = JSON.parse(
   db.prepare(`SELECT synced_values FROM basecamp_projects WHERE project_id='101'`).get().synced_values,
 );
 check('الصورةُ تُحفظ بابين: قضيةً وعميلاً',
-  upgraded.case?.caseNumber === 'م-2026-002' && upgraded.client?.clientType === 'company', upgraded);
+  upgraded.case?.summary === 'مراجعةُ عقود التوريد' && upgraded.client?.clientType === 'company', upgraded);
 
 db.prepare(`UPDATE basecamp_projects SET synced_values = ? WHERE project_id='101'`)
   .run(JSON.stringify({ caseNumber: 'م-2026-002', summary: 'مراجعةُ عقود التوريد', status: 'completed' }));
@@ -511,7 +511,7 @@ globalThis.fetch = async () => ({
   json: async () => ({ id: 901, title: 'بيانات المشروع', content: docContent, app_url: 'x', updated_at: 'x' }),
 });
 
-// ── رقمٌ تبدّل في ملفّ مشروعٍ مربوط → القضيةُ نفسُها ──
+// ── رقمُ الجهة تبدّل في ملفّ مشروعٍ مربوط → القضيةُ نفسُها ──
 ({ db, env } = setup());
 await writeConflictPolicy(env, 'platform', 'u1');
 docContent = DOC;
@@ -520,9 +520,9 @@ const firstId = kase().id;
 
 docContent = DOC.replace('ق-2026-014', 'ق-2026-099');
 applied = await runSync(env, connection, actor);
-check('تبدّلُ الرقم في الملفّ يُحدّث القضيةَ نفسَها',
+check('تبدّلُ رقمِ الجهة في الملفّ يُحدّث القضيةَ نفسَها ورقمُها باقٍ',
   db.prepare(`SELECT COUNT(*) n FROM cases`).get().n === 1 && kase().id === firstId &&
-    kase().case_number === 'ق-2026-099',
+    kase().case_number === '101' && kase().court_case_number === 'ق-2026-099',
   db.prepare(`SELECT id, case_number FROM cases`).all());
 
 /* والتحديثُ في السجلّ منسوبٌ إلى مشروعه. */
@@ -533,7 +533,7 @@ check('والسجلُّ يسمّي المشروعَ وقضيتَه',
   logged.projects?.some((entry) => entry.projectId === '101' && entry.caseId === firstId),
   logged.projects);
 
-// ── رقمٌ لقضيةٍ يربطها مشروعٌ آخر → لا يُكتب فيها ──
+// ── رقمُ الجهة نفسُه في مشروعين → قضيتان ──
 ({ db, env } = setup());
 docContent = DOC;
 await runSync(env, connection, actor);
@@ -545,19 +545,52 @@ db.prepare(
    VALUES ('103', 'مشروعٌ نُسخ ملفُّه', 'https://3.basecamp.com/1/projects/103', 'active', '13', '903',
            'client', ?, ?)`,
 ).run(now, now);
-/* والمشروعُ المالك خارجَ الدفعة — وإلا ردّ `seen` الثاني «مكرّراً» قبل أن
-   يبلغ هذا الحارس. وهي حالُ مشروعٍ صُنّف بعدها داخلياً، أو حُذف ملفُّه. */
+/* والمشروعُ الأوّل خارجَ الدفعة: الملفُّ المنسوخ بموضوعٍ آخر لا يُكتب فيه،
+   فيُرى أنّ قضيته لا تُمسّ بمشروعٍ يشاركها رقمَ الجهة. */
 db.prepare(`UPDATE basecamp_projects SET kind = 'internal' WHERE project_id = '101'`).run();
 docContent = DOC.replace('نزاعٌ على عقد توريد', 'موضوعُ مشروعٍ آخر');
 plan = await buildPlan(env, connection);
 const copied = plan.plans.find((p) => p.projectId === '103');
-check('رقمٌ لقضية مشروعٍ آخر → خطأٌ مسمّى', copied.error === 'case_number_taken', copied);
+check('رقمُ الجهة نفسُه في مشروعٍ آخر → قضيةٌ أخرى برقم مشروعها، بلا خطأ',
+  !copied.error && copied.case.action === 'create_case' && copied.case.values.caseNumber === '103', copied);
 await runSync(env, connection, actor);
 check('ولا تُمسّ قضيةُ المشروع الآخر',
   db.prepare(`SELECT summary FROM cases WHERE id = ?`).get(ownerCase.id).summary === ownerCase.summary,
   db.prepare(`SELECT summary FROM cases WHERE id = ?`).get(ownerCase.id));
-check('ولا يُربط المشروعُ بها',
-  !db.prepare(`SELECT case_id FROM basecamp_projects WHERE project_id = '103'`).get().case_id);
+const sibling = db.prepare(
+  `SELECT c.* FROM cases c JOIN basecamp_projects p ON p.case_id = c.id WHERE p.project_id = '103'`,
+).get();
+check('ويُربط المشروعُ بقضيته، ورقمُ الجهة فيهما معاً',
+  sibling && sibling.id !== ownerCase.id && sibling.case_number === '103' &&
+    sibling.court_case_number === ownerCase.court_case_number, sibling);
+
+// ── قضيةٌ ربطها مشروعُها قبل الإصلاح تُرقَّم برقمه ──
+({ db, env } = setup());
+docContent = DOC;
+await runSync(env, connection, actor);
+/* كما تركها الإصدارُ السابق: رقمُ الجهة في `case_number`، والصورةُ بلا حقلَي الجهة. */
+db.prepare(`UPDATE cases SET case_number = 'ق-2026-014', court_case_number = NULL`).run();
+{
+  const snapshot = JSON.parse(db.prepare(`SELECT synced_values FROM basecamp_projects`).get().synced_values);
+  delete snapshot.case.courtCaseNumber;
+  snapshot.case.caseNumber = 'ق-2026-014';
+  db.prepare(`UPDATE basecamp_projects SET synced_values = ?`).run(JSON.stringify(snapshot));
+}
+applied = await runSync(env, connection, actor);
+check('رقمُ الجهة القديمُ في رقم القضية يُصحَّح إلى معرّف المشروع',
+  db.prepare(`SELECT COUNT(*) n FROM cases`).get().n === 1 && kase().case_number === '101' &&
+    kase().court_case_number === 'ق-2026-014', kase());
+
+// ── خريطةٌ محفوظةٌ قبل الإصلاح تُحوَّل ──
+const { upgradeFieldMap } = await import('../worker/lib/basecamp/sync.js');
+const legacyMap = upgradeFieldMap({
+  'رقم القضية': 'case.caseNumber', 'رقم المشروع': 'case.caseNumber', 'اسم العميل': 'client.fullName',
+});
+check('«رقم القضية» القديمُ يصير رقمَ الجهة، و«رقم المشروع» يُسقط',
+  legacyMap['رقم القضية'] === 'case.courtCaseNumber' && !('رقم المشروع' in legacyMap) &&
+    legacyMap['اسم العميل'] === 'client.fullName', legacyMap);
+check('وتُضاف عناوينُ الجهة الافتراضية',
+  legacyMap['الجهة المختصة'] === 'case.authority', legacyMap);
 
 // ── المشروعُ المؤرشف منتهٍ ──
 ({ db, env } = setup());

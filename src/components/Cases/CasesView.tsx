@@ -89,14 +89,19 @@ export default function CasesView() {
     archiveView === 'archived' ? Boolean(case_.archivedAt) : !case_.archivedAt,
   );
 
+  /* البحثُ برقم المشروع وبرقم القضية لدى الجهة معاً: الموكّلُ يتّصل برقم المحكمة. */
+  const matchesText = (case_: Case) => {
+    const needle = searchTerm.toLowerCase();
+    return [case_.caseNumber, case_.courtCaseNumber ?? '', case_.clientName, case_.summary]
+      .some((value) => value.toLowerCase().includes(needle));
+  };
+
   // فصل القضايا المكتملة عن الباقي
   const activeCases = visibleCases.filter(case_ => case_.status !== 'completed');
   const completedCases = visibleCases.filter(case_ => case_.status === 'completed');
 
   const filteredActiveCases = activeCases.filter(case_ => {
-    const matchesSearch = case_.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         case_.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         case_.summary.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesText(case_);
     
     const matchesStatus = filterStatus === 'all' || case_.status === filterStatus;
     const matchesType = filterType === 'all' || case_.caseType === filterType;
@@ -105,9 +110,7 @@ export default function CasesView() {
   });
 
   const filteredCompletedCases = completedCases.filter(case_ => {
-    const matchesSearch = case_.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         case_.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         case_.summary.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesText(case_);
     
     const matchesStatus = filterStatus === 'all' || filterStatus === 'completed';
     const matchesType = filterType === 'all' || case_.caseType === filterType;
@@ -353,6 +356,9 @@ export default function CasesView() {
                       >
                         <bdi>{case_.caseNumber}</bdi>
                       </button>
+                      {case_.courtCaseNumber && (
+                        <p className="text-xs text-muted-foreground"><bdi>{case_.courtCaseNumber}</bdi></p>
+                      )}
                       <p className="text-xs text-muted-foreground">{case_.caseType}</p>
                     </div>
                   </div>
@@ -440,7 +446,7 @@ export default function CasesView() {
                   />
                 </TableHead>
                 <TableHead className="sm:px-6 tracking-wider">
-                  رقم القضية
+                  رقم المشروع
                 </TableHead>
                 <TableHead className="sm:px-6 tracking-wider hidden sm:table-cell">
                   النوع
@@ -482,6 +488,9 @@ export default function CasesView() {
                     >
                       <bdi>{case_.caseNumber}</bdi>
                     </button>
+                    {case_.courtCaseNumber && (
+                      <div className="text-xs text-muted-foreground"><bdi>{case_.courtCaseNumber}</bdi></div>
+                    )}
                   </TableCell>
                   <TableCell className="sm:px-6 hidden sm:table-cell">
                     <div className="text-xs sm:text-sm text-foreground">{case_.caseType}</div>
@@ -590,7 +599,7 @@ export default function CasesView() {
                   <TableRow>
                     <TableHead className="w-10" />
                     <TableHead className="tracking-wider">
-                      رقم القضية
+                      رقم المشروع
                     </TableHead>
                     <TableHead className="tracking-wider">
                       النوع
@@ -632,6 +641,9 @@ export default function CasesView() {
                         >
                           <bdi>{case_.caseNumber}</bdi>
                         </button>
+                        {case_.courtCaseNumber && (
+                          <div className="text-xs text-muted-foreground"><bdi>{case_.courtCaseNumber}</bdi></div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-foreground">{case_.caseType}</div>

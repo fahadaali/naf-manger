@@ -20,6 +20,7 @@ import { Badge } from '@/registry/naf/ui/badge';
 import { formatDateTime, formatNumber } from '@/registry/naf/lib/format';
 import { ConflictsPanel, FieldMapPanel, PreviewPanel } from './BasecampPanels';
 import BasecampReviews from './BasecampReviews';
+import BasecampReset from './BasecampReset';
 
 /* ═══ ربط بيسكامب ═══
  *
@@ -468,6 +469,7 @@ export default function BasecampSync() {
             onChanged={() => load(true)}
           />
           <FieldMapPanel />
+          <BasecampReset onDone={() => load(true)} />
         </>
       )}
 

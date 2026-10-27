@@ -28,7 +28,9 @@ export const REPORT_FIELDS: Record<string, ReportField[]> = {
     { id: 'followUpDate', name: 'موعد المتابعة', type: 'date', source: 'prospects' }
   ],
   cases: [
-    { id: 'caseNumber', name: 'رقم القضية', type: 'text', source: 'cases' },
+    { id: 'caseNumber', name: 'رقم المشروع', type: 'text', source: 'cases' },
+    { id: 'authority', name: 'الجهة المختصة', type: 'text', source: 'cases' },
+    { id: 'courtCaseNumber', name: 'رقم القضية لدى الجهة', type: 'text', source: 'cases' },
     { id: 'caseType', name: 'نوع القضية', type: 'text', source: 'cases' },
     { id: 'status', name: 'الحالة', type: 'select', source: 'cases', options: ['pending', 'in-progress', 'completed', 'postponed'] },
     { id: 'outcome', name: 'النتيجة', type: 'select', source: 'cases', options: ['won', 'lost', 'settled'] },

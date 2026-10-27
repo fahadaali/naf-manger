@@ -3,7 +3,9 @@ import { CircleCheck, Landmark, RefreshCw, Sparkles, TriangleAlert } from 'lucid
 
 import { db } from '../../data/database';
 import { ApiError } from '../../data/api';
-import { Case, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqStatus, WafeqSummary } from '../../types';
+import {
+  Case, WafeqAiSummary, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary,
+} from '../../types';
 import { Button } from '@/registry/naf/ui/button';
 import { Card } from '@/registry/naf/ui/card';
 import { Alert } from '@/registry/naf/ui/alert';
@@ -29,6 +31,7 @@ const ERRORS: Record<string, string> = {
   unreachable: 'تعذّر الوصول إلى وافق',
   not_found: 'لم يُعرف المسار عند وافق — شغّل «اختبار الاتصال» وأرسل لنا نتيجته',
   sync_first: 'شغّل مزامنةً يدويةً ناجحة أوّلاً',
+  ai_unavailable: 'الذكاء الاصطناعي غيرُ مربوطٍ بالمنصة (ارتباط AI في Cloudflare)',
   pro_bono_case: 'القضية تطوّعية — لا دفعات عليها',
   forbidden: 'لا تملك صلاحية هذا',
 };
@@ -43,6 +46,21 @@ const MATCH_LABEL: Record<string, string> = {
   manual: 'يدويّاً',
 };
 
+/* لماذا لم يُسأل الطراز — يُقال ولا يُسكت عنه. */
+function AiLine({ ai }: { ai: WafeqAiSummary }) {
+  const skipped = ai.skipped ?? { disabled: 0, noCandidates: 0 };
+  return (
+    <p className="text-muted-foreground flex flex-wrap items-center gap-1">
+      <Sparkles className="h-3 w-3" aria-hidden="true" />
+      {ai.enabled ? <>سُئل الذكاءُ الاصطناعي {formatNumber(ai.used)} مرّة</> : <>الذكاءُ الاصطناعي مطفأ</>}
+      {ai.deferred > 0 && <> · بقي {formatNumber(ai.deferred)} لضغطةٍ تالية</>}
+      {ai.failed > 0 && <> · تعذّر {formatNumber(ai.failed)}</>}
+      {skipped.disabled > 0 && <> · {formatNumber(skipped.disabled)} لم تُعرض عليه لأنّه مطفأ</>}
+      {skipped.noCandidates > 0 && <> · {formatNumber(skipped.noCandidates)} بلا قضايا مفتوحة تُرشَّح</>}
+    </p>
+  );
+}
+
 const TABS: { id: WafeqPaymentStatus; label: string }[] = [
   { id: 'suggested', label: 'مقترَحة' },
   { id: 'unmatched', label: 'بلا قضية' },
@@ -54,6 +72,7 @@ export default function WafeqSync() {
   const [status, setStatus] = useState<WafeqStatus | null>(null);
   const [probe, setProbe] = useState<WafeqProbe | null>(null);
   const [summary, setSummary] = useState<{ title: string; data: WafeqSummary } | null>(null);
+  const [rematch, setRematch] = useState<WafeqRematch | null>(null);
   const [tab, setTab] = useState<WafeqPaymentStatus>('suggested');
   const [payments, setPayments] = useState<WafeqPayment[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
@@ -196,6 +215,59 @@ export default function WafeqSync() {
               {!status.lastSyncAt && <span className="text-muted-foreground">— بعد أوّل مزامنةٍ يدوية</span>}
             </label>
 
+            {/* ═══ الربطُ بالذكاء الاصطناعي ═══
+                على المخزَّن «بلا قضية» دون قراءة وافق من جديد. ونتيجتُه اقتراحٌ
+                تؤكّده — لا ينزل شيءٌ إلى سجلّ الدفعات بترجيح. */}
+            <div className="rounded border p-3 space-y-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-foreground">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  {!status.ai?.available
+                    ? 'الذكاءُ الاصطناعي غيرُ مربوطٍ بالمنصة'
+                    : status.ai.enabled ? 'الذكاءُ الاصطناعي يعمل — يقترح القضيةَ لما لا رقمَ فيه' : 'الذكاءُ الاصطناعي مطفأ'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {status.ai?.available && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy !== null}
+                      onClick={() => run('ai', async () => {
+                        await db.setBasecampAi(!status.ai?.enabled);
+                        await loadStatus();
+                      }, 'تعذّر تبديل الذكاء الاصطناعي')}
+                    >
+                      {status.ai.enabled ? 'أطفئه' : 'شغّله'}
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    disabled={busy !== null || !status.ai?.available || !status.ai.enabled || !(status.counts?.unmatched)}
+                    onClick={() => run('rematch', async () => {
+                      setRematch(await db.rematchWafeq());
+                      await refresh();
+                    }, 'تعذّر الربط بالذكاء الاصطناعي')}
+                  >
+                    <Sparkles aria-hidden="true" />
+                    {busy === 'rematch' ? 'جارٍ الربط' : 'اربط بالذكاء الاصطناعي الآن'}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                المفتاحُ نفسُه مفتاحُ «التلخيص الآليّ» في الربط ببيسكامب. وفي كلّ ضغطةٍ يُسأل عن {formatNumber(60)} دفعةً
+                على الأكثر — اضغط ثانيةً حتى لا يبقى شيء.
+              </p>
+              {rematch && (
+                <div className="text-muted-foreground">
+                  <p>
+                    فُحصت {formatNumber(rematch.checked)} · رُبطت {formatNumber(rematch.linked)} ·
+                    مقترَحة {formatNumber(rematch.suggested)} · بقيت بلا قضية {formatNumber(rematch.unmatched)}
+                  </p>
+                  <AiLine ai={rematch.ai} />
+                </div>
+              )}
+            </div>
+
             {probe && (
               <div className="rounded border bg-muted p-3 text-sm space-y-1">
                 <p className="flex items-center gap-2 text-foreground">
@@ -222,13 +294,7 @@ export default function WafeqSync() {
                   بلا تغيير {formatNumber(summary.data.unchanged)}
                   {summary.data.skipped > 0 && <> · طُرحت {formatNumber(summary.data.skipped)} لم تُفهم</>}
                 </p>
-                {summary.data.ai.enabled && (
-                  <p className="text-muted-foreground flex items-center gap-1">
-                    <Sparkles className="h-3 w-3" aria-hidden="true" />
-                    استدلالات: {formatNumber(summary.data.ai.used)}
-                    {summary.data.ai.deferred > 0 && <> · أُجّل {formatNumber(summary.data.ai.deferred)} إلى الدورة التالية</>}
-                  </p>
-                )}
+                <AiLine ai={summary.data.ai} />
                 {summary.data.truncated && <p className="text-muted-foreground">بلغت الدورةُ سقفَ الصفحات — الباقي في التي تليها.</p>}
               </div>
             )}
@@ -292,7 +358,7 @@ export default function WafeqSync() {
                             <option value="">اختر القضية</option>
                             {cases.map((kase) => (
                               <option key={kase.id} value={kase.id}>
-                                {kase.caseNumber} — {kase.clientName}
+                                {kase.caseNumber}{kase.courtCaseNumber ? ` (${kase.courtCaseNumber})` : ''} — {kase.clientName}
                               </option>
                             ))}
                           </Select>

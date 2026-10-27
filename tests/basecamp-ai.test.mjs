@@ -155,7 +155,7 @@ const actor = { actorId: 'u1', actorName: 'فهد', source: 'اختبار' };
 const FULL_NAME_DOC = `<div>
   <div>اسم العميل: محمد خالد عبدالله القحطاني</div>
   <div>رقم الهوية: 1012345678</div>
-  <div>رقم المشروع: ق-2026-100</div>
+  <div>رقم القضية: ق-2026-100</div>
   <div>نوع المشروع: قضية عمالية</div>
   <div>موضوع المشروع: مطالبةٌ بمستحقّات نهاية الخدمة</div>
 </div>`;
@@ -456,15 +456,15 @@ docContent = docContent.replace('خالد الغامدي', 'خالد سعد ال
 await runSync(env, connection, actor);
 check('ويُعاد على ملفٍّ تبدّل', rereads === firstReads + 1, `reads=${rereads}`);
 
-/* ═══ ورقمُ القضية لا يُستخرج ═══
-   هو مفتاحُ الربط: تُطابَق به القضيةُ القائمة ثم يُكتب فيها. وملفٌّ قد
-   يذكر رقمَ قضيةٍ أخرى، فيُنقل نقلاً صحيحاً ويُربط المشروعُ بملفّ غيره. */
+/* ═══ ورقمُ المشروع لا يُستخرج ═══
+   هو معرّفُ المشروع في بيسكامب، لا شيءٌ في الملفّ. فجوابٌ عنه — ولو ذكر
+   الملفُّ رقماً — لا يُكتب، والرقمُ هو المعرّف أبداً. */
 ({ db, env } = readerSetup());
 docContent = PROSE_DOC;
 answers = { 'client.fullName': 'محمد خالد عبدالله القحطاني', 'case.caseNumber': '1012345678' };
 plan = await buildPlan(env, connection);
-check('ورقمُ القضية لا يُؤخذ من استخلاص',
-  plan.plans[0].case.values.caseNumber === 'بيسكامب-101', plan.plans[0].case.values);
+check('ورقمُ المشروع لا يُؤخذ من استخلاص',
+  plan.plans[0].case.values.caseNumber === '101', plan.plans[0].case.values);
 
 // ── اقتراحُ الربط: من القائمة وحدها، ولا يُحفظ ──
 group('اقتراحُ ربط العناوين');
@@ -548,7 +548,7 @@ check('و«لا-أعرف» تُردّ فراغاً',
 ({ db, env } = readerSetup());
 docContent = `<div>
   <div>اسم العميل: خالد الغامدي</div>
-  <div>رقم المشروع: ق-2026-777</div>
+  <div>رقم القضية: ق-2026-777</div>
   <div>نتيجة المشروع: تحت الدراسة</div>
 </div>`;
 env.AI = { async run(model, input) {
@@ -588,7 +588,7 @@ env.AI = {
 };
 docContent = `<div>
   <div>اسم العميل: خالد الغامدي</div>
-  <div>رقم المشروع: ق-2026-900</div>
+  <div>رقم القضية: ق-2026-900</div>
   <div>نتيجة المشروع: تحت الدراسة</div>
   <div>الملاحظات: صدر الحكم لصالحنا وننتظر التنفيذ</div>
 </div>`;

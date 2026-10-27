@@ -11,12 +11,14 @@ import { formatNumber, isolate } from '@/registry/naf/lib/format';
 
 /* أعمدةُ القالب: عنوانُها العربي، ومفتاحُها عند الخادم، ومثالُها. */
 const COLUMNS: { header: string; key: keyof CaseImportRow; sample: string; required?: boolean }[] = [
-  { header: 'رقم القضية', key: 'caseNumber', sample: 'ق-2026-120', required: true },
+  { header: 'رقم المشروع', key: 'caseNumber', sample: 'ق-2026-120', required: true },
   { header: 'اسم العميل', key: 'clientName', sample: 'شركة الأفق التجارية', required: true },
   { header: 'هوية العميل', key: 'clientIdNumber', sample: '7001234567' },
   { header: 'جوال العميل', key: 'clientPhone', sample: '0501234567' },
   { header: 'نوع القضية', key: 'caseType', sample: 'قضية تجارية' },
   { header: 'موضوع القضية', key: 'summary', sample: 'نزاع على عقد توريد' },
+  { header: 'الجهة المختصة', key: 'authority', sample: 'المحكمة التجارية بالرياض' },
+  { header: 'رقم القضية لدى الجهة', key: 'courtCaseNumber', sample: '4470123456' },
   { header: 'الحالة', key: 'status', sample: 'قيد المعالجة' },
   { header: 'النتيجة', key: 'outcome', sample: '' },
   { header: 'المحامي المسؤول', key: 'lawyer', sample: '' },

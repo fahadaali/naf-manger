@@ -69,7 +69,9 @@ export const CLIENT_FIELDS = [
   'fullName', 'idNumber', 'idType', 'phone', 'contacts', 'email', 'clientType',
   'commercialRegister', 'legalRepresentative', 'notes',
 ];
-export const CASE_FIELDS = ['caseNumber', 'caseType', 'summary', 'status', 'outcome', 'notes', 'opposingParties', 'lawyerId'];
+export const CASE_FIELDS = [
+  'caseType', 'summary', 'status', 'outcome', 'notes', 'opposingParties', 'lawyerId', 'courtCaseNumber', 'authority',
+];
 
 /* و`contacts` خارج الدمج: مصفوفةٌ تُضمّ ضمّاً — أرقامٌ تُزاد ولا يُحذف
    منها رقم — فلا معنى لمقارنةِ «قبلُ وبعدُ» فيها ولا لتعارضٍ عليها. */
@@ -86,7 +88,7 @@ const CLIENT_COLUMN = {
 const CASE_COLUMN = {
   caseNumber: 'case_number', caseType: 'case_type', summary: 'summary',
   status: 'status', outcome: 'outcome', notes: 'notes', opposingParties: 'opposing_parties',
-  lawyerId: 'lawyer_id',
+  lawyerId: 'lawyer_id', courtCaseNumber: 'court_case_number', authority: 'authority',
 };
 
 /**
@@ -110,11 +112,34 @@ export async function readFieldMap(env) {
   try {
     const stored = JSON.parse(row.value);
     return stored && typeof stored === 'object' && Object.keys(stored).length
-      ? stored
+      ? upgradeFieldMap(stored)
       : { ...DEFAULT_FIELD_MAP };
   } catch {
     return { ...DEFAULT_FIELD_MAP };
   }
+}
+
+/* حقلا الجهة: يُضافان إلى خريطةٍ محفوظة لا تعرفهما — بعناوينهما الافتراضية. */
+const COURT_TARGETS = new Set(['case.courtCaseNumber', 'case.authority']);
+
+/**
+ * خريطةٌ حُفظت قبل أن يصير رقمُ المشروع معرّفَ بيسكامب.
+ *
+ * كانت تربط «رقم القضية» (وربما «رقم المشروع» و«رقم الملف») بـ`case.caseNumber`
+ * — وهو هدفٌ أُلغي: رقمُ المشروع لا يُقرأ من الملفّ. فما كان عنوانُه «قضية»
+ * يصير رقمَ القضية لدى الجهة، وما سواه يُسقط فيظهر «بلا ربط» في المعاينة. ولا
+ * يُكتب التحويلُ في القاعدة: يُقرأ هكذا، ويُحفظ متى حفظ المكتبُ خريطتَه.
+ */
+export function upgradeFieldMap(stored) {
+  const map = {};
+  for (const [label, target] of Object.entries(stored)) {
+    if (target !== 'case.caseNumber') { map[label] = target; continue; }
+    if (normalizeArabic(label).includes('قضيه')) map[label] = 'case.courtCaseNumber';
+  }
+  for (const [label, target] of Object.entries(DEFAULT_FIELD_MAP)) {
+    if (COURT_TARGETS.has(target) && !(label in map)) map[label] = target;
+  }
+  return map;
 }
 
 export async function writeFieldMap(env, map, userId) {
@@ -262,18 +287,6 @@ function mergeField({ current, incoming, lastSynced, blank, firstContact, same =
 }
 
 /**
- * رقمُ قضيةٍ بديلٌ ثابت حين لا يحمله الملفّ.
- *
- * والثباتُ شرط: مزامنةٌ ثانية يجب أن تجد الصفَّ نفسه لا أن تُنشئ ثانياً.
- * فيُشتقّ من معرّف المشروع في بيسكامب — وهو لا يتبدّل.
- *
- * **ولا يُولَّد رقمُ هوية بهذا ولا بغيره.** عمودُه يقبل الغياب، ورقمٌ
- * مخترَعٌ في ملفّ موكّل يُقرأ حقيقياً بعد شهر. أمّا رقمُ القضية فهو مفتاحٌ
- * داخليّ لا يدّعي شيئاً عن الخارج، وإسقاطُ القضية بدله يُضيع ما جيء لأجله.
- */
-const fallbackNumber = (prefix, projectId) => `${prefix}-${projectId}`;
-
-/**
  * يبحث عن عميلٍ مطابق — بالهوية أوّلاً ثم بالاسم الموحَّد.
  *
  * والاسمُ ثانياً لا أوّلاً: الهويةُ فريدةٌ في المخطَّط، والاسمُ يتشابه.
@@ -316,19 +329,11 @@ export async function findClient(env, { idNumber, fullName }) {
  *
  * `client.idType` خارجَه: يُرجَّح من رقم الهوية نفسِه، وذلك أوثقُ من سؤال.
  *
- * و**`case.caseNumber` خارجَه بقصد**، وهو الاستثناء الذي يستحقّ سببَه:
- * رقمُ القضية مفتاحُ الربط — تُطابَق به القضيةُ القائمة ثم يُكتب فيها.
- * وملفُّ مشروعٍ قد يذكر رقمَ قضيةٍ أخرى (قضيةٌ مرتبطة، أو حكمٌ سابق)،
- * فينقله الطراز منقولاً صحيحاً من النصّ — ويُربط المشروعُ بقضية موكّلٍ
- * آخر فتُكتب حقولُه فيها.
- *
- * فالشرطُ الثاني (النقلُ الحرفي) يمنع الاختراع ولا يمنع أخذَ الرقم
- * الخطأ من الملفّ. والبديلُ عن ذلك رقمٌ مولَّدٌ يُعلَّم «يحتاج تصحيحاً» —
- * وهو ظاهرٌ يُصحَّح، لا ربطٌ صامتٌ بملفّ غيره.
+ * ورقمُ المشروع لا يُسأل عنه أصلاً — هو معرّفُ المشروع في بيسكامب، لا يُقرأ
+ * من الملفّ. ورقمُ القضية لدى الجهة حقلٌ تفصيليّ كغيره، لا مفتاحُ ربط: فإن
+ * نقله الطراز من النصّ خطأً كان خطأً ظاهراً يُصحَّح، لا ربطاً بملفّ غيره.
  */
-const RECOVERABLE = Object.keys(TARGETS).filter(
-  (key) => key !== 'client.idType' && key !== 'case.caseNumber',
-);
+const RECOVERABLE = Object.keys(TARGETS).filter((key) => key !== 'client.idType');
 
 /** أهذا الحقلُ مملوءٌ في ما قرأته القاعدة؟ */
 const already = (parsed, target) => {
@@ -673,72 +678,26 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
       });
     }
   }
-  if (!caseValues.caseNumber) {
-    caseValues.caseNumber = fallbackNumber('بيسكامب', row.project_id);
-    plan.warnings.push('رقم القضية مولَّد — يحتاج تصحيحاً');
-    plan.reviews.push({
-      kind: 'generated_number',
-      subject: caseValues.caseNumber,
-      fingerprint: caseValues.caseNumber,
-      detail: { generated: caseValues.caseNumber },
-    });
-  }
+  /* ═══ رقمُ المشروع هو معرّفُه في بيسكامب ═══
 
-  if (seen.cases.has(caseValues.caseNumber)) {
-    /* مشروعان يحملان رقم القضية نفسَه: أحدهما سيدهس الآخر أو يسقط بقيد
-       التفرّد. وهو تضاربٌ في ملفّاتهم لا في شيفرتنا — فيُسمّى ويُترك
-       لصاحبه، ولا يُحسم بالتخمين. */
-    plan.error = 'duplicate_case_number';
-    return plan;
-  }
-  seen.cases.add(caseValues.caseNumber);
+     الثابتُ الذي في رابط المشروع، ولا يُقرأ من الملفّ أبداً. و«رقم القضية» في
+     «بيانات المشروع» رقمُها لدى الجهة المختصة — محكمةٍ أو شرطةٍ أو نيابة —
+     معلومةٌ تفصيلية تتكرّر بين مشاريع وتغيب في غيرها، فهي في
+     `court_case_number` لا مفتاحٌ يُطابَق به.
 
-  /* ═══ كلُّ تحديثٍ مربوطٌ بمعرّف المشروع ═══
+     وكان رقمُ الجهة هو المفتاح: فمشروعان لقضيةٍ واحدةٍ لدى المحكمة يسقط
+     ثانيهما «مكرّراً»، ومشروعٌ بلا رقمٍ يُولَّد له رقم، ورقمٌ تبدّل في الملفّ
+     يفتح اختلافاً — وكلُّه تعارضٌ على ما ليس مفتاحاً. والقضيةُ تُطابَق الآن
+     بمشروعها: بربطه السابق، ثمّ برقمها = معرّفه. */
+  caseValues.caseNumber = String(row.project_id);
 
-     للموكّل مشاريعُ عدّة، ولكلٍّ قضيتُه. فالقضيةُ التي ربطها هذا المشروعُ
-     من قبل هي قضيتُه أبداً — يتبدّل رقمُها في الملفّ فتتبدّل هي، ولا
-     يُنشأ غيرُها. ورقمُ القضية لا يُطابَق به إلا لمشروعٍ لم يُربط بعد.
-
-     وكان الترتيبُ معكوساً: الرقمُ أوّلاً. فملفٌّ يذكر رقمَ قضيةٍ أخرى —
-     خطأً في الكتابة أو نسخاً من ملفٍّ قديم — كان يكتب حقولَه في قضية
-     مشروعٍ آخر، ولموكّلٍ آخر ربما. */
   let existingCase = row.case_id
     ? await env.DB.prepare(`SELECT * FROM cases WHERE id = ?`).bind(row.case_id).first()
     : null;
-
-  if (existingCase) {
-    if (existingCase.case_number !== caseValues.caseNumber) {
-      /* والرقمُ الجديد قد يكون لقضيةٍ قائمة: كتابتُه يُسقطها قيدُ التفرّد،
-         أو تجمع قضيتين على رقمٍ واحد. فيبقى الرقمُ القائم ويُقال. */
-      const taken = await env.DB.prepare(`SELECT id FROM cases WHERE case_number = ? AND id <> ?`)
-        .bind(caseValues.caseNumber, existingCase.id)
-        .first();
-      if (taken) {
-        plan.warnings.push(`رقمُ المشروع في الملفّ «${caseValues.caseNumber}» لقضيةٍ أخرى — بقي «${existingCase.case_number}»`);
-        caseValues.caseNumber = existingCase.case_number;
-      } else {
-        plan.warnings.push('تبدّل رقم القضية في الملفّ');
-      }
-    }
-  } else {
+  if (!existingCase) {
     existingCase = await env.DB.prepare(`SELECT * FROM cases WHERE case_number = ?`)
       .bind(caseValues.caseNumber)
       .first();
-
-    /* قضيةٌ بالرقم نفسِه ربطها مشروعٌ آخر: ليست لهذا المشروع. فيُسمّى
-       ولا يُكتب فيها — وإلا تقاسم مشروعان قضيةً واحدة، يدهس كلٌّ ما كتبه
-       الآخر في كل دورة. */
-    if (existingCase) {
-      const owner = await env.DB.prepare(
-        `SELECT project_id FROM basecamp_projects WHERE case_id = ? AND project_id <> ?`,
-      )
-        .bind(existingCase.id, row.project_id)
-        .first();
-      if (owner) {
-        plan.error = 'case_number_taken';
-        return plan;
-      }
-    }
   }
 
   /* ═══ المشروعُ المؤرشف منتهٍ ═══
@@ -821,6 +780,17 @@ async function planProject(env, connection, row, fieldMap, seen, vocab, ai, poli
     }
   }
 
+  /* قضيةٌ ربطها المشروعُ قبل أن يصير رقمُها معرّفَه: حملت رقمَ الجهة أو رقماً
+     مولَّداً. فتُرقَّم برقم مشروعها — ما لم يحمله صفٌّ آخر، فلا يُسقطها قيدُ
+     التفرّد — ورقمُ الجهة يُكتب في عموده بالدمج أعلاه. */
+  if (existingCase.case_number !== caseValues.caseNumber) {
+    const taken = await env.DB.prepare(`SELECT id FROM cases WHERE case_number = ? AND id <> ?`)
+      .bind(caseValues.caseNumber, existingCase.id)
+      .first();
+    if (taken) plan.warnings.push(`رقمُ المشروع «${caseValues.caseNumber}» تحمله قضيةٌ أخرى — بقي «${existingCase.case_number}»`);
+    else changes.caseNumber = caseValues.caseNumber;
+  }
+
   plan.case = {
     id: existingCase.id,
     values: caseValues,
@@ -848,7 +818,7 @@ export async function buildPlan(env, connection) {
      سقفُ المشروع الواحد، وإلا استدلّ حسابٌ فيه ثلاثمئة مشروعٍ ثلاثمئة مرّة. */
   const ai = { enabled: await aiEnabled(env), budget: newBudget() };
   const policy = await readConflictPolicy(env);
-  const seen = { clients: new Set(), cases: new Set() };
+  const seen = { clients: new Set() };
   const plans = [];
   for (const row of results ?? []) {
     plans.push(await planProject(env, connection, row, fieldMap, seen, vocab, ai, policy));
@@ -1015,8 +985,9 @@ async function applyPlan(env, plan, actorId, ai) {
     const values = plan.case.values;
     await env.DB.prepare(
       `INSERT INTO cases (id, case_number, case_type, client_id, client_name, summary, status,
-                          outcome, notes, opposing_parties, lawyer_id, basecamp_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                          outcome, notes, opposing_parties, lawyer_id, court_case_number, authority,
+                          basecamp_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         caseId,
@@ -1030,6 +1001,8 @@ async function applyPlan(env, plan, actorId, ai) {
         values.notes ?? '',
         values.opposingParties ?? '[]',
         values.lawyerId ?? null,
+        values.courtCaseNumber ?? null,
+        values.authority ?? null,
         plan.appUrl,
         /* ═══ القضيةُ أُنشئت يومَ أُنشئ مشروعُها ═══
            كانت تُختم بلحظة الاستيراد، فتظهر قضيةٌ من ٢٠٢١ منشأةً اليوم —

@@ -38,6 +38,7 @@ import { scheduledWafeqSync } from './lib/wafeq/sync.js';
 import { readConflicts } from './lib/conflicts.js';
 import { importCases } from './lib/case-import.js';
 import { caseTimeline } from './lib/basecamp/timeline.js';
+import { resetBasecampImport } from './lib/basecamp/reset.js';
 import { readMailStatus, sendTestMail } from './lib/mail.js';
 import { listNotifications, markNotificationsRead, scheduledNotifications } from './lib/notify.js';
 import {
@@ -45,6 +46,7 @@ import {
   listWafeqPayments,
   previewWafeq,
   readWafeqStatus,
+  rematchWafeqPayments,
   setWafeqAutoSync,
   syncWafeq,
   testWafeq,
@@ -265,6 +267,7 @@ export default {
         if (id === 'test' && request.method === 'POST') return testWafeq(env, user);
         if (id === 'preview' && request.method === 'POST') return previewWafeq(env, user);
         if (id === 'sync' && request.method === 'POST') return syncWafeq(env, user);
+        if (id === 'rematch' && request.method === 'POST') return rematchWafeqPayments(env, user);
         if (id === 'auto-sync' && request.method === 'PUT') return setWafeqAutoSync(request, env, user);
         if (id === 'payments' && !verb && request.method === 'GET') return listWafeqPayments(env, user, url);
         /* القرارُ في الجسم: `{ action: link | ignore | unlink, caseId? }`. */
@@ -297,6 +300,8 @@ export default {
            بضغطة رجوع. */
         if (id === 'preview' && request.method === 'POST') return preview(env, user);
         if (id === 'sync' && request.method === 'POST') return sync(env, user, { source: 'يدوي' });
+        /* إعادةُ الاستيراد من الصفر — معاينةٌ بالأعداد، ثم تنفيذٌ بعبارة تأكيد. */
+        if (id === 'reset' && request.method === 'POST') return resetBasecampImport(request, env, user);
         if (id === 'auto-sync' && request.method === 'PUT') return setAutoSync(request, env, user);
         if (id === 'ai' && request.method === 'PUT') return setAiImport(request, env, user);
         if (id === 'conflicts' && !verb && request.method === 'GET') return listConflicts(env, user);

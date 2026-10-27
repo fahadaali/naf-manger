@@ -373,7 +373,7 @@ group('مسارات بيسكامب الجديدة');
 r = await hit('GET', '/api/basecamp/map');
 check('الخريطة تُقرأ بافتراضها',
   r.body.ok && r.body.data.map['اسم العميل'] === 'client.fullName', r.body.data?.map);
-check('ومعها الحقول الممكنة', r.body.ok && 'case.caseNumber' in r.body.data.targets);
+check('ومعها الحقول الممكنة', r.body.ok && 'case.courtCaseNumber' in r.body.data.targets && !('case.caseNumber' in r.body.data.targets));
 
 r = await hit('PUT', '/api/basecamp/map', { map: { 'الموكّل': 'client.fullName', 'س': 'case.مجهول' } });
 check('تُحفظ الخريطة', r.body.ok, r.body);

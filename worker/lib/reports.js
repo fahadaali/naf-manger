@@ -44,6 +44,8 @@ const FIELDS = {
   },
   cases: {
     caseNumber: { column: 'case_number', type: 'text' },
+    authority: { column: 'authority', type: 'text' },
+    courtCaseNumber: { column: 'court_case_number', type: 'text' },
     caseType: { column: 'case_type', type: 'text' },
     status: { column: 'status', type: 'text' },
     outcome: { column: 'outcome', type: 'text' },

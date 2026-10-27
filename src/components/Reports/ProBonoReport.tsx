@@ -36,21 +36,21 @@ export default function ProBonoReport() {
   );
 
   const exportYear = () => {
-    const headers = ['رقم القضية', 'الموكّل', 'نوع القضية', 'الحالة', 'الساعات', 'القيمة التقديرية'];
+    const headers = ['رقم المشروع', 'الموكّل', 'نوع القضية', 'الحالة', 'الساعات', 'القيمة التقديرية'];
     downloadXlsx(
       [{
         name: `التطوّعي ${year}`,
         headers,
         rows: [
           ...shown.map((row) => ({
-            'رقم القضية': row.caseNumber,
+            'رقم المشروع': row.caseNumber,
             'الموكّل': row.clientName,
             'نوع القضية': row.caseType,
             'الحالة': caseStatusLabel(row.status),
             'الساعات': row.proBonoHours ?? '',
             'القيمة التقديرية': row.proBonoValue ?? '',
           })),
-          { 'رقم القضية': 'المجموع', 'الساعات': totals.hours, 'القيمة التقديرية': totals.value },
+          { 'رقم المشروع': 'المجموع', 'الساعات': totals.hours, 'القيمة التقديرية': totals.value },
         ],
       }],
       `المسؤولية الاجتماعية ${year}.xlsx`,

@@ -48,7 +48,7 @@ const EXTRACT_SYSTEM = `أنت قارئُ مستندات في مكتب محام�
 - الأرقام كما هي في النصّ.
 
 أعِد JSON فقط، بلا نصٍّ قبله ولا بعده، مفاتيحُه من الحقول المطلوبة وحدها:
-{"client.fullName":"…","case.caseNumber":"…"}
+{"client.fullName":"…","case.courtCaseNumber":"…"}
 
 وإن لم تجد شيئاً فأعِد: {}`;
 

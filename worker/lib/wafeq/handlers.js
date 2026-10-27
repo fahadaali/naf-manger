@@ -5,7 +5,8 @@
 // ماليّة قضية، وشاشتُه شاشتُها.
 
 import { configured, firstPage, WafeqError } from './api.js';
-import { linkPayment, runWafeqSync, unlinkPayment } from './sync.js';
+import { linkPayment, rematchWafeq, runWafeqSync, unlinkPayment } from './sync.js';
+import { aiEnabled } from '../ai/summarize.js';
 
 const fail = (error, status) => Response.json({ ok: false, error }, { status });
 const ok = (data) => Response.json({ ok: true, data });
@@ -35,9 +36,10 @@ export async function readWafeqStatus(env, user) {
   if (!mayDecide(user)) return fail('forbidden', 403);
   if (!configured(env)) return ok({ state: 'not_configured' });
 
-  const [row, counts] = await Promise.all([
+  const [row, counts, ai] = await Promise.all([
     env.DB.prepare(`SELECT * FROM wafeq_connection WHERE id = 1`).first(),
     env.DB.prepare(`SELECT status, COUNT(*) n FROM wafeq_payments GROUP BY status`).all(),
+    aiEnabled(env),
   ]);
   const byStatus = Object.fromEntries(STATUSES.map((status) => [status, 0]));
   for (const entry of counts.results ?? []) byStatus[entry.status] = entry.n;
@@ -49,6 +51,8 @@ export async function readWafeqStatus(env, user) {
     lastSyncError: row?.last_sync_error ?? null,
     newestPaymentDate: row?.cursor_date ?? null,
     counts: byStatus,
+    /* الطرازُ مربوطٌ (`[ai]`) ومشغَّلٌ (مفتاحُ «التلخيص الآليّ» نفسُه). */
+    ai: { available: Boolean(env.AI), enabled: ai },
   });
 }
 
@@ -109,6 +113,17 @@ export async function syncWafeq(env, user) {
       .run()
       .catch(() => {});
     return failure(error, 'sync_failed');
+  }
+}
+
+/** «اربط بالذكاء الاصطناعي الآن» — على المخزَّن «بلا قضية»، بلا قراءة وافق. */
+export async function rematchWafeqPayments(env, user) {
+  if (!isAdmin(user)) return fail('forbidden', 403);
+  if (!env.AI) return fail('ai_unavailable', 503);
+  try {
+    return ok(await rematchWafeq(env, { actorId: user.id, actorName: user.name }));
+  } catch (error) {
+    return failure(error, 'rematch_failed');
   }
 }
 

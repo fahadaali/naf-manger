@@ -91,13 +91,13 @@ async function planRow(env, raw, line, seen, members) {
 
   const caseNumber = toLatinDigits(String(raw.caseNumber ?? '')).trim();
   const clientName = String(raw.clientName ?? '').trim();
-  if (!caseNumber) return reject('رقم القضية مطلوب');
+  if (!caseNumber) return reject('رقم المشروع مطلوب');
   if (!clientName) return reject('اسم العميل مطلوب');
 
-  if (seen.cases.has(caseNumber)) return reject('رقم القضية مكرّر في الملفّ');
+  if (seen.cases.has(caseNumber)) return reject('رقم المشروع مكرّر في الملفّ');
   seen.cases.add(caseNumber);
   const taken = await env.DB.prepare(`SELECT id FROM cases WHERE case_number = ?`).bind(caseNumber).first();
-  if (taken) return reject('رقم القضية موجودٌ في المنصة');
+  if (taken) return reject('رقم المشروع موجودٌ في المنصة');
 
   // ── العميل ──
   const idNumber = toLatinDigits(String(raw.clientIdNumber ?? '')).replace(/\s+/g, '') || null;
@@ -126,6 +126,11 @@ async function planRow(env, raw, line, seen, members) {
     summary: String(raw.summary ?? '').trim(),
     notes: String(raw.notes ?? '').trim(),
   };
+  /* الجهةُ ورقمُ القضية لديها: توثيقٌ يتكرّر بين القضايا، فلا يُفحص تفرّده. */
+  const authority = String(raw.authority ?? '').trim();
+  const courtCaseNumber = toLatinDigits(String(raw.courtCaseNumber ?? '')).trim();
+  if (authority) values.authority = authority;
+  if (courtCaseNumber) values.courtCaseNumber = courtCaseNumber;
 
   const status = closed('case.status', raw.status);
   if (status === undefined) plan.warnings.push(`حالةٌ لم تُفهم: «${raw.status}» — تُكتب «منظورة»`);

@@ -25,7 +25,10 @@ export const TARGETS = {
   'client.commercialRegister': { label: 'السجل التجاري', entity: 'client' },
   'client.legalRepresentative': { label: 'مسؤول التواصل', entity: 'client' },
   'client.notes': { label: 'ملاحظات العميل', entity: 'client' },
-  'case.caseNumber': { label: 'رقم القضية', entity: 'case' },
+  /* ورقمُ المشروع ليس هنا: هو معرّفُ المشروع في بيسكامب، لا يُقرأ من الملفّ.
+     و«رقم القضية» في الملفّ رقمُها لدى الجهة المختصة — حقلٌ تفصيليّ لا مفتاح. */
+  'case.courtCaseNumber': { label: 'رقم القضية لدى الجهة', entity: 'case' },
+  'case.authority': { label: 'الجهة المختصة', entity: 'case' },
   'case.caseType': { label: 'نوع القضية', entity: 'case' },
   'case.summary': { label: 'موضوع المشروع', entity: 'case' },
   'case.status': { label: 'حالة المشروع', entity: 'case' },
@@ -71,9 +74,14 @@ export const DEFAULT_FIELD_MAP = {
   'تصنيف العميل': 'client.clientType',
   'صفة العميل': 'client.clientType',
   'ملاحظات العميل': 'client.notes',
-  'رقم القضية': 'case.caseNumber',
-  'رقم المشروع': 'case.caseNumber',
-  'رقم الملف': 'case.caseNumber',
+  /* «رقم القضية» وحدَه رقمُ الجهة. و«رقم المشروع» و«رقم الملف» خارج الخريطة:
+     رقمُ المشروع معرّفُه في بيسكامب، فيظهران «بلا ربط» إن وُجدا. */
+  'رقم القضية': 'case.courtCaseNumber',
+  'رقم القضية لدى الجهة': 'case.courtCaseNumber',
+  'رقم القضية لدى الجهة المختصة': 'case.courtCaseNumber',
+  'الجهة المختصة': 'case.authority',
+  'الجهة': 'case.authority',
+  'المحكمة': 'case.authority',
   'نوع القضية': 'case.caseType',
   'نوع المشروع': 'case.caseType',
   'موضوع القضية': 'case.summary',

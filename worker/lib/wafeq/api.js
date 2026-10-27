@@ -119,16 +119,35 @@ const dayOf = (value) => {
   return /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : null;
 };
 
-/** الجهةُ كائناً أو معرّفاً — والمعرّفُ وحده لا اسمَ فيه يُطابَق. */
+/**
+ * الجهةُ كائناً أو معرّفاً — والمعرّفُ وحده لا اسمَ فيه يُطابَق، فيُحمل
+ * `id` لتُقرأ به الجهة (`readContact`).
+ */
 function contactOf(raw) {
   const contact = raw.contact && typeof raw.contact === 'object' ? raw.contact : {};
+  const bareId = typeof raw.contact === 'string' || typeof raw.contact === 'number' ? raw.contact : null;
+  const fields = contactFields(contact);
   return {
-    name: text(first(contact.name, contact.display_name, raw.contact_name, raw.customer_name)),
+    id: text(first(contact.id, bareId, raw.contact_id, raw.customer_id)),
+    name: fields.name || text(first(raw.contact_name, raw.customer_name)),
+    number: fields.number || text(raw.tax_registration_number),
+  };
+}
+
+/** اسمُ الجهة ورقمُها من كائنها — كما يردّه `GET /contacts/{id}/`. */
+export function contactFields(contact) {
+  if (!contact || typeof contact !== 'object') return { name: '', number: '' };
+  return {
+    name: text(first(contact.name, contact.display_name, contact.company_name)),
     number: text(first(
       contact.tax_registration_number, contact.vat_number, contact.tax_number,
-      contact.commercial_registration_number, contact.national_id, raw.tax_registration_number,
+      contact.commercial_registration_number, contact.national_id,
     )),
   };
+}
+
+export async function readContact(env, id) {
+  return call(env, urlOf(`contacts/${encodeURIComponent(id)}/`));
 }
 
 /** فواتيرُ الدفعة: أرقامُها ومعرّفاتُها ونصُّ ما فيها إن جاء مع الدفعة. */
@@ -141,6 +160,7 @@ function invoicesOf(raw) {
       id: text(invoice?.id ?? (typeof entry?.invoice === 'string' || typeof entry?.invoice === 'number' ? entry.invoice : entry?.id)),
       number: text(first(invoice?.invoice_number, invoice?.number, entry?.invoice_number)),
       text: invoice ? invoiceText(invoice) : '',
+      contact: contactFields(invoice?.contact),
     };
   });
 }
@@ -178,6 +198,7 @@ export function normalizePayment(raw) {
     date: dayOf(first(raw.date, raw.payment_date, raw.created_ts, raw.created_at)),
     amount,
     currency: text(first(raw.currency, raw.currency_code)) || null,
+    contactId: contact.id,
     contactName: contact.name,
     contactNumber: contact.number,
     reference: text(first(raw.reference, raw.payment_reference, raw.number)),

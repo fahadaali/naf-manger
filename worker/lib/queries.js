@@ -603,7 +603,11 @@ export async function readMarketerStats(env, user, marketerId) {
 export async function exportAll(env, user) {
   if (!user.permissions?.settings?.read) return fail('forbidden', 403);
 
-  const tables = ['clients', 'prospects', 'cases', 'marketers', 'commission_payments', 'client_payments', 'activity_logs'];
+  /* ومعها ربطُ المشاريع ودفعاتُ وافق: النسخةُ قبل «إعادة الاستيراد» تحفظ ما تصفّره. */
+  const tables = [
+    'clients', 'prospects', 'cases', 'marketers', 'commission_payments', 'client_payments', 'activity_logs',
+    'basecamp_projects', 'wafeq_payments',
+  ];
   const data = {};
 
   for (const table of tables) {

@@ -228,5 +228,74 @@ res = await handlers.syncWafeq(env, admin);
 const refused = await bodyOf(res);
 check('ومفتاحٌ مرفوض يُردّ «unauthorized»', refused.error === 'unauthorized', refused);
 
+// ═══════════════════════════════════════════════════════════
+group('الطرازُ يُسأل حين لا يُعرف الدافع');
+
+check('الجهةُ معرّفاً تُحمل بمعرّفها',
+  normalizePayment({ id: 'x', amount: 10, contact: 'ct-9' }).contactId === 'ct-9');
+
+({ db, env } = setup());
+/* كأكثر قضايا المكتب: بلا أتعابٍ مكتوبة — فكان «ما بقي عليه شيء» فارغاً. */
+db.prepare(`UPDATE cases SET payment_status = NULL`).run();
+db.prepare(`UPDATE cases SET court_case_number = '4470001234', authority = 'المحكمة العامة' WHERE id = 'k-noor'`).run();
+
+let asked = [];
+aiAnswer = '{"case":"ق-2026-021","reason":"الدافع Saad Alotaibi هو الموكّل سعد"}';
+env.AI = { run: async (model, input) => { asked.push(JSON.parse(input.messages[1].content)); return { response: aiAnswer }; } };
+let contactReads = 0;
+globalThis.fetch = async (url) => {
+  const path = new URL(url).pathname;
+  if (path.startsWith('/v1/contacts/')) {
+    contactReads++;
+    return { ok: true, status: 200, json: async () => ({ id: 'ct-1', name: 'Saad Alotaibi' }) };
+  }
+  return { ok: true, status: 200, json: async () => ({ count: payments.length, next: null, results: payments }) };
+};
+payments = [
+  { id: 'q1', date: '2026-10-01', amount: 900, description: 'تحويل', contact: 'ct-1' },
+  { id: 'q2', date: '2026-10-02', amount: 400, description: 'تحويل ثانٍ', contact: 'ct-1' },
+  { id: 'q3', date: '2026-10-03', amount: 700, reference: 'سداد القضية 4470001234', contact: 'ct-1' },
+];
+let result = await runWafeqSync(env, { actorId: 'u1' });
+check('الجهةُ تُقرأ بمعرّفها مرّةً في الدورة', contactReads === 1 && row('q1').contact_name === 'Saad Alotaibi',
+  { contactReads, name: row('q1').contact_name });
+check('ومعرّفُها يُحفظ', row('q1').contact_id === 'ct-1');
+check('والطرازُ يُسأل بلا أتعابٍ مكتوبة', asked.length === 2 && result.summary.ai.used === 2, result.summary.ai);
+check('ومع كلّ مرشّحٍ اسمُ موكّله',
+  asked[0]?.القضايا?.some((item) => item.الموكّل === 'سعد'), asked[0]?.القضايا);
+check('واقتراحُه ينتظر تأكيداً', row('q1').status === 'suggested' && row('q1').suggested_case_id === 'k-saad-2', row('q1'));
+check('ورقمُ القضية لدى الجهة في المرجع يربط',
+  row('q3').status === 'linked' && row('q3').case_id === 'k-noor', row('q3'));
+
+// ── وبلا طرازٍ مشغَّل: يُقال لماذا ──
+({ db, env } = setup());
+db.prepare(`INSERT INTO system_settings (key, value, updated_at) VALUES ('ai_import', '{"enabled":false}', 1)`).run();
+payments = [{ id: 'r1', date: '2026-10-01', amount: 900, description: 'تحويل', contact: { name: 'مجهولٌ تماماً' } }];
+result = await runWafeqSync(env, { actorId: 'u1' });
+check('والطرازُ المطفأ يُعدّ سبباً', result.summary.ai.skipped.disabled === 1 && result.summary.ai.used === 0, result.summary.ai);
+
+// ── «اربط بالذكاء الاصطناعي الآن» على المخزَّن ──
+({ db, env } = setup());
+db.prepare(`UPDATE cases SET payment_status = NULL`).run();
+db.prepare(
+  `INSERT INTO wafeq_payments (external_id, payment_date, amount, status, contact_id, description, created_at, updated_at)
+   VALUES ('s1', '2026-08-01', 50000, 'unmatched', 'ct-1', 'دفعةٌ قديمة', 1, 1)`,
+).run();
+asked = [];
+contactReads = 0;
+env.AI = { run: async (model, input) => { asked.push(JSON.parse(input.messages[1].content)); return { response: aiAnswer }; } };
+res = await handlers.rematchWafeqPayments(env, { id: 'u1', role: 'admin' });
+const rematched = (await bodyOf(res)).data;
+check('يُسأل الطرازُ عن المخزَّن بلا قراءة الدفعات', asked.length === 1 && rematched.suggested === 1 && contactReads === 1, rematched);
+check('ويُكتب اقتراحُه واسمُ الجهة',
+  row('s1').status === 'suggested' && row('s1').suggested_case_id === 'k-saad-2' && row('s1').contact_name === 'Saad Alotaibi', row('s1'));
+check('ولا ينزل إلى السجلّ قبل التأكيد', !db.prepare(`SELECT 1 FROM client_payments`).get());
+
+res = await handlers.rematchWafeqPayments(env, { id: 'u2', role: 'lawyer', permissions: { cases: { update: true } } });
+check('وهو للمسؤول وحده', res.status === 403);
+
+res = await handlers.readWafeqStatus(env, { id: 'u1', role: 'admin' });
+check('والحالةُ تقول حالَ الطراز', (await bodyOf(res)).data.ai?.available === true);
+
 console.log(`\n${pass} نجحت، ${fail} سقطت`);
 process.exit(fail ? 1 : 0);
