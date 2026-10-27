@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact } from '../types';
+import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact, WafeqProjectLink } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -380,6 +380,14 @@ export class LocalDatabase {
   /* على المخزَّن «بلا قضية» — بلا قراءة وافق من جديد. */
   async rematchWafeq(): Promise<WafeqRematch> {
     return await api.post<WafeqRematch>('/wafeq/rematch');
+  }
+
+  async getWafeqProjectLinks(): Promise<WafeqProjectLink[]> {
+    return await api.read<WafeqProjectLink[]>('/wafeq/project-links');
+  }
+
+  async deleteWafeqProjectLink(projectId: string): Promise<void> {
+    await api.remove('wafeq/project-links', projectId);
   }
 
   async setWafeqAutoSync(enabled: boolean): Promise<void> {

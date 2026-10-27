@@ -102,6 +102,8 @@ export async function resetBasecampImport(request, env, user) {
               reason = 'أُعيد استيرادُ القضايا — تنتظر المطابقة', updated_at = ?
         WHERE case_id IN (${LINKED}) OR suggested_case_id IN (${LINKED})`,
     ).bind(now),
+    /* وربطُ مشاريع وافق بهذه القضايا يزول معها — يُعاد بعد الاستيراد بالاسم أو بالتأكيد. */
+    env.DB.prepare(`DELETE FROM wafeq_project_links WHERE case_id IN (${LINKED})`),
     env.DB.prepare(`DELETE FROM client_payments WHERE case_id IN (${LINKED})`),
     env.DB.prepare(`DELETE FROM commission_payments WHERE case_id IN (${LINKED})`),
     env.DB.prepare(`DELETE FROM cases WHERE id IN (${LINKED})`),
