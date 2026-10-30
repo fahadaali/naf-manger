@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, HandHeart, Sparkles } from 'lucide-react';
+import { CalendarRange, ExternalLink, HandHeart, Sparkles } from 'lucide-react';
 import { Attachment, Case, Client, Marketer, FeeStructure, MemberEntry, OpposingParty, PaymentStatus, CommissionStructure } from '../../types';
 import AttachmentList from '../Common/AttachmentList';
 import CasePayments from './CasePayments';
@@ -42,6 +42,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
   const [marketers, setMarketers] = useState<Marketer[]>([]);
   /* الأعضاء المفعَّلون — للمحامي المسؤول وفريقه. */
   const [members, setMembers] = useState<MemberEntry[]>([]);
+  /* الموكّلون بعقدٍ سنويٍّ لم ينتهِ — قضاياهم عملٌ قانونيٌّ بأتعاب «عقد سنوي». */
+  const [retainedClients, setRetainedClients] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     caseNumber: existingCase?.caseNumber || '',
     title: existingCase?.title || '',
@@ -128,6 +130,9 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
         setMembers((await db.getLawyers()).map((lawyer) => ({
           id: lawyer.id, name: lawyer.name, role: lawyer.isActive ? 'active' : 'inactive',
         })));
+        setRetainedClients(new Set((await db.getContracts())
+          .filter((contract) => contract.summary.status !== 'expired')
+          .map((contract) => contract.clientId)));
       } catch (error) {
         console.error('Error loading data:', error);
         setClients([]);
@@ -137,6 +142,17 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     
     loadData();
   }, []);
+
+  /* ═══ موكّلٌ متعاقد ═══ القضيةُ عملٌ قانونيٌّ بأتعاب «عقد سنوي» — والخادمُ
+     يكتبها كذلك أيّاً كان المرسَل، فتُعرض هنا كما ستُحفظ. */
+  const retainer = retainedClients.has(formData.clientId) && formData.feeType !== 'pro_bono';
+  useEffect(() => {
+    if (!retainer) return;
+    setFormData((current) => (current.feeType === 'annual_contract' && current.workKind === 'legal_work'
+      ? current
+      : { ...current, feeType: 'annual_contract', workKind: 'legal_work' }));
+  }, [retainer]);
+  const annual = formData.feeType === 'annual_contract';
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -170,6 +186,13 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     const feeStructure: FeeStructure = {
       type: formData.feeType as FeeStructure['type']
     };
+
+    /* وقضيةُ العقد السنويّ تحفظ ما اتُّفق عليه قبله: أتعابُها في العقد، وما في
+       بنيتها من مقدَّمٍ ومؤخَّر قديم لا يُمحى بحفظها. */
+    if (annual) {
+      if (existingCase?.feeStructure?.advance) feeStructure.advance = existingCase.feeStructure.advance;
+      if (existingCase?.feeStructure?.deferred) feeStructure.deferred = existingCase.feeStructure.deferred;
+    }
     
     if (formData.feeType === 'advance_only' || formData.feeType === 'advance_and_deferred') {
       feeStructure.advance = {
@@ -193,7 +216,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
     const proBono = formData.feeType === 'pro_bono';
 
     // Build payment status
-    const totalAmount = proBono ? 0 : parseFloat(formData.totalAmount) || 0;
+    const totalAmount = proBono ? 0 : annual ? existingCase?.paymentStatus?.totalAmount ?? 0 : parseFloat(formData.totalAmount) || 0;
     const collectedAmount = proBono ? 0 : parseFloat(formData.collectedAmount) || 0;
     const paymentStatus: PaymentStatus = {
       totalAmount,
@@ -519,7 +542,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
               <label className="block text-sm font-medium text-foreground mb-2">
                 نوع العمل
               </label>
-              <Select value={formData.workKind} onChange={(e) => handleInputChange('workKind', e.target.value)}>
+              <Select value={formData.workKind} disabled={retainer} onChange={(e) => handleInputChange('workKind', e.target.value)}>
                 <option value="">{`تلقائي — ${WORK_KIND_LABEL[workKindOf({ ...formData, workKind: null })]}`}</option>
                 <option value="litigation">{WORK_KIND_LABEL.litigation}</option>
                 <option value="legal_work">{WORK_KIND_LABEL.legal_work}</option>
@@ -658,6 +681,7 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                   هنا بينما القائمةُ المكوَّنة تحمل مفرداتٍ أخرى لا يقرؤها أحد. */}
               <Select
                 value={formData.feeType}
+                disabled={retainer}
                 onChange={(e) => handleInputChange('feeType', e.target.value)}
               >
                 {feeTypes.map((type) => (
@@ -665,6 +689,17 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
                 ))}
               </Select>
             </div>
+
+            {annual && (
+              <div className="flex items-start gap-2 p-3 bg-card rounded border">
+                <CalendarRange className="h-5 w-5 text-primary mt-0.5" aria-hidden="true" />
+                <p className="text-sm text-muted-foreground">
+                  {retainer
+                    ? 'للعميل عقدٌ سنويّ ساري: أتعاب هذه القضية ضمن عقده، وتُسجَّل دفعاتُه ومستحقّاتُه في ملف العميل. ونوعُ العمل «عمل قانوني».'
+                    : 'أتعابها ضمن العقد السنوي للعميل — تُدار دفعاتُه من ملف العميل.'}
+                </p>
+              </div>
+            )}
 
             {formData.feeType === 'pro_bono' && (
               <div className="flex items-start gap-2 p-3 bg-card rounded border">
@@ -788,8 +823,8 @@ export default function CaseModal({ case: existingCase, onClose, onSave, isEditi
             )}
           </div>
 
-          {/* Payment Status */}
-          {formData.feeType !== 'pro_bono' && (
+          {/* Payment Status — والعقدُ السنويّ تحصيلُه في عقده. */}
+          {formData.feeType !== 'pro_bono' && !annual && (
           <div className="space-y-4 p-4 bg-success-soft rounded-lg">
             <h4 className="font-medium text-foreground">حالة التحصيل من العميل</h4>
             

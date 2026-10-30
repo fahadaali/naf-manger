@@ -5,7 +5,7 @@
 // رأساً.
 
 import { Client, Prospect, Case, User, ActivityLog, SystemSettings } from '../types';
-import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact, WafeqProjectLink, GeneralPayment, Lawyer } from '../types';
+import { CaseTimeline, InAppNotification, CaseImportPreview, CaseImportRow, ConflictCheck, CustomReport, MailStatus, MemberEntry, DisplayToken, Marketer, ClientPayment, CommissionPayment, MarketerStats, WafeqPayment, WafeqPaymentStatus, WafeqProbe, WafeqRematch, WafeqStatus, WafeqSummary, BasecampResetImpact, WafeqProjectLink, GeneralPayment, Lawyer, ClientContract, ContractFrequency, ContractRateChange } from '../types';
 import { AiInsightsResult, Meeting, ReportResult } from '../types';
 import { BasecampProject, BasecampSample, BasecampScan, BasecampStatus } from '../types';
 import { BasecampConflict, BasecampMap, BasecampMapSuggestion, BasecampPreview, BasecampSummary } from '../types';
@@ -359,6 +359,43 @@ export class LocalDatabase {
 
   async deleteClientPayment(id: string): Promise<void> {
     await api.remove('clientPayments', id);
+  }
+
+  /* ═══ العقودُ السنوية ═══ — على الموكّل، والجدولُ والملخّصُ يشتقّهما الخادم
+     (`worker/lib/contracts.js`). وكلُّ كتابةٍ تردّ العقدَ بملخّصه الجديد. */
+  async getContracts(clientId?: string): Promise<ClientContract[]> {
+    const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
+    return await listOr(api.read<ClientContract[]>(`/contracts${query}`), 'العقود');
+  }
+
+  async createContract(contract: {
+    clientId: string; startDate: string; endDate?: string; frequency: ContractFrequency;
+    amount: number; rateChanges?: ContractRateChange[]; notes?: string;
+  }): Promise<ClientContract> {
+    return await api.post<ClientContract>('/contracts', contract);
+  }
+
+  async updateContract(id: string, updates: Partial<Pick<ClientContract,
+    'startDate' | 'endDate' | 'frequency' | 'amount' | 'rateChanges' | 'notes'>>): Promise<ClientContract> {
+    return await api.put<ClientContract>(`/contracts/${encodeURIComponent(id)}`, updates);
+  }
+
+  async deleteContract(id: string): Promise<void> {
+    await api.remove('contracts', id);
+  }
+
+  async renewContract(id: string, terms: { amount?: number; frequency?: ContractFrequency; endDate?: string } = {}): Promise<ClientContract> {
+    return await api.post<ClientContract>(`/contracts/${encodeURIComponent(id)}/renew`, terms);
+  }
+
+  async addContractPayment(id: string, payment: {
+    amount: number; paymentDate?: string; method?: string; reference?: string; notes?: string;
+  }): Promise<ClientContract> {
+    return await api.post<ClientContract>(`/contracts/${encodeURIComponent(id)}/payments`, payment);
+  }
+
+  async deleteContractPayment(id: string, paymentId: string): Promise<ClientContract> {
+    return await api.del<ClientContract>(`/contracts/${encodeURIComponent(id)}/payments/${encodeURIComponent(paymentId)}`);
   }
 
   /* ═══ استبصارات التحليلات ═══

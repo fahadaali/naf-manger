@@ -57,6 +57,19 @@ export default function ClientsView({ initialFilter }: { initialFilter?: ViewFil
     loadClients();
   }, []);
 
+  /* ═══ موكّلٌ بعينه من اللوحة ═══ «عقودٌ تنتهي قريباً» تفتح تفاصيلَه حين تصل قائمتُه. */
+  const [pendingOpen, setPendingOpen] = useState<string | null>(null);
+  useEffect(() => {
+    if (initialFilter?.clientId) setPendingOpen(initialFilter.clientId);
+  }, [initialFilter?.stamp]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!pendingOpen) return;
+    const target = clients.find((client) => client.id === pendingOpen);
+    if (!target) return;
+    setPendingOpen(null);
+    handleViewDetails(target);
+  }, [pendingOpen, clients]);
+
   const loadClients = () => {
     const loadClientsAsync = async () => {
       try {

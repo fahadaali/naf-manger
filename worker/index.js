@@ -59,6 +59,15 @@ import { importCases } from './lib/case-import.js';
 import { caseTimeline } from './lib/basecamp/timeline.js';
 import { resetBasecampImport } from './lib/basecamp/reset.js';
 import { createLawyer, deleteLawyer, listLawyers, updateLawyer } from './lib/lawyers.js';
+import {
+  addContractPayment,
+  createContract,
+  deleteContract,
+  deleteContractPayment,
+  listContracts,
+  renewContract,
+  updateContract,
+} from './lib/contracts.js';
 import { readMailStatus, sendTestMail } from './lib/mail.js';
 import { listNotifications, markNotificationsRead, scheduledNotifications } from './lib/notify.js';
 import {
@@ -381,6 +390,25 @@ export default {
         if (!id && request.method === 'POST') return createLawyer(request, env, user);
         if (id && !verb && request.method === 'PUT') return updateLawyer(request, env, user, decodeURIComponent(id));
         if (id && !verb && request.method === 'DELETE') return deleteLawyer(env, user, decodeURIComponent(id));
+      }
+      /* ═══ العقودُ السنوية ═══ على الموكّل — والتصاريحُ في `lib/contracts.js`.
+         والدفعةُ تحت عقدها: `‎/api/contracts/:id/payments/:paymentId‎`. */
+      if (name === 'contracts') {
+        const contractId = id ? decodeURIComponent(id) : null;
+        if (!id && request.method === 'GET') return listContracts(env, user, url);
+        if (!id && request.method === 'POST') return createContract(request, env, user);
+        if (id && !verb && (request.method === 'PUT' || request.method === 'PATCH')) {
+          return updateContract(request, env, user, contractId);
+        }
+        if (id && !verb && request.method === 'DELETE') return deleteContract(env, user, contractId);
+        if (id && verb === 'renew' && request.method === 'POST') return renewContract(request, env, user, contractId);
+        if (id && verb === 'payments' && !segments[4] && request.method === 'POST') {
+          return addContractPayment(request, env, user, contractId);
+        }
+        if (id && verb === 'payments' && segments[4] && request.method === 'DELETE') {
+          return deleteContractPayment(env, user, contractId, decodeURIComponent(segments[4]));
+        }
+        return Response.json({ ok: false, error: 'not_found' }, { status: 404 });
       }
       /* صياغةُ عنوان القضية وموضوعها — بطلب صاحبها. */
       if (name === 'cases' && id && verb === 'phrase' && request.method === 'POST') {

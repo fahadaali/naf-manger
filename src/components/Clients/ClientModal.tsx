@@ -8,6 +8,7 @@ import AttachmentList from '../Common/AttachmentList';
 import ContactNumbers from '../Common/ContactNumbers';
 import ConflictWarning from '../Common/ConflictWarning';
 import ClientStatement from './ClientStatement';
+import ClientContracts from './ClientContracts';
 import ProspectComments from '../Prospects/ProspectComments';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDate, formatNumber, formatPhone } from '@/registry/naf/lib/format';
@@ -68,6 +69,9 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
   const clientId = client?.id;
   const viewing = !isEditing && Boolean(clientId);
 
+  /* ويُعاد جلبُها بعد حفظ عقدٍ سنويّ: العقدُ يجعل قضاياه «عملاً قانونياً». */
+  const [casesStamp, setCasesStamp] = useState(0);
+
   useEffect(() => {
     if (!viewing || !clientId) return;
     let alive = true;
@@ -80,7 +84,7 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
       });
 
     return () => { alive = false; };
-  }, [viewing, clientId]);
+  }, [viewing, clientId, casesStamp]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -292,6 +296,8 @@ export default function ClientModal({ client, onClose, onSave, isEditing = false
                 </div>
               </div>
             </div>
+
+            <ClientContracts clientId={client.id} onChanged={() => setCasesStamp((n) => n + 1)} />
 
             <ClientStatement client={client} cases={clientCases} />
 

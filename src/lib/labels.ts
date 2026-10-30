@@ -73,6 +73,22 @@ const FEE_TYPE: Record<string, string> = {
   deferred_only: 'مؤخَّر فقط',
   advance_and_deferred: 'مقدَّم ومؤخَّر',
   pro_bono: 'مجاني — تطوّعي',
+  annual_contract: 'عقد سنوي',
+}
+
+/* تكرارُ دفعة العقد السنويّ. */
+const CONTRACT_FREQUENCY: Record<string, string> = {
+  monthly: 'شهرية',
+  quarterly: 'ربع سنوية',
+  semiannual: 'نصف سنوية',
+  annual: 'سنوية',
+}
+
+const CONTRACT_STATUS: Record<string, string> = {
+  upcoming: 'لم يبدأ',
+  active: 'ساري',
+  expiring: 'ينتهي قريباً',
+  expired: 'منتهٍ',
 }
 
 /* دورُ العضو — وكانت هذه الخريطة مكتوبةً في `Header` و`UserManagement`
@@ -95,4 +111,6 @@ export const clientStatusLabel = label(CLIENT_STATUS)
 export const commissionTypeLabel = label(COMMISSION_TYPE)
 export const collectionStatusLabel = label(COLLECTION_STATUS)
 export const feeTypeLabel = label(FEE_TYPE)
+export const contractFrequencyLabel = label(CONTRACT_FREQUENCY)
+export const contractStatusLabel = label(CONTRACT_STATUS)
 export const roleLabel = label(ROLE)

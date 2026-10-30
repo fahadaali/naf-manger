@@ -18,6 +18,7 @@
 // تصير `completed`، و«ربحانة» `won`. وما لم يُفهَم يُترك فارغاً ويُقال — لا
 // يُكتب نصّاً يغيب عن كلّ إحصاء.
 
+import { applyRetainer } from './contracts.js';
 import { RESOURCES } from './resources.js';
 import { createRow, may } from './crud.js';
 import { coerceTarget } from './basecamp/parse.js';
@@ -273,6 +274,9 @@ export async function importCases(request, env, user) {
       failures.push({ line: plan.line, reason: String(error?.message ?? error) });
     }
   }
+
+  /* والمستورَدةُ لموكّلٍ متعاقد عملٌ قانونيّ — كما لو حُفظت من نافذتها. */
+  if (written) await applyRetainer(env);
 
   await env.DB.prepare(
     `INSERT INTO activity_logs (id, type, description, user_id, user_name, entity_type, details, created_at)

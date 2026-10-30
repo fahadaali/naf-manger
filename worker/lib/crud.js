@@ -12,6 +12,7 @@ import { RESOURCES, orderOf, toClient, toRow } from './resources.js';
 import { logActivity } from './activity.js';
 import { preparePayment, recomputeCollected } from './payments.js';
 import { notifyEvent } from './notify.js';
+import { applyRetainer } from './contracts.js';
 
 const json = (body, status = 200) => Response.json(body, { status });
 const fail = (error, status) => json({ ok: false, error }, status);
@@ -322,6 +323,8 @@ export async function handleResource(request, env, user, name, id) {
 async function afterWrite(env, name, resource, result) {
   const caseId = resource.ledger ? result.data?.caseId : name === 'cases' ? result.data?.id : null;
   if (!caseId) return;
+  /* وقضيةُ موكّلٍ متعاقد عملٌ قانونيٌّ بأتعاب «عقد سنوي» — أيّاً كان ما أُرسل. */
+  if (name === 'cases') await applyRetainer(env, result.data?.clientId);
   await recomputeCollected(env, caseId);
   if (name === 'cases') result.data = await getRow(env, resource, caseId);
 }

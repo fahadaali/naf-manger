@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Award, Banknote, FileText, Gavel, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
+import { Award, Banknote, CalendarRange, FileText, Gavel, HandHeart, TrendingUp, UserPlus, Users, Wallet } from 'lucide-react';
 import { Money } from '@/registry/naf/currency/money';
 import { Card } from '@/registry/naf/ui/card';
 import StatsCard from './StatsCard';
@@ -12,9 +12,9 @@ import { Period, periodRange } from '../../lib/periods';
 
 const PERIOD_KEY = 'dashboard-period';
 import { useChartPalette } from '../../lib/chart-tokens';
-import { formatNumber } from '@/registry/naf/lib/format';
+import { formatDate, formatNumber } from '@/registry/naf/lib/format';
 import { useSettingList } from '../../lib/use-settings';
-import { caseStatusLabel, clientTypeLabel } from '../../lib/labels';
+import { caseStatusLabel, clientTypeLabel, contractFrequencyLabel } from '../../lib/labels';
 
 /* الحالةُ الفارغة تُكتب مرّةً وتُقرأ في الابتداء وفي الخطأ معاً: كانت
    مكرّرةً في موضعين، فيُزاد حقلٌ في أحدهما ويُنسى في الآخر. */
@@ -225,7 +225,12 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
           <StatsCard
             title={ranged ? 'المحصَّل في الفترة' : 'المحصَّل هذا العام'}
             value={<>
-              <Money value={stats.collectedThisYear.cases + stats.collectedThisYear.general} />
+              <Money value={stats.collectedThisYear.cases + stats.collectedThisYear.general + (stats.collectedThisYear.contracts ?? 0)} />
+              {(stats.collectedThisYear.contracts ?? 0) > 0 && (
+                <span className="block text-xs font-normal text-muted-foreground">
+                  منها دفعات العقود السنوية: <Money value={stats.collectedThisYear.contracts ?? 0} />
+                </span>
+              )}
               {stats.collectedThisYear.general > 0 && (
                 <span className="block text-xs font-normal text-muted-foreground">
                   منها إيرادٌ عام بلا قضية: <Money value={stats.collectedThisYear.general} />
@@ -236,14 +241,45 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
             color="bg-chart-3"
           />
         )}
-        {/* ما لم يُحصَّل من أتعاب القضايا الحاضرة — مجموعُ «المتبقّي». */}
+        {/* ما لم يُحصَّل من أتعاب القضايا الحاضرة — مجموعُ «المتبقّي» — ومعه
+            مستحقُّ العقود السنوية حتى نهايتها، وقضاياها خارج الأوّل فلا يُعدّ مرّتين. */}
         <StatsCard
           title={ranged ? 'مستحقّات غير محصّلة (الآن)' : 'مستحقّات غير محصّلة'}
-          value={<Money value={stats.outstandingAmount ?? 0} />}
+          value={<>
+            <Money value={(stats.outstandingAmount ?? 0) + (stats.contracts?.overdue ?? 0) + (stats.contracts?.notYetDue ?? 0)} />
+            {stats.contracts && (stats.contracts.overdue > 0 || stats.contracts.notYetDue > 0) && (
+              <span className="block text-xs font-normal text-muted-foreground">
+                أتعاب القضايا: <Money value={stats.outstandingAmount ?? 0} />
+                <span className="block">
+                  العقود السنوية: <Money value={stats.contracts.overdue + stats.contracts.notYetDue} />
+                  {stats.contracts.overdue > 0 && (
+                    <span className="text-destructive-strong"> (متأخّر <Money value={stats.contracts.overdue} />)</span>
+                  )}
+                </span>
+              </span>
+            )}
+          </>}
           icon={Wallet}
           color="bg-chart-2"
           onClick={go('cases')}
         />
+        {/* العقودُ السنوية — الساريةُ الآن، وما ينتهي منها خلال ستّين يوماً. */}
+        {stats.contracts && (stats.contracts.active > 0 || stats.contracts.upcoming > 0 || stats.contracts.expiring.length > 0) && (
+          <StatsCard
+            title={ranged ? 'العقود السنوية السارية (الآن)' : 'العقود السنوية السارية'}
+            value={<>
+              {formatNumber(stats.contracts.active)}
+              <span className="block text-xs font-normal text-muted-foreground">
+                {stats.contracts.expiring.length > 0
+                  ? <span className="text-warning-strong">{`${formatNumber(stats.contracts.expiring.length)} تنتهي خلال 60 يوماً`}</span>
+                  : 'لا عقود تنتهي خلال 60 يوماً'}
+                {stats.contracts.upcoming > 0 && ` · ${formatNumber(stats.contracts.upcoming)} لم تبدأ`}
+              </span>
+            </>}
+            icon={CalendarRange}
+            color="bg-chart-4"
+          />
+        )}
       </div>
 
       {/* Charts and Activity */}
@@ -264,6 +300,41 @@ export default function Dashboard({ onNavigate }: { onNavigate?: Navigate } = {}
               options={clickable((index) => go('cases', { status: caseStatuses[index] })())}
             />
           </div>
+
+          {/* ═══ عقودٌ تنتهي قريباً ═══
+              خلال ستّين يوماً، أو انتهت حديثاً ولم تُجدَّد — والصفُّ يفتح ملفَّ العميل. */}
+          {(stats.contracts?.expiring ?? []).length > 0 && (
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <CalendarRange className="h-5 w-5" aria-hidden="true" />
+                عقود سنوية تنتهي خلال 60 يوماً
+              </h3>
+              <ul className="divide-y">
+                {(stats.contracts?.expiring ?? []).map((row) => (
+                  <li key={row.id}>
+                    <button
+                      type="button"
+                      onClick={go('clients', { clientId: row.clientId })}
+                      className="flex w-full flex-wrap items-center justify-between gap-2 rounded-md p-2 text-start text-sm hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      <span className="font-medium text-foreground">{row.clientName || 'عميل'}</span>
+                      <span className="text-muted-foreground">
+                        دفعة {contractFrequencyLabel(row.frequency)} <Money value={row.currentAmount} />
+                        {' · '}
+                        <bdi>{formatDate(row.endDate)}</bdi>
+                        {' · '}
+                        <span className={row.daysLeft < 0 ? 'text-destructive-strong font-medium' : row.daysLeft <= 30 ? 'text-warning-strong font-medium' : ''}>
+                          {row.daysLeft < 0
+                            ? `انتهى منذ ${formatNumber(-row.daysLeft)} يوماً — بلا تجديد`
+                            : row.daysLeft === 0 ? 'ينتهي اليوم' : `بعد ${formatNumber(row.daysLeft)} يوماً`}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           {/* ═══ حِملُ المحامين ═══
               القضايا المفتوحة لكلّ محامٍ مسؤول — و«بلا محامٍ» أولى بالنظر. */}
