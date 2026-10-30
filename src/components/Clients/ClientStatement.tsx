@@ -39,9 +39,11 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
 
   const rows = cases.map((case_) => {
     const proBono = case_.feeStructure?.type === 'pro_bono';
-    const total = proBono ? 0 : case_.paymentStatus?.totalAmount ?? 0;
+    /* وقضيةُ العقد السنويّ أتعابُها في عقده — يُعرض مستحقُّه في «العقد السنوي». */
+    const retainer = case_.feeStructure?.type === 'annual_contract';
+    const total = proBono || retainer ? 0 : case_.paymentStatus?.totalAmount ?? 0;
     const collected = proBono ? 0 : case_.paymentStatus?.collectedAmount ?? 0;
-    return { case_, proBono, total, collected, remaining: Math.max(total - collected, 0) };
+    return { case_, proBono, retainer, total, collected, remaining: Math.max(total - collected, 0) };
   });
 
   const totals = rows.reduce(
@@ -70,7 +72,7 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
               'الأتعاب': row.total,
               'المحصَّل': row.collected,
               'المتبقّي': row.remaining,
-              'ملاحظة': row.proBono ? 'تطوّعية' : '',
+              'ملاحظة': row.proBono ? 'تطوّعية' : row.retainer ? 'ضمن العقد السنوي' : '',
             })),
             ...(generalTotal > 0 ? [{
               'رقم المشروع': 'إيرادٌ عام بلا قضية',
@@ -142,7 +144,7 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
       </div>
 
       <ul className="divide-y divide-border rounded border bg-card">
-        {rows.map(({ case_, proBono, total, collected, remaining }) => (
+        {rows.map(({ case_, proBono, retainer, total, collected, remaining }) => (
           <li key={case_.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
             <span className="font-medium text-foreground">
               <bdi>{case_.caseNumber}</bdi>
@@ -150,6 +152,8 @@ export default function ClientStatement({ client, cases }: ClientStatementProps)
             </span>
             {proBono ? (
               <Badge variant="outline">تطوّعية</Badge>
+            ) : retainer ? (
+              <Badge variant="info">ضمن العقد السنوي</Badge>
             ) : (
               <span className="text-muted-foreground">
                 <Money value={collected} /> من <Money value={total} />

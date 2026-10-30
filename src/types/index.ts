@@ -442,6 +442,8 @@ export interface ViewFilter {
   workKind?: 'litigation' | 'legal_work';
   lawyer?: string;
   clientType?: string;
+  /** موكّلٌ بعينه — تُفتح تفاصيلُه (من «عقودٌ تنتهي قريباً»). */
+  clientId?: string;
   /** يتبدّل مع كلّ نقرة فتُطبَّق التصفيةُ ولو تكرّرت. */
   stamp?: number;
 }
@@ -875,8 +877,12 @@ export interface DashboardStats {
   range?: { from: string; to: string; prevFrom: string; prevTo: string } | null;
   /** الجاري بنوعه: قضايا منظورة، وأعمالٌ قانونية مستمرّة. */
   ongoingByKind?: { litigation?: number; legalWork?: number };
-  /** المحصَّل هذا العام: دفعاتُ القضايا، والإيرادُ العامّ بلا قضية — ريالات. */
-  collectedThisYear?: { cases: number; general: number };
+  /** المحصَّل هذا العام: دفعاتُ القضايا، والإيرادُ العامّ بلا قضية، ودفعاتُ العقود — ريالات. */
+  collectedThisYear?: { cases: number; general: number; contracts?: number };
+  /** عددُ العقود السنوية الجارية — يبلغ شاشاتِ العرض. */
+  activeContracts?: number;
+  /** العقودُ السنوية — الآن، بالريالات. */
+  contracts?: ContractsDigest;
   /** القضايا المفتوحة لكلّ محامٍ مسؤول. و`lawyerId: null` هي «بلا محامٍ». */
   casesByLawyer?: { lawyerId: string | null; name: string; open: number }[];
   growth?: {
@@ -1102,8 +1108,9 @@ export interface ConflictCheck {
 
 export interface FeeStructure {
   /** و`pro_bono` قضيةٌ يقدّمها المكتب مجاناً تطوّعاً: لا أتعابَ ولا تحصيلَ
-      ولا عمولة، ولا تدخل الإيرادَ في أيّ حساب. */
-  type: 'advance_only' | 'deferred_only' | 'advance_and_deferred' | 'pro_bono';
+      ولا عمولة، ولا تدخل الإيرادَ في أيّ حساب. و`annual_contract` قضيةُ موكّلٍ
+      متعاقدٍ سنوياً — أتعابُها في عقده (`ClientContract`)، ويكتبها الخادم. */
+  type: 'advance_only' | 'deferred_only' | 'advance_and_deferred' | 'pro_bono' | 'annual_contract';
   advance?: {
     feeType: 'fixed_amount' | 'percentage';
     value: number;
@@ -1172,4 +1179,79 @@ export interface MarketerStats {
   remainingCommission: number;
   conversionRate: number;
   averageCaseValue: number;
+}
+/* ═══ العقدُ السنويّ ═══ — `migrations/0032` و`worker/lib/contracts.js`. */
+
+export type ContractFrequency = 'monthly' | 'quarterly' | 'semiannual' | 'annual';
+
+/** تعديلُ مبلغ الدفعة ابتداءً من تاريخ — ريالات. */
+export interface ContractRateChange {
+  from: string;
+  amount: number;
+}
+
+/** دفعةٌ في جدول الاستحقاق — يشتقّه الخادم. */
+export interface ContractInstallment {
+  dueDate: string;
+  amount: number;
+  /** ما غطّاه المدفوعُ منها — يُوزَّع على الأقدم أولاً. */
+  paid: number;
+  state: 'paid' | 'partial' | 'overdue' | 'upcoming';
+}
+
+export interface ContractSummary {
+  status: 'upcoming' | 'active' | 'expiring' | 'expired';
+  daysLeft: number;
+  totalValue: number;
+  dueToDate: number;
+  paid: number;
+  overdue: number;
+  remaining: number;
+  currentAmount: number;
+  nextDue: { dueDate: string; amount: number } | null;
+  installments: ContractInstallment[];
+}
+
+export interface ContractPayment {
+  id: string;
+  contractId: string;
+  clientId: string;
+  amount: number;
+  paymentDate: string;
+  method: string;
+  reference: string;
+  notes: string;
+}
+
+export interface ClientContract {
+  id: string;
+  clientId: string;
+  clientName: string;
+  startDate: string;
+  endDate: string;
+  frequency: ContractFrequency;
+  /** مبلغُ الدفعة عند البداية — ريالات. */
+  amount: number;
+  rateChanges: ContractRateChange[];
+  notes: string;
+  renewedFrom: string | null;
+  summary: ContractSummary;
+  payments: ContractPayment[];
+}
+
+export interface ContractsDigest {
+  active: number;
+  upcoming: number;
+  /** ما ينتهي خلال ستّين يوماً، أو انتهى حديثاً بلا تجديد. */
+  expiring: {
+    id: string;
+    clientId: string;
+    clientName: string;
+    endDate: string;
+    daysLeft: number;
+    currentAmount: number;
+    frequency: ContractFrequency;
+  }[];
+  overdue: number;
+  notYetDue: number;
 }

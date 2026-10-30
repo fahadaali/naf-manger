@@ -27,6 +27,8 @@ const ENTITY = {
   marketers: { one: 'المسوّق', type: 'marketer' },
   commissions: { one: 'دفعة العمولة', type: 'commission' },
   clientPayments: { one: 'دفعة العميل', type: 'client_payment' },
+  contracts: { one: 'العقد السنوي', type: 'contract' },
+  contractPayments: { one: 'دفعة العقد السنوي', type: 'contract_payment' },
 };
 
 /** فعلُ الرسالة ونوعُ السطر. */

@@ -19,6 +19,7 @@
 // فما عُدِّل في المنصة هو المعتمد وإن خالف بيسكامب — قرارُ صاحب المكتب.
 // وتصحيحٌ يُمحى صامتاً في بيانات موكّلين لا يقع في أيٍّ من الحالات.
 
+import { applyRetainer } from '../contracts.js';
 import { BasecampError } from './api.js';
 import { readProjectDocument } from './discover.js';
 import {
@@ -1390,6 +1391,8 @@ export async function runSync(env, connection, { actorId, actorName, source }) {
   /* ═══ ثمّ ملخّصُ قضايا كلِّ موكّل ═══
      بعد الدفعة كلِّها لا بعد كل مشروع: للموكّل قضايا موزّعةٌ على مشاريع،
      وتلخيصُها عند أوّلها يلخّص نصفَها ثم يعيد عند ثانيها. */
+  /* وما أُنشئ لموكّلٍ متعاقد عملٌ قانونيٌّ بأتعاب «عقد سنوي». */
+  await applyRetainer(env);
   const summarizedClients = await summarizeClients(env, results, ai);
   const topics = await phraseCases(env, connection, results, ai);
 

@@ -5,6 +5,7 @@ import { WORK_KIND_SQL } from './work-kind.js';
 import { may } from './crud.js';
 import { KNOWN_ROLES, permissionsFor } from './roles.js';
 import { logActivity } from './activity.js';
+import { contractsDigest } from './contracts.js';
 
 const json = (body, status = 200) => Response.json(body, { status });
 const fail = (error, status) => json({ ok: false, error }, status);
@@ -78,7 +79,8 @@ const DEFAULT_SETTINGS = {
      من «تكوين النظام» ولا يقرؤها أحد، وخياراتُ الشاشة مكتوبةٌ في تصييرها.
      فصارت مفرداتِ ما يُكتب فعلاً، وصارت الشاشةُ تقرؤها. */
   /* و`pro_bono` قضيةٌ مجانيةٌ تطوّعاً — بلا أتعابٍ ولا تحصيلٍ ولا عمولة. */
-  feeTypes: ['advance_only', 'deferred_only', 'advance_and_deferred', 'pro_bono'],
+  /* و`annual_contract` قضيةٌ أتعابُها في عقد موكّلها السنويّ — `lib/contracts.js`. */
+  feeTypes: ['advance_only', 'deferred_only', 'advance_and_deferred', 'pro_bono', 'annual_contract'],
   companyName: 'شركة ناف',
   companyDescription: 'نظام إدارة العملاء',
 };
@@ -499,13 +501,14 @@ export async function readStats(env, { publicBoard = false, from = null, to = nu
               SUM(CASE WHEN ${prior(DECIDED_AT, 'epoch')} AND ${WIN} THEN 1 ELSE 0 END) prior_won
          FROM cases WHERE archived_at IS NULL AND outcome IN ('won', 'lost', 'settled')`),
 
-    /* ما لم يُحصَّل — الآن: الإجماليُّ ناقصَ المحصَّل لكل قضيةٍ حاضرة. */
+    /* ما لم يُحصَّل — الآن: الإجماليُّ ناقصَ المحصَّل لكل قضيةٍ حاضرة. وقضايا العقد
+       السنويّ خارجه: مستحقُّها في عقدها، ويُحسب من جدوله (`contracts.js`). */
     q(`SELECT COALESCE(SUM(MAX(
                 COALESCE(json_extract(payment_status, '$.totalAmount'), 0)
               - COALESCE(json_extract(payment_status, '$.collectedAmount'), 0), 0)), 0) n
          FROM cases
         WHERE archived_at IS NULL AND json_valid(payment_status) = 1
-          AND ${FEE_TYPE} <> 'pro_bono'`),
+          AND ${FEE_TYPE} NOT IN ('pro_bono', 'annual_contract')`),
 
     /* ═══ حِملُ المحامين ═══ — الآن. و«بلا محامٍ» صفٌّ بذاته. */
     q(`SELECT c.lawyer_id id, COALESCE(l.name, m.display_name) name, COUNT(*) n
@@ -519,7 +522,9 @@ export async function readStats(env, { publicBoard = false, from = null, to = nu
            WHERE ${range ? period('payment_date', 'date') : `payment_date >= date('now', 'start of year')`}) cases_total,
          (SELECT COALESCE(SUM(amount), 0) FROM wafeq_payments
            WHERE status = 'general'
-             AND ${range ? period('payment_date', 'date') : `payment_date >= date('now', 'start of year')`}) general_total`),
+             AND ${range ? period('payment_date', 'date') : `payment_date >= date('now', 'start of year')`}) general_total,
+         (SELECT COALESCE(SUM(amount), 0) FROM contract_payments
+           WHERE ${range ? period('payment_date', 'date') : `payment_date >= date('now', 'start of year')`}) contracts_total`),
 
     /* ═══ الجاري بنوعه ═══ — الآن. */
     q(`SELECT ${WORK_KIND_SQL} kind, COUNT(*) n FROM cases
@@ -565,6 +570,9 @@ export async function readStats(env, { publicBoard = false, from = null, to = nu
      الكسبُ — رابحةٌ أو تسوية/صلح — من المحسومة، وهي ما له نتيجة. وكانت
      «الرابحة من كلّ المكتملة»، فيُنقصها كلُّ عقدٍ واستشارةٍ اكتمل، وكلُّ قضيةٍ
      انتهت ولم تُسجَّل نتيجتُها. */
+  /* ═══ العقودُ السنوية ═══ — الآن، كالمستحقّات: الجاريةُ وما ينتهي قريباً، وما عليها. */
+  const contracts = await contractsDigest(env);
+
   const outcomes = { won: 0, lost: 0, settled: 0 };
   for (const row of decidedRows.results ?? []) if (row.outcome in outcomes) outcomes[row.outcome] += Number(row.n ?? 0);
   const decided = outcomes.won + outcomes.lost + outcomes.settled;
@@ -589,6 +597,8 @@ export async function readStats(env, { publicBoard = false, from = null, to = nu
       prospectsByStatus,
       casesByStatus,
       proBonoCases: Number(proBono.results?.[0]?.n ?? 0),
+      /* عددُ العقود الجارية — عددٌ لا مبلغ، فيبلغ شاشاتِ العرض كذلك. */
+      activeContracts: contracts.active,
       /* والمبالغُ وأسماءُ الأعضاء لا تبلغ شاشات العرض — تلك أعدادٌ ونسبٌ وحدها. */
       ...(publicBoard ? {} : {
         outstandingAmount: Number(outstanding.results?.[0]?.n ?? 0),
@@ -597,7 +607,9 @@ export async function readStats(env, { publicBoard = false, from = null, to = nu
         collectedThisYear: {
           cases: Number(collected.results?.[0]?.cases_total ?? 0) / 100,
           general: Number(collected.results?.[0]?.general_total ?? 0) / 100,
+          contracts: Number(collected.results?.[0]?.contracts_total ?? 0) / 100,
         },
+        contracts,
         casesByLawyer: (byLawyer.results ?? []).map((row) => ({
           lawyerId: row.id ?? null,
           name: row.id ? row.name ?? '' : '',
